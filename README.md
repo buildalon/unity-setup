@@ -1,5 +1,7 @@
 # Buildalon Unity Setup
 
+[![Discord](https://img.shields.io/discord/939721153688264824.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/uASrq8YDh7) [![actions](https://github.com/buildalon/unity-setup/actions/workflows/validate.yml/badge.svg?branch=main&event=push)](https://github.com/buildalon/unity-setup/actions/workflows/validate.yml)
+
 A GitHub Action for setting up the [Unity Game Engine](https://unity.com) on GitHub Action Runners.
 
 ## How to use
