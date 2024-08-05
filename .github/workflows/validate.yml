@@ -1,0 +1,65 @@
+name: validate
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Run every Sunday at midnight
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '*'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    env:
+      UNITY_EDITORS: '' # set by the unity-setup action
+      UNITY_HUB_PATH: '' # set by the unity-setup action
+      UNITY_EDITOR_PATH: '' # set by the unity-setup action
+      UNITY_PROJECT_PATH: '' # set by the unity-setup action
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        unity-versions:
+          - 2019.4.40f1 (ffc62b691db5)
+          - 2020.3.48f1 (b805b124c6b7)
+          - 2021.3.41f1 (6c5a9e20c022)
+          - 2022.3.40f1 (cbdda657d2f0)
+          - 6000.0.13f1 (53a692e3fca9)
+        include:
+          - os: ubuntu-latest
+            build-targets: StandaloneLinux64, Android, iOS
+            modules: linux-server
+          - os: windows-latest
+            build-targets: StandaloneWindows64, Android, WSAPlayer
+            modules: windows-server
+          - os: macos-13
+            build-targets: StandaloneOSX, Android, iOS
+            modules: mac-server
+          - os: macos-latest
+            build-targets: StandaloneOSX Android iOS VisionOS
+            modules: mac-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: RageAgainstThePixel/com.utilities.buildpipeine
+          path: com.utilities.buildpipline
+          ref: development
+
+      - uses: ./ # buildalon/unity-setup
+        with:
+          unity-version: ${{ matrix.unity-versions }}
+          build-targets: ${{ matrix.build-targets }}
+          modules: ${{ matrix.modules }}
+
+      - run: |
+          echo "UNITY_HUB_PATH: '${{ env.UNITY_HUB_PATH }}'"
+          echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
+          echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
+          echo "UNITY_PROJECT_PATH: '${{ env.UNITY_PROJECT_PATH }}'"
