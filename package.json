@@ -1,0 +1,39 @@
+{
+  "name": "unity-setup",
+  "version": "1.0.0",
+  "description": "A GitHub action for setting up the Unity Game Engine for CI/CD workflows.",
+  "author": "Buildalon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildalon/unity-setup.git"
+  },
+  "bugs": {
+    "url": "https://github.com/buildalon/unity-setup/issues"
+  },
+  "homepage": "https://github.com/buildalon/unity-setup",
+  "main": "dist/index.js",
+  "keywords": [
+    "setup",
+    "install",
+    "unity",
+    "editor",
+    "ci",
+    "cd",
+    "github",
+    "action"
+  ],
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/glob": "^0.4.0",
+    "semver": "^7.6.3"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.34.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm install && npm ci && ncc build src/index.js -o dist --source-map --license licenses.txt"
+  }
+}

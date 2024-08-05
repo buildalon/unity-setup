@@ -1,0 +1,29 @@
+name: Buildalon Unity Setup
+description: A GitHub action for setting up the Unity Game Engine for CI/CD workflows.
+branding:
+  color: red
+  icon: download
+inputs:
+  version-file:
+    description: 'Specify a path to search for the unity project version text file. Useful if there are multiple projects in a single repo.'
+    required: false
+    default: ''
+  unity-version:
+    description: 'Specify the Unity version(s) to install. You must include the changeset! i.e `2019.4.13f1 (518737b1de84)`. ***This will override any version specified in the `version-file`!***'
+    required: false
+    default: ''
+  build-targets:
+    description: 'Specify the build targets to install modules for. One or more of `StandaloneWindows64` `WSAPlayer` `StandaloneOSX` `iOS` `StandaloneLinux64` `Android` `Lumin` `WebGL`.'
+    required: false
+    default: ''
+  modules:
+    description: 'Modules to install with the editor. This list can be different per editor version.'
+    required: false
+    default: ''
+  architecture:
+    description: 'Specify the architecture to install. Either `x86_64` or `arm64`.'
+    required: false
+    default: ''
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
