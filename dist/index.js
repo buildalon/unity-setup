@@ -31392,17 +31392,13 @@ async function createRepositoryCfg() {
 }
 
 async function getJDKPath(rootEditorPath) {
-    try {
-        const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
-        if (!jdkPath) {
-            throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(jdkPath, fs.constants.R_OK);
-        core.info(`jdkPath:\n  > "${jdkPath}"`);
-        return jdkPath;
-    } catch (error) {
-        throw error;
+    const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
+    if (!jdkPath) {
+        throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
     }
+    await fs.access(jdkPath, fs.constants.R_OK);
+    core.info(`jdkPath:\n  > "${jdkPath}"`);
+    return jdkPath;
 }
 
 async function getSdkManager(rootEditorPath) {
