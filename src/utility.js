@@ -33,10 +33,10 @@ async function ReadFileContents(filePath) {
 }
 
 async function FindGlobPattern(pattern) {
-    core.info(`searching for: ${pattern}...`);
+    core.debug(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
-        core.info(`found glob: ${file}`);
+        core.debug(`found glob: ${file}`);
         return file;
     }
 }

@@ -85,6 +85,9 @@ async function installUnityHub() {
                     listeners: {
                         stdout: (data) => {
                             output += data.toString();
+                        },
+                        stderr: (data) => {
+                            output += data.toString();
                         }
                     }
                 });
@@ -116,6 +119,9 @@ async function execUnityHub(args) {
                 listeners: {
                     stdout: (data) => {
                         output += data.toString();
+                    },
+                    stderr: (data) => {
+                        output += data.toString();
                     }
                 },
                 ignoreReturnCode: true
@@ -135,6 +141,9 @@ async function execUnityHub(args) {
                         }
                     },
                     stdout: (data) => {
+                        output += data.toString();
+                    },
+                    stderr: (data) => {
                         output += data.toString();
                     }
                 },

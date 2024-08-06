@@ -31387,11 +31387,7 @@ async function createRepositoryCfg() {
     const androidPath = path.join(os.homedir(), '.android');
     await fs.mkdir(androidPath, { recursive: true });
     const fileHandle = await fs.open(path.join(androidPath, 'repositories.cfg'), 'w');
-    try {
-        // Empty file
-    } finally {
-        await fileHandle.close();
-    }
+    await fileHandle.close();
 }
 
 async function getJDKPath(rootEditorPath) {
@@ -31561,6 +31557,9 @@ async function installUnityHub() {
                     listeners: {
                         stdout: (data) => {
                             output += data.toString();
+                        },
+                        stderr: (data) => {
+                            output += data.toString();
                         }
                     }
                 });
@@ -31592,6 +31591,9 @@ async function execUnityHub(args) {
                 listeners: {
                     stdout: (data) => {
                         output += data.toString();
+                    },
+                    stderr: (data) => {
+                        output += data.toString();
                     }
                 },
                 ignoreReturnCode: true
@@ -31611,6 +31613,9 @@ async function execUnityHub(args) {
                         }
                     },
                     stdout: (data) => {
+                        output += data.toString();
+                    },
+                    stderr: (data) => {
                         output += data.toString();
                     }
                 },
@@ -31827,10 +31832,10 @@ async function ReadFileContents(filePath) {
 }
 
 async function FindGlobPattern(pattern) {
-    core.info(`searching for: ${pattern}...`);
+    core.debug(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
-        core.info(`found glob: ${file}`);
+        core.debug(`found glob: ${file}`);
         return file;
     }
 }

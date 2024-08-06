@@ -41,11 +41,7 @@ async function createRepositoryCfg() {
     const androidPath = path.join(os.homedir(), '.android');
     await fs.mkdir(androidPath, { recursive: true });
     const fileHandle = await fs.open(path.join(androidPath, 'repositories.cfg'), 'w');
-    try {
-        // Empty file
-    } finally {
-        await fileHandle.close();
-    }
+    await fileHandle.close();
 }
 
 async function getJDKPath(rootEditorPath) {
