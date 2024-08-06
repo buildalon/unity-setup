@@ -1,4 +1,5 @@
 const core = require('@actions/core');
+const glob = require('@actions/glob');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -31,4 +32,11 @@ async function ReadFileContents(filePath) {
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents };
+async function GetGlob(globPath, globOptions) {
+    const globber = await glob.create(globPath, globOptions);
+    for await (const file of globber.globGenerator()) {
+        return file;
+    }
+}
+
+module.exports = { GetEditorRootPath, ReadFileContents, GetGlob };

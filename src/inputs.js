@@ -163,6 +163,7 @@ async function getVersionFilePath() {
 }
 
 async function searchForVersionFile() {
+    core.debug(`searching for ProjectVersion.txt...`);
     const globber = await glob.create('**/ProjectVersion.txt');
     for await (const file of globber.globGenerator()) {
         core.debug(`resolve glob: ${file}`);

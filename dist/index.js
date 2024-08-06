@@ -31308,6 +31308,7 @@ async function getVersionFilePath() {
 }
 
 async function searchForVersionFile() {
+    core.debug(`searching for ProjectVersion.txt...`);
     const globber = await glob.create('**/ProjectVersion.txt');
     for await (const file of globber.globGenerator()) {
         core.debug(`resolve glob: ${file}`);
@@ -31353,7 +31354,7 @@ module.exports = { ValidateInputs };
 /***/ 133:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { GetEditorRootPath, ReadFileContents } = __nccwpck_require__(4345);
+const { GetEditorRootPath, ReadFileContents, GetGlob } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const glob = __nccwpck_require__(8090);
@@ -31363,19 +31364,27 @@ const os = __nccwpck_require__(2037);
 
 async function CheckAndroidSdkInstalled(editorPath, projectPath) {
     core.startGroup('Validating Android Target SDK Installed...');
+    let sdkPath = undefined;
     try {
+        await createRepositoryCfg();
+        const rootEditorPath = await GetEditorRootPath(editorPath);
         const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
         const projectSettingsContent = await ReadFileContents(projectSettingsPath);
         const androidTargetSdk = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
         if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
-        core.info(`Android Target SDK:\n  > android-${androidTargetSdk}`);
-        await createRepositoryCfg();
-        const sdkManagerPath = await getSdkManager(editorPath);
-        const javaSdk = await getJDKPath(editorPath);
+        sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
+        if (sdkPath) {
+            core.info(`Target Android SDK Installed in:\n  > "${sdkPath}"`);
+            return;
+        }
+        core.info(`Installing Android Target SDK:\n  > android-${androidTargetSdk}`);
+        const sdkManagerPath = await getSdkManager(rootEditorPath);
+        const javaSdk = await getJDKPath(rootEditorPath);
         await execSdkManager(sdkManagerPath, javaSdk, ['--licenses']);
         await execSdkManager(sdkManagerPath, javaSdk, ['--update']);
         await execSdkManager(sdkManagerPath, javaSdk, ['platform-tools', `platforms;android-${androidTargetSdk}`]);
-        await validateSdkPath(editorPath, androidTargetSdk);
+        sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
+        core.info(`Target Android SDK Installed in:\n  > "${sdkPath}"`);
     } finally {
         core.endGroup();
     }
@@ -31392,19 +31401,9 @@ async function createRepositoryCfg() {
     }
 }
 
-async function getJDKPath(editorPath) {
-    core.debug(`editorPath: ${editorPath}`);
-    const rootEditorPath = await GetEditorRootPath(editorPath);
-    core.debug(`rootEditorPath: ${rootEditorPath}`);
-    let globPath = path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK');
+async function getJDKPath(rootEditorPath) {
     try {
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const jdkPath = globPaths[0];
+        const jdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
         if (!jdkPath) {
             throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
         }
@@ -31416,10 +31415,7 @@ async function getJDKPath(editorPath) {
     }
 }
 
-async function getSdkManager(editorPath) {
-    core.debug(`editorPath: ${editorPath}`);
-    const rootEditorPath = await GetEditorRootPath(editorPath);
-    core.debug(`rootEditorPath: ${rootEditorPath}`);
+async function getSdkManager(rootEditorPath) {
     let globPath;
     switch (process.platform) {
         case 'darwin':
@@ -31432,38 +31428,24 @@ async function getSdkManager(editorPath) {
         default:
             throw new Error(`Unsupported platform: ${process.platform}`);
     }
-    try {
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const sdkmanagerPath = globPaths[0];
-        if (!sdkmanagerPath) {
-            throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(sdkmanagerPath, fs.constants.R_OK);
-        core.info(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
-        return sdkmanagerPath;
-    } catch (error) {
-        throw error;
+    const sdkmanagerPath = await GetGlob(globPath);
+    if (!sdkmanagerPath) {
+        throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
     }
+    await fs.access(sdkmanagerPath, fs.constants.R_OK);
+    core.info(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
+    return sdkmanagerPath;
 }
 
-async function validateSdkPath(editorPath, androidTargetSdk) {
-    core.debug(`attempting to validate Android SDK Path...\n  > editorPath: ${editorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
-    const rootEditorPath = await GetEditorRootPath(editorPath);
-    core.debug(`rootEditorPath: ${rootEditorPath}`);
-    const sdkPath = path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`);
-    core.debug(`sdkPath: ${sdkPath}`);
-    const globber = await glob.create(sdkPath);
-    const globPaths = await globber.glob();
-    core.debug(`globPaths: ${globPaths}`);
-    if (globPaths.length === 0) {
-        throw new Error(`Failed to install Android SDK: ${sdkPath}`);
+async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
+    core.debug(`attempting to validate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
+    const sdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
+    if (!sdkPath) {
+        throw new Error(`Failed to resolve Android SDK`);
     }
-    core.info(`Target Android SDK Installed in:\n  > "${globPaths[0]}"`);
+    await fs.access(sdkPath, fs.constants.R_OK);
+    core.info(`sdkPath:\n  > "${sdkPath}"`);
+    return sdkPath;
 }
 
 async function execSdkManager(sdkManagerPath, javaSdk, args) {
@@ -31820,6 +31802,7 @@ module.exports = { Get, Unity, ListInstalledEditors }
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(2186);
+const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 
@@ -31852,7 +31835,14 @@ async function ReadFileContents(filePath) {
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents };
+async function GetGlob(globPath, globOptions) {
+    const globber = await glob.create(globPath, globOptions);
+    for await (const file of globber.globGenerator()) {
+        return file;
+    }
+}
+
+module.exports = { GetEditorRootPath, ReadFileContents, GetGlob };
 
 
 /***/ }),

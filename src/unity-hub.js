@@ -59,7 +59,7 @@ async function installUnityHub() {
     switch (process.platform) {
         case 'win32':
             {
-                const scriptPath = path.join(__dirname, 'install-unityhub-windows.ps1');
+                const scriptPath = path.normalize(path.join(__dirname, 'install-unityhub-windows.ps1'));
                 exitCode = await exec.exec('pwsh', [scriptPath]);
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
