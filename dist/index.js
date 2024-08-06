@@ -31290,7 +31290,7 @@ async function getVersionFilePath() {
         projectVersionPath = await searchForVersionFile();
     } else {
         projectVersionPath = path.join(process.cwd(), projectVersionPath);
-        core.debug(`resolve absolute: ${projectVersionPath}`);
+        core.info(`resolve absolute: ${projectVersionPath}`);
     }
     try {
         await fs.access(projectVersionPath, fs.constants.R_OK);
@@ -31308,10 +31308,10 @@ async function getVersionFilePath() {
 }
 
 async function searchForVersionFile() {
-    core.debug(`searching for ProjectVersion.txt...`);
-    const globber = await glob.create('**/ProjectVersion.txt');
+    core.info(`searching for ProjectVersion.txt...`);
+    const globber = await glob.create(path.join(process.cwd(), '**/ProjectVersion.txt'));
     for await (const file of globber.globGenerator()) {
-        core.debug(`resolve glob: ${file}`);
+        core.info(`resolve glob: ${file}`);
         return file;
     }
 }
