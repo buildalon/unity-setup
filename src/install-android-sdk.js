@@ -1,7 +1,6 @@
 const { GetEditorRootPath, ReadFileContents, FindGlobPattern } = require('./utility');
 const core = require('@actions/core');
 const exec = require('@actions/exec');
-const glob = require('@actions/glob');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
@@ -18,7 +17,7 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
         if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
         sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
         if (sdkPath) {
-            core.info(`Target Android SDK Installed in:\n  > "${sdkPath}"`);
+            core.info(`Target Android SDK android-${androidTargetSdk} Installed in:\n  > "${sdkPath}"`);
             return;
         }
         core.info(`Installing Android Target SDK:\n  > android-${androidTargetSdk}`);
@@ -50,7 +49,7 @@ async function getJDKPath(rootEditorPath) {
         throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
     }
     await fs.access(jdkPath, fs.constants.R_OK);
-    core.info(`jdkPath:\n  > "${jdkPath}"`);
+    core.debug(`jdkPath:\n  > "${jdkPath}"`);
     return jdkPath;
 }
 
@@ -72,20 +71,20 @@ async function getSdkManager(rootEditorPath) {
         throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
     }
     await fs.access(sdkmanagerPath, fs.constants.R_OK);
-    core.info(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
+    core.debug(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
     return sdkmanagerPath;
 }
 
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
-    core.info(`Attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
+    core.debug(`Attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
     const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     try {
         await fs.access(sdkPath, fs.constants.R_OK);
     } catch (error) {
-        core.info(`android-${androidTargetSdk} not installed"`);
+        core.debug(`android-${androidTargetSdk} not installed`);
         return undefined;
     }
-    core.info(`sdkPath:\n  > "${sdkPath}"`);
+    core.debug(`sdkPath:\n  > "${sdkPath}"`);
     return sdkPath;
 }
 

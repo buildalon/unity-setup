@@ -23,12 +23,12 @@ async function GetEditorRootPath(editorPath) {
 }
 
 async function ReadFileContents(filePath) {
-    const fd = await fs.open(filePath, 'r');
+    const fileHandle = await fs.open(filePath, 'r');
     try {
-        const projectSettingsContent = await fd.readFile('utf8');
+        const projectSettingsContent = await fileHandle.readFile('utf8');
         return projectSettingsContent;
     } finally {
-        await fd.close();
+        await fileHandle.close();
     }
 }
 
