@@ -1,5 +1,5 @@
+const { FindGlobPattern } = require('./utility');
 const core = require('@actions/core');
-const glob = require('@actions/glob');
 const fs = require('fs').promises;
 const semver = require('semver');
 const path = require('path');
@@ -142,31 +142,22 @@ function getDefaultModules() {
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
     if (!projectVersionPath) {
-        projectVersionPath = await searchForVersionFile();
+        projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**/ProjectVersion.txt'));
     } else {
-        projectVersionPath = path.join(process.cwd(), projectVersionPath);
-        core.debug(`resolve absolute: ${projectVersionPath}`);
+        core.info(`projectVersionPath: ${projectVersionPath}`);
     }
     try {
         await fs.access(projectVersionPath, fs.constants.R_OK);
         return projectVersionPath;
     } catch (error) {
         try {
-            projectVersionPath = await searchForVersionFile();
+            projectVersionPath = await FindGlobPattern(projectVersionPath);
             await fs.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
         } catch (error) {
             // ignore
         }
         throw Error(`Could not find ProjectVersion.txt in ${projectVersionPath}`);
-    }
-}
-
-async function searchForVersionFile() {
-    const globber = await glob.create('**/ProjectVersion.txt');
-    for await (const file of globber.globGenerator()) {
-        core.debug(`resolve glob: ${file}`);
-        return file;
     }
 }
 

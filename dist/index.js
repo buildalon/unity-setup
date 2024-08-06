@@ -31143,8 +31143,8 @@ exports["default"] = _default;
 /***/ 7229:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+const { FindGlobPattern } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
-const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(1017);
@@ -31287,31 +31287,22 @@ function getDefaultModules() {
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
     if (!projectVersionPath) {
-        projectVersionPath = await searchForVersionFile();
+        projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**/ProjectVersion.txt'));
     } else {
-        projectVersionPath = path.join(process.cwd(), projectVersionPath);
-        core.debug(`resolve absolute: ${projectVersionPath}`);
+        core.info(`projectVersionPath: ${projectVersionPath}`);
     }
     try {
         await fs.access(projectVersionPath, fs.constants.R_OK);
         return projectVersionPath;
     } catch (error) {
         try {
-            projectVersionPath = await searchForVersionFile();
+            projectVersionPath = await FindGlobPattern(projectVersionPath);
             await fs.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
         } catch (error) {
             // ignore
         }
         throw Error(`Could not find ProjectVersion.txt in ${projectVersionPath}`);
-    }
-}
-
-async function searchForVersionFile() {
-    const globber = await glob.create('**/ProjectVersion.txt');
-    for await (const file of globber.globGenerator()) {
-        core.debug(`resolve glob: ${file}`);
-        return file;
     }
 }
 
@@ -31353,29 +31344,39 @@ module.exports = { ValidateInputs };
 /***/ 133:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { GetEditorRootPath, ReadFileContents } = __nccwpck_require__(4345);
+const { GetEditorRootPath, ReadFileContents, FindGlobPattern } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
-const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 const os = __nccwpck_require__(2037);
 
 async function CheckAndroidSdkInstalled(editorPath, projectPath) {
     core.startGroup('Validating Android Target SDK Installed...');
+    let sdkPath = undefined;
     try {
+        await createRepositoryCfg();
+        const rootEditorPath = await GetEditorRootPath(editorPath);
         const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
         const projectSettingsContent = await ReadFileContents(projectSettingsPath);
         const androidTargetSdk = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
         if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
-        core.info(`Android Target SDK:\n  > android-${androidTargetSdk}`);
-        await createRepositoryCfg();
-        const sdkManagerPath = await getSdkManager(editorPath);
-        const javaSdk = await getJDKPath(editorPath);
+        sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
+        if (sdkPath) {
+            core.info(`Target Android SDK android-${androidTargetSdk} Installed in:\n  > "${sdkPath}"`);
+            return;
+        }
+        core.info(`Installing Android Target SDK:\n  > android-${androidTargetSdk}`);
+        const sdkManagerPath = await getSdkManager(rootEditorPath);
+        const javaSdk = await getJDKPath(rootEditorPath);
         await execSdkManager(sdkManagerPath, javaSdk, ['--licenses']);
         await execSdkManager(sdkManagerPath, javaSdk, ['--update']);
         await execSdkManager(sdkManagerPath, javaSdk, ['platform-tools', `platforms;android-${androidTargetSdk}`]);
-        await validateSdkPath(editorPath, androidTargetSdk);
+        sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
+        if (!sdkPath) {
+            throw new Error(`Failed to install android-${androidTargetSdk} in ${rootEditorPath}`);
+        }
+        core.info(`Target Android SDK Installed in:\n  > "${sdkPath}"`);
     } finally {
         core.endGroup();
     }
@@ -31385,41 +31386,20 @@ async function createRepositoryCfg() {
     const androidPath = path.join(os.homedir(), '.android');
     await fs.mkdir(androidPath, { recursive: true });
     const fileHandle = await fs.open(path.join(androidPath, 'repositories.cfg'), 'w');
-    try {
-        // Empty file
-    } finally {
-        await fileHandle.close();
-    }
+    await fileHandle.close();
 }
 
-async function getJDKPath(editorPath) {
-    core.debug(`editorPath: ${editorPath}`);
-    const rootEditorPath = await GetEditorRootPath(editorPath);
-    core.debug(`rootEditorPath: ${rootEditorPath}`);
-    let globPath = path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK');
-    try {
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const jdkPath = globPaths[0];
-        if (!jdkPath) {
-            throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(jdkPath, fs.constants.R_OK);
-        core.info(`jdkPath:\n  > "${jdkPath}"`);
-        return jdkPath;
-    } catch (error) {
-        throw error;
+async function getJDKPath(rootEditorPath) {
+    const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
+    if (!jdkPath) {
+        throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
     }
+    await fs.access(jdkPath, fs.constants.R_OK);
+    core.debug(`jdkPath:\n  > "${jdkPath}"`);
+    return jdkPath;
 }
 
-async function getSdkManager(editorPath) {
-    core.debug(`editorPath: ${editorPath}`);
-    const rootEditorPath = await GetEditorRootPath(editorPath);
-    core.debug(`rootEditorPath: ${rootEditorPath}`);
+async function getSdkManager(rootEditorPath) {
     let globPath;
     switch (process.platform) {
         case 'darwin':
@@ -31432,38 +31412,26 @@ async function getSdkManager(editorPath) {
         default:
             throw new Error(`Unsupported platform: ${process.platform}`);
     }
-    try {
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const sdkmanagerPath = globPaths[0];
-        if (!sdkmanagerPath) {
-            throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(sdkmanagerPath, fs.constants.R_OK);
-        core.info(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
-        return sdkmanagerPath;
-    } catch (error) {
-        throw error;
+    const sdkmanagerPath = await FindGlobPattern(globPath);
+    if (!sdkmanagerPath) {
+        throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
     }
+    await fs.access(sdkmanagerPath, fs.constants.R_OK);
+    core.debug(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
+    return sdkmanagerPath;
 }
 
-async function validateSdkPath(editorPath, androidTargetSdk) {
-    core.debug(`attempting to validate Android SDK Path...\n  > editorPath: ${editorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
-    const rootEditorPath = await GetEditorRootPath(editorPath);
-    core.debug(`rootEditorPath: ${rootEditorPath}`);
-    const sdkPath = path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`);
-    core.debug(`sdkPath: ${sdkPath}`);
-    const globber = await glob.create(sdkPath);
-    const globPaths = await globber.glob();
-    core.debug(`globPaths: ${globPaths}`);
-    if (globPaths.length === 0) {
-        throw new Error(`Failed to install Android SDK: ${sdkPath}`);
+async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
+    core.debug(`Attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
+    const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
+    try {
+        await fs.access(sdkPath, fs.constants.R_OK);
+    } catch (error) {
+        core.debug(`android-${androidTargetSdk} not installed`);
+        return undefined;
     }
-    core.info(`Target Android SDK Installed in:\n  > "${globPaths[0]}"`);
+    core.debug(`sdkPath:\n  > "${sdkPath}"`);
+    return sdkPath;
 }
 
 async function execSdkManager(sdkManagerPath, javaSdk, args) {
@@ -31588,6 +31556,9 @@ async function installUnityHub() {
                     listeners: {
                         stdout: (data) => {
                             output += data.toString();
+                        },
+                        stderr: (data) => {
+                            output += data.toString();
                         }
                     }
                 });
@@ -31619,6 +31590,9 @@ async function execUnityHub(args) {
                 listeners: {
                     stdout: (data) => {
                         output += data.toString();
+                    },
+                    stderr: (data) => {
+                        output += data.toString();
                     }
                 },
                 ignoreReturnCode: true
@@ -31638,6 +31612,9 @@ async function execUnityHub(args) {
                         }
                     },
                     stdout: (data) => {
+                        output += data.toString();
+                    },
+                    stderr: (data) => {
                         output += data.toString();
                     }
                 },
@@ -31820,6 +31797,7 @@ module.exports = { Get, Unity, ListInstalledEditors }
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(2186);
+const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 
@@ -31843,16 +31821,25 @@ async function GetEditorRootPath(editorPath) {
 }
 
 async function ReadFileContents(filePath) {
-    const fd = await fs.open(filePath, 'r');
+    const fileHandle = await fs.open(filePath, 'r');
     try {
-        const projectSettingsContent = await fd.readFile('utf8');
+        const projectSettingsContent = await fileHandle.readFile('utf8');
         return projectSettingsContent;
     } finally {
-        await fd.close();
+        await fileHandle.close();
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents };
+async function FindGlobPattern(pattern) {
+    core.debug(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
+    for await (const file of globber.globGenerator()) {
+        core.debug(`found glob: ${file}`);
+        return file;
+    }
+}
+
+module.exports = { GetEditorRootPath, ReadFileContents, FindGlobPattern };
 
 
 /***/ }),

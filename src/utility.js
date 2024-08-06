@@ -1,4 +1,5 @@
 const core = require('@actions/core');
+const glob = require('@actions/glob');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -22,13 +23,22 @@ async function GetEditorRootPath(editorPath) {
 }
 
 async function ReadFileContents(filePath) {
-    const fd = await fs.open(filePath, 'r');
+    const fileHandle = await fs.open(filePath, 'r');
     try {
-        const projectSettingsContent = await fd.readFile('utf8');
+        const projectSettingsContent = await fileHandle.readFile('utf8');
         return projectSettingsContent;
     } finally {
-        await fd.close();
+        await fileHandle.close();
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents };
+async function FindGlobPattern(pattern) {
+    core.debug(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
+    for await (const file of globber.globGenerator()) {
+        core.debug(`found glob: ${file}`);
+        return file;
+    }
+}
+
+module.exports = { GetEditorRootPath, ReadFileContents, FindGlobPattern };
