@@ -6,15 +6,16 @@ const path = require('path');
 const os = require('os');
 
 async function CheckAndroidSdkInstalled(editorPath, projectPath) {
-    core.startGroup('Validating Android Target SDK Installed...');
     let sdkPath = undefined;
+    await createRepositoryCfg();
+    const rootEditorPath = await GetEditorRootPath(editorPath);
+    const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
+    const projectSettingsContent = await ReadFileContents(projectSettingsPath);
+    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/));
+    core.debug(`AndroidTargetSdkVersion:\n  > ${androidTargetSdk}`);
+    if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
+    core.startGroup('Validating Android Target SDK Installed...');
     try {
-        await createRepositoryCfg();
-        const rootEditorPath = await GetEditorRootPath(editorPath);
-        const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
-        const projectSettingsContent = await ReadFileContents(projectSettingsPath);
-        const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/));
-        if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
         sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
         if (sdkPath) {
             core.info(`Target Android SDK android-${androidTargetSdk} Installed in:\n  > "${sdkPath}"`);
