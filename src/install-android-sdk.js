@@ -13,7 +13,7 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
         const rootEditorPath = await GetEditorRootPath(editorPath);
         const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
         const projectSettingsContent = await ReadFileContents(projectSettingsPath);
-        const androidTargetSdk = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
+        const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/));
         if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
         sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
         if (sdkPath) {
