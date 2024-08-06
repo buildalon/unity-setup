@@ -46,17 +46,13 @@ async function createRepositoryCfg() {
 }
 
 async function getJDKPath(rootEditorPath) {
-    try {
-        const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
-        if (!jdkPath) {
-            throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(jdkPath, fs.constants.R_OK);
-        core.info(`jdkPath:\n  > "${jdkPath}"`);
-        return jdkPath;
-    } catch (error) {
-        throw error;
+    const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
+    if (!jdkPath) {
+        throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
     }
+    await fs.access(jdkPath, fs.constants.R_OK);
+    core.info(`jdkPath:\n  > "${jdkPath}"`);
+    return jdkPath;
 }
 
 async function getSdkManager(rootEditorPath) {
@@ -82,12 +78,16 @@ async function getSdkManager(rootEditorPath) {
 }
 
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
-    core.info(`attempting to validate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
+    core.info(`attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
     const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     if (!sdkPath) {
         throw new Error(`Failed to resolve Android SDK`);
     }
-    await fs.access(sdkPath, fs.constants.R_OK);
+    try {
+        await fs.access(sdkPath, fs.constants.R_OK);
+    } catch (error) {
+        return undefined;
+    }
     core.info(`sdkPath:\n  > "${sdkPath}"`);
     return sdkPath;
 }
