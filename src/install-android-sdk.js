@@ -1,4 +1,4 @@
-const { GetEditorRootPath, ReadFileContents, GetGlob } = require('./utility');
+const { GetEditorRootPath, ReadFileContents, FindGlobPattern } = require('./utility');
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const glob = require('@actions/glob');
@@ -47,7 +47,7 @@ async function createRepositoryCfg() {
 
 async function getJDKPath(rootEditorPath) {
     try {
-        const jdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
+        const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
         if (!jdkPath) {
             throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
         }
@@ -72,7 +72,7 @@ async function getSdkManager(rootEditorPath) {
         default:
             throw new Error(`Unsupported platform: ${process.platform}`);
     }
-    const sdkmanagerPath = await GetGlob(globPath);
+    const sdkmanagerPath = await FindGlobPattern(globPath);
     if (!sdkmanagerPath) {
         throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
     }
@@ -83,7 +83,7 @@ async function getSdkManager(rootEditorPath) {
 
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
     core.info(`attempting to validate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
-    const sdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
+    const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     if (!sdkPath) {
         throw new Error(`Failed to resolve Android SDK`);
     }

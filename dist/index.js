@@ -31143,8 +31143,8 @@ exports["default"] = _default;
 /***/ 7229:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+const { FindGlobPattern } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
-const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(1017);
@@ -31287,32 +31287,22 @@ function getDefaultModules() {
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
     if (!projectVersionPath) {
-        projectVersionPath = await searchForVersionFile();
+        projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**/ProjectVersion.txt'));
     } else {
-        projectVersionPath = path.join(process.cwd(), projectVersionPath);
-        core.info(`resolve absolute: ${projectVersionPath}`);
+        core.info(`projectVersionPath: ${projectVersionPath}`);
     }
     try {
         await fs.access(projectVersionPath, fs.constants.R_OK);
         return projectVersionPath;
     } catch (error) {
         try {
-            projectVersionPath = await searchForVersionFile();
+            projectVersionPath = await FindGlobPattern(projectVersionPath);
             await fs.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
         } catch (error) {
             // ignore
         }
         throw Error(`Could not find ProjectVersion.txt in ${projectVersionPath}`);
-    }
-}
-
-async function searchForVersionFile() {
-    core.info(`searching for ProjectVersion.txt...`);
-    const globber = await glob.create(path.join(process.cwd(), '**/ProjectVersion.txt'));
-    for await (const file of globber.globGenerator()) {
-        core.info(`resolve glob: ${file}`);
-        return file;
     }
 }
 
@@ -31354,7 +31344,7 @@ module.exports = { ValidateInputs };
 /***/ 133:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { GetEditorRootPath, ReadFileContents, GetGlob } = __nccwpck_require__(4345);
+const { GetEditorRootPath, ReadFileContents, FindGlobPattern } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const glob = __nccwpck_require__(8090);
@@ -31403,7 +31393,7 @@ async function createRepositoryCfg() {
 
 async function getJDKPath(rootEditorPath) {
     try {
-        const jdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
+        const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
         if (!jdkPath) {
             throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
         }
@@ -31428,7 +31418,7 @@ async function getSdkManager(rootEditorPath) {
         default:
             throw new Error(`Unsupported platform: ${process.platform}`);
     }
-    const sdkmanagerPath = await GetGlob(globPath);
+    const sdkmanagerPath = await FindGlobPattern(globPath);
     if (!sdkmanagerPath) {
         throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
     }
@@ -31439,7 +31429,7 @@ async function getSdkManager(rootEditorPath) {
 
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
     core.info(`attempting to validate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
-    const sdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
+    const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     if (!sdkPath) {
         throw new Error(`Failed to resolve Android SDK`);
     }
@@ -31835,16 +31825,16 @@ async function ReadFileContents(filePath) {
     }
 }
 
-async function GetGlob(globPath) {
-    core.info(`searching for glob: ${globPath}`);
-    const globber = await glob.create(globPath);
+async function FindGlobPattern(pattern) {
+    core.info(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
         core.info(`found glob: ${file}`);
         return file;
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents, GetGlob };
+module.exports = { GetEditorRootPath, ReadFileContents, FindGlobPattern };
 
 
 /***/ }),

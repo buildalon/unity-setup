@@ -32,13 +32,13 @@ async function ReadFileContents(filePath) {
     }
 }
 
-async function GetGlob(globPath) {
-    core.info(`searching for glob: ${globPath}`);
-    const globber = await glob.create(globPath);
+async function FindGlobPattern(pattern) {
+    core.info(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
         core.info(`found glob: ${file}`);
         return file;
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents, GetGlob };
+module.exports = { GetEditorRootPath, ReadFileContents, FindGlobPattern };
