@@ -28,6 +28,9 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
         await execSdkManager(sdkManagerPath, javaSdk, ['--update']);
         await execSdkManager(sdkManagerPath, javaSdk, ['platform-tools', `platforms;android-${androidTargetSdk}`]);
         sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
+        if (!sdkPath) {
+            throw new Error(`Failed to install android-${androidTargetSdk} in ${rootEditorPath}`);
+        }
         core.info(`Target Android SDK Installed in:\n  > "${sdkPath}"`);
     } finally {
         core.endGroup();
@@ -78,14 +81,12 @@ async function getSdkManager(rootEditorPath) {
 }
 
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
-    core.info(`attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
+    core.info(`Attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
     const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
-    if (!sdkPath) {
-        throw new Error(`Failed to resolve Android SDK`);
-    }
     try {
         await fs.access(sdkPath, fs.constants.R_OK);
     } catch (error) {
+        core.info(`android-${androidTargetSdk} not installed"`);
         return undefined;
     }
     core.info(`sdkPath:\n  > "${sdkPath}"`);
