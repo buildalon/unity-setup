@@ -32,9 +32,11 @@ async function ReadFileContents(filePath) {
     }
 }
 
-async function GetGlob(globPath, globOptions) {
-    const globber = await glob.create(globPath, globOptions);
+async function GetGlob(globPath) {
+    core.info(`searching for glob: ${globPath}`);
+    const globber = await glob.create(globPath);
     for await (const file of globber.globGenerator()) {
+        core.info(`found glob: ${file}`);
         return file;
     }
 }

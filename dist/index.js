@@ -31438,7 +31438,7 @@ async function getSdkManager(rootEditorPath) {
 }
 
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
-    core.debug(`attempting to validate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
+    core.info(`attempting to validate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
     const sdkPath = await GetGlob(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     if (!sdkPath) {
         throw new Error(`Failed to resolve Android SDK`);
@@ -31835,9 +31835,11 @@ async function ReadFileContents(filePath) {
     }
 }
 
-async function GetGlob(globPath, globOptions) {
-    const globber = await glob.create(globPath, globOptions);
+async function GetGlob(globPath) {
+    core.info(`searching for glob: ${globPath}`);
+    const globber = await glob.create(globPath);
     for await (const file of globber.globGenerator()) {
+        core.info(`found glob: ${file}`);
         return file;
     }
 }
