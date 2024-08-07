@@ -1,10 +1,12 @@
-const { GetEditorRootPath, ReadFileContents } = require('./utility');
+const { GetHubRootPath, GetEditorRootPath, ReadFileContents } = require('./utility');
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require('fs').promises;
 const semver = require('semver');
 const path = require('path');
 const os = require('os');
+const asar = require('@electron/asar');
+const yaml = require('yaml');
 
 const unityHub = init();
 let hubPath = unityHub.hubPath;
@@ -33,14 +35,16 @@ function init() {
 }
 
 async function Get() {
-    if (process.platform === 'win32') {
-        // TODO always install Unity Hub on Windows
-        // until windows-latest runner has been updated with latest hub version
+    try {
+        await fs.access(hubPath, fs.constants.X_OK);
+    } catch (error) {
         hubPath = await installUnityHub();
     }
-    try {
-        await fs.access(hubPath, fs.constants.R_OK);
-    } catch (error) {
+    const hubVersion = await getInstalledHubVersion();
+    core.info(`Unity Hub Version:\n  > ${hubVersion}`);
+    const latestHubVersion = await getLatestHubVersion();
+    if (semver.lt(hubVersion, latestHubVersion)) {
+        core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
         hubPath = await installUnityHub();
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
@@ -64,7 +68,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.R_OK);
+                await fs.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'darwin':
@@ -74,7 +78,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.R_OK);
+                await fs.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'linux':
@@ -95,9 +99,56 @@ async function installUnityHub() {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
                 const hubPath = output.match(/UNITY_HUB (.+)/)[1];
-                await fs.access(hubPath, fs.constants.R_OK);
+                await fs.access(hubPath, fs.constants.X_OK);
                 return hubPath;
             }
+    }
+}
+
+async function getInstalledHubVersion() {
+    try {
+        let asarPath = undefined;
+        const baseHubPath = await GetHubRootPath(hubPath);
+        switch (process.platform) {
+            case 'darwin':
+                asarPath = path.join(baseHubPath, 'Contents', 'Resources', 'app.asar');
+                break;
+            default:
+                asarPath = path.join(baseHubPath, 'resources', 'app.asar');
+                break;
+        }
+        await fs.access(asarPath, fs.constants.R_OK);
+        const fileBuffer = asar.extractFile(asarPath, 'package.json');
+        const packageJson = JSON.parse(fileBuffer.toString());
+        return semver.coerce(packageJson.version);
+    } catch (error) {
+        core.error(error);
+        return undefined;
+    }
+}
+
+async function getLatestHubVersion() {
+    try {
+        let url = undefined;
+        switch (process.platform) {
+            case 'win32':
+                url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest.yml';
+                break;
+            case 'darwin':
+                url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-mac.yml';
+                break;
+            case 'linux':
+                url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-linux.yml';
+                break;
+        }
+        const response = await fetch(url);
+        const data = await response.text();
+        const parsed = yaml.parse(data);
+        const version = semver.coerce(parsed.version);
+        return version;
+    } catch (error) {
+        core.error(error);
+        return undefined;
     }
 }
 
