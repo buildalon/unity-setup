@@ -34657,7 +34657,7 @@ async function getInstalledHubVersion() {
                 asarPath = path.join(baseHubPath, 'Contents', 'Resources', 'app.asar');
                 break;
             default:
-                asarPath = path.join(baseHubPath, 'resources', 'app.asar.unpacked');
+                asarPath = path.join(baseHubPath, 'resources', 'app.asar');
                 break;
         }
         await fs.access(asarPath, fs.constants.R_OK);
@@ -34665,6 +34665,7 @@ async function getInstalledHubVersion() {
         const packageJson = JSON.parse(fileBuffer.toString());
         return semver.coerce(packageJson.version);
     } catch (error) {
+        core.error(error);
         return undefined;
     }
 }
