@@ -31192,7 +31192,7 @@ async function ValidateInputs() {
     const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
     const versions = getUnityVersionsFromInput();
     const pathInput = core.getInput('version-file');
-    const overrideVersion = pathInput && pathInput.length > 0 && versions.length > 0;
+    const overrideVersion = pathInput === undefined || (pathInput && pathInput.length > 0 && versions.length > 0);
     if (versions.length > 0) {
         const version = versions.find(([v, c]) => v === unityVersion && c === changeset);
         if (!version && !overrideVersion) {
