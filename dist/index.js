@@ -34652,7 +34652,7 @@ async function installUnityHub() {
 }
 
 async function getInstalledHubVersion() {
-    const baseHubPath = await GetRootPath(hubPath);
+    const baseHubPath = await GetHubRootPath(hubPath);
     const fileBuffer = asar.extractFile(path.join(baseHubPath, 'resources', 'app.asar'), 'package.json');
     const packageJson = JSON.parse(fileBuffer.toString());
     return semver.coerce(packageJson.version);
