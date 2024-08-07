@@ -10,7 +10,6 @@ const yaml = require('yaml');
 
 const unityHub = init();
 let hubPath = unityHub.hubPath;
-let hubVersion = undefined;
 
 function init() {
     switch (process.platform) {
@@ -41,10 +40,8 @@ async function Get() {
     } catch (error) {
         hubPath = await installUnityHub();
     }
-    if (!hubVersion) {
-        hubVersion = await getInstalledHubVersion();
-        core.info(`Installed Unity Hub Version: ${hubVersion}`);
-    }
+    const hubVersion = await getInstalledHubVersion();
+    core.info(`Installed Unity Hub Version: ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
     if (semver.lt(hubVersion, latestHubVersion)) {
         hubPath = await installUnityHub();
@@ -108,10 +105,24 @@ async function installUnityHub() {
 }
 
 async function getInstalledHubVersion() {
-    const baseHubPath = await GetHubRootPath(hubPath);
-    const fileBuffer = asar.extractFile(path.join(baseHubPath, 'resources', 'app.asar'), 'package.json');
-    const packageJson = JSON.parse(fileBuffer.toString());
-    return semver.coerce(packageJson.version);
+    try {
+        let asarPath = undefined;
+        const baseHubPath = await GetHubRootPath(hubPath);
+        switch (process.platform) {
+            case 'darwin':
+                asarPath = path.join(baseHubPath, 'Contents', 'Resources', 'app.asar');
+                break;
+            default:
+                asarPath = path.join(baseHubPath, 'resources', 'app.asar.unpacked');
+                break;
+        }
+        await fs.access(asarPath, fs.constants.R_OK);
+        const fileBuffer = asar.extractFile(asarPath, 'package.json');
+        const packageJson = JSON.parse(fileBuffer.toString());
+        return semver.coerce(packageJson.version);
+    } catch (error) {
+        return undefined;
+    }
 }
 
 async function getLatestHubVersion() {
