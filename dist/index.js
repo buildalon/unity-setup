@@ -34588,7 +34588,7 @@ async function Get() {
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
     if (semver.lt(hubVersion, latestHubVersion)) {
-        core.info(`Installing Latest Unity Hub Version:\n  > ${version}`);
+        core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
         hubPath = await installUnityHub();
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
