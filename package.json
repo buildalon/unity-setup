@@ -1,6 +1,6 @@
 {
   "name": "unity-setup",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A GitHub action for setting up the Unity Game Engine for CI/CD workflows.",
   "author": "Buildalon",
   "license": "MIT",

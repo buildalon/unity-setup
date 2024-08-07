@@ -13,7 +13,7 @@ inputs:
     required: false
     default: ''
   build-targets:
-    description: 'Specify the build targets to install modules for. One or more of `StandaloneWindows64` `WSAPlayer` `StandaloneOSX` `iOS` `StandaloneLinux64` `Android` `Lumin` `WebGL`.'
+    description: 'Specify the build targets to install modules for. One or more of `StandaloneWindows64` `WSAPlayer` `StandaloneOSX` `iOS` `StandaloneLinux64` `Android` `Lumin` `WebGL` `VisionOS`.'
     required: false
     default: ''
   modules:
