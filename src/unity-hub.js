@@ -41,9 +41,10 @@ async function Get() {
         hubPath = await installUnityHub();
     }
     const hubVersion = await getInstalledHubVersion();
-    core.info(`Installed Unity Hub Version: ${hubVersion}`);
+    core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
     if (semver.lt(hubVersion, latestHubVersion)) {
+        core.info(`Installing Latest Unity Hub Version:\n  > ${version}`);
         hubPath = await installUnityHub();
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
@@ -143,7 +144,6 @@ async function getLatestHubVersion() {
     const data = await response.text();
     const parsed = yaml.parse(data);
     const version = semver.coerce(parsed.version);
-    core.info(`Latest Unity Hub Version: ${version}`);
     return version;
 }
 
