@@ -34542,7 +34542,7 @@ module.exports = { CheckAndroidSdkInstalled };
 /***/ 5798:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { GetEditorRootPath, ReadFileContents } = __nccwpck_require__(4345);
+const { GetHubRootPath, GetEditorRootPath, ReadFileContents } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const fs = (__nccwpck_require__(7147).promises);
@@ -34652,7 +34652,8 @@ async function installUnityHub() {
 }
 
 async function getInstalledHubVersion() {
-    const fileBuffer = asar.extractFile(path.join(hubPath, 'resources', 'app.asar'), 'package.json');
+    const baseHubPath = await GetRootPath(hubPath);
+    const fileBuffer = asar.extractFile(path.join(baseHubPath, 'resources', 'app.asar'), 'package.json');
     const packageJson = JSON.parse(fileBuffer.toString());
     return semver.coerce(packageJson.version);
 }
@@ -34907,6 +34908,23 @@ const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 
+async function GetHubRootPath(hubPath) {
+    core.debug(`searching for hub root path: ${hubPath}`);
+    let hubRootPath = hubPath;
+    switch (process.platform) {
+        case 'darwin':
+            hubRootPath = path.join(hubPath, '../../../');
+            break;
+        case 'win32':
+            hubRootPath = path.join(hubPath, '../');
+            break
+        case 'linux':
+            hubRootPath = path.join(hubPath, '../');
+            break;
+    }
+    return hubRootPath;
+}
+
 async function GetEditorRootPath(editorPath) {
     core.debug(`searching for editor root path: ${editorPath}`);
     let editorRootPath = editorPath;
@@ -34945,7 +34963,7 @@ async function FindGlobPattern(pattern) {
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents, FindGlobPattern };
+module.exports = { GetHubRootPath, GetEditorRootPath, ReadFileContents, FindGlobPattern };
 
 
 /***/ }),

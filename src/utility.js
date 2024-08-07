@@ -3,6 +3,23 @@ const glob = require('@actions/glob');
 const fs = require('fs').promises;
 const path = require('path');
 
+async function GetHubRootPath(hubPath) {
+    core.debug(`searching for hub root path: ${hubPath}`);
+    let hubRootPath = hubPath;
+    switch (process.platform) {
+        case 'darwin':
+            hubRootPath = path.join(hubPath, '../../../');
+            break;
+        case 'win32':
+            hubRootPath = path.join(hubPath, '../');
+            break
+        case 'linux':
+            hubRootPath = path.join(hubPath, '../');
+            break;
+    }
+    return hubRootPath;
+}
+
 async function GetEditorRootPath(editorPath) {
     core.debug(`searching for editor root path: ${editorPath}`);
     let editorRootPath = editorPath;
@@ -41,4 +58,4 @@ async function FindGlobPattern(pattern) {
     }
 }
 
-module.exports = { GetEditorRootPath, ReadFileContents, FindGlobPattern };
+module.exports = { GetHubRootPath, GetEditorRootPath, ReadFileContents, FindGlobPattern };

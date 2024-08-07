@@ -1,4 +1,4 @@
-const { GetEditorRootPath, ReadFileContents } = require('./utility');
+const { GetHubRootPath, GetEditorRootPath, ReadFileContents } = require('./utility');
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require('fs').promises;
@@ -108,7 +108,8 @@ async function installUnityHub() {
 }
 
 async function getInstalledHubVersion() {
-    const fileBuffer = asar.extractFile(path.join(hubPath, 'resources', 'app.asar'), 'package.json');
+    const baseHubPath = await GetRootPath(hubPath);
+    const fileBuffer = asar.extractFile(path.join(baseHubPath, 'resources', 'app.asar'), 'package.json');
     const packageJson = JSON.parse(fileBuffer.toString());
     return semver.coerce(packageJson.version);
 }
