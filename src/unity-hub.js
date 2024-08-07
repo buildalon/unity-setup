@@ -5,9 +5,12 @@ const fs = require('fs').promises;
 const semver = require('semver');
 const path = require('path');
 const os = require('os');
+const asar = require('@electron/asar');
+const yaml = require('yaml');
 
 const unityHub = init();
 let hubPath = unityHub.hubPath;
+let hubVersion = undefined;
 
 function init() {
     switch (process.platform) {
@@ -33,14 +36,17 @@ function init() {
 }
 
 async function Get() {
-    if (process.platform === 'win32') {
-        // TODO always install Unity Hub on Windows
-        // until windows-latest runner has been updated with latest hub version
+    try {
+        await fs.access(hubPath, fs.constants.X_OK);
+    } catch (error) {
         hubPath = await installUnityHub();
     }
-    try {
-        await fs.access(hubPath, fs.constants.R_OK);
-    } catch (error) {
+    if (!hubVersion) {
+        hubVersion = await getInstalledHubVersion();
+        core.info(`Installed Unity Hub Version: ${hubVersion}`);
+    }
+    const latestHubVersion = await getLatestHubVersion();
+    if (semver.lt(hubVersion, latestHubVersion)) {
         hubPath = await installUnityHub();
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
@@ -99,6 +105,33 @@ async function installUnityHub() {
                 return hubPath;
             }
     }
+}
+
+async function getInstalledHubVersion() {
+    const fileBuffer = asar.extractFile(path.join(hubPath, 'resources', 'app.asar'), 'package.json');
+    const packageJson = JSON.parse(fileBuffer.toString());
+    return semver.coerce(packageJson.version);
+}
+
+async function getLatestHubVersion() {
+    let url = undefined;
+    switch (process.platform) {
+        case 'win32':
+            url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest.yml';
+            break;
+        case 'darwin':
+            url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-mac.yml';
+            break;
+        case 'linux':
+            url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-linux.yml';
+            break;
+    }
+    const response = await fetch(url);
+    const data = await response.text();
+    const parsed = yaml.parse(data);
+    const version = semver.coerce(parsed.version);
+    core.info(`Latest Unity Hub Version: ${version}`);
+    return version;
 }
 
 const ignoredLines = [
