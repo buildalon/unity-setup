@@ -12,7 +12,13 @@ A GitHub Action for setting up the [Unity Game Engine](https://unity.com) on Git
 strategy:
   matrix:
     os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
-    unity-versions: [2020.3.48f1 (b805b124c6b7), 2021.3.41f1 (6c5a9e20c022), 2022.3.40f1 (cbdda657d2f0)]
+    unity-versions:
+      - 'in version file'
+      - 2019.4.40f1 (ffc62b691db5)
+      - 2020.3.48f1 (b805b124c6b7)
+      - 2021.3.41f1 (6c5a9e20c022)
+      - 2022.3.40f1 (cbdda657d2f0)
+      - 6000.0.13f1 (53a692e3fca9)
     include:
       - os: ubuntu-latest
         build-targets: StandaloneLinux64, Android, iOS
