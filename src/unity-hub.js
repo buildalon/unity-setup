@@ -68,7 +68,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.R_OK);
+                await fs.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'darwin':
@@ -78,7 +78,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.R_OK);
+                await fs.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'linux':
@@ -99,7 +99,7 @@ async function installUnityHub() {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
                 const hubPath = output.match(/UNITY_HUB (.+)/)[1];
-                await fs.access(hubPath, fs.constants.R_OK);
+                await fs.access(hubPath, fs.constants.X_OK);
                 return hubPath;
             }
     }
@@ -128,23 +128,28 @@ async function getInstalledHubVersion() {
 }
 
 async function getLatestHubVersion() {
-    let url = undefined;
-    switch (process.platform) {
-        case 'win32':
-            url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest.yml';
-            break;
-        case 'darwin':
-            url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-mac.yml';
-            break;
-        case 'linux':
-            url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-linux.yml';
-            break;
+    try {
+        let url = undefined;
+        switch (process.platform) {
+            case 'win32':
+                url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest.yml';
+                break;
+            case 'darwin':
+                url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-mac.yml';
+                break;
+            case 'linux':
+                url = 'https://public-cdn.cloud.unity3d.com/hub/prod/latest-linux.yml';
+                break;
+        }
+        const response = await fetch(url);
+        const data = await response.text();
+        const parsed = yaml.parse(data);
+        const version = semver.coerce(parsed.version);
+        return version;
+    } catch (error) {
+        core.error(error);
+        return undefined;
     }
-    const response = await fetch(url);
-    const data = await response.text();
-    const parsed = yaml.parse(data);
-    const version = semver.coerce(parsed.version);
-    return version;
 }
 
 const ignoredLines = [
