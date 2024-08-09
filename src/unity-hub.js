@@ -179,7 +179,7 @@ async function execUnityHub(args) {
             });
             break;
         case 'linux': // xvfb-run --auto-servernum "~/Unity Hub/UnityHub.AppImage" --headless help
-            core.info(`[command]"xvfb-run" --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
+            core.info(`[command]xvfb-run --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
             await exec.exec('xvfb-run', ['--auto-servernum', hubPath, '--headless', ...args], {
                 listeners: {
                     stdline: (data) => {
@@ -314,8 +314,12 @@ async function checkInstalledEditors(version, architecture, failOnEmpty = true) 
     if (!editorPath) {
         throw new Error(`Failed to find installed Unity Editor: ${version} ${architecture ?? ''}`);
     }
-    if (process.platform === 'darwin') {
-        editorPath = path.join(editorPath, '/Contents/MacOS/Unity');
+    switch (process.platform) {
+        case 'darwin':
+            editorPath = path.join(editorPath, '/Contents/MacOS/Unity');
+            break;
+        default:
+            break;
     }
     await fs.access(editorPath, fs.constants.R_OK);
     core.debug(`Found installed Unity Editor: ${editorPath}`);
