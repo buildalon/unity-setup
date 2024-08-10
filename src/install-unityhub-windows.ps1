@@ -8,4 +8,3 @@ Write-Host "`"$tempPath`" /S"
 $process = Start-Process -FilePath $tempPath -ArgumentList '/S' -PassThru -Wait
 Write-Host "::endgroup::"
 exit [int]$process.ExitCode
-

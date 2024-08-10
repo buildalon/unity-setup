@@ -42,20 +42,22 @@ async function ValidateInputs() {
     if (modules.length == 0) {
         throw Error('No modules or build-targets provided!');
     }
-    const versionFilePath = await getVersionFilePath();
-    core.info(`versionFilePath:\n  > "${versionFilePath}"`);
-    const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
     const versions = getUnityVersionsFromInput();
-    if (versions.length === 0) {
-        versions.push([unityVersion, changeset]);
+    const versionFilePath = await getVersionFilePath();
+    const unityProjectPath = versionFilePath ? path.join(versionFilePath, '..', '..') : undefined;
+    if (versionFilePath) {
+        core.info(`versionFilePath:\n  > "${versionFilePath}"`);
+        core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
+        const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
+        if (versions.length === 0) {
+            versions.push([unityVersion, changeset]);
+        }
     }
     versions.sort(([a], [b]) => semver.compare(a, b, true));
     core.info(`Unity Versions:`);
     for (const [version, changeset] of versions) {
         core.info(`  > ${version} (${changeset})`);
     }
-    const unityProjectPath = path.join(versionFilePath, '..', '..');
-    core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
     return [versions, architecture, modules, unityProjectPath];
 }
 
@@ -157,7 +159,7 @@ async function getVersionFilePath() {
                 core.debug(error);
             }
         }
-        throw Error(`Could not find ProjectVersion.txt in ${projectVersionPath}`);
+        debug.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
     }
 }
 

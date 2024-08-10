@@ -6,7 +6,9 @@ const core = require('@actions/core');
 const main = async () => {
     try {
         const [versions, architecture, modules, unityProjectPath] = await ValidateInputs();
-        core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+        if (unityProjectPath) {
+            core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+        }
         const unityHubPath = await unityHub.Get();
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
         const editors = [];
