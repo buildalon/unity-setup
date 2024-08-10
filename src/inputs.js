@@ -159,7 +159,7 @@ async function getVersionFilePath() {
                     await fs.access(projectVersionPath, fs.constants.R_OK);
                     return projectVersionPath;
                 } catch (error) {
-                    core.debug(error);
+                    // ignore
                 }
             }
         }
