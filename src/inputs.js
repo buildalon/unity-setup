@@ -44,7 +44,7 @@ async function ValidateInputs() {
     }
     const versions = getUnityVersionsFromInput();
     const versionFilePath = await getVersionFilePath();
-    const unityProjectPath = versionFilePath ? path.join(versionFilePath, '..', '..') : undefined;
+    const unityProjectPath = versionFilePath !== undefined ? path.join(versionFilePath, '..', '..') : undefined;
     if (versionFilePath) {
         core.info(`versionFilePath:\n  > "${versionFilePath}"`);
         core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
