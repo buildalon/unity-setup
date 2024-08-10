@@ -34356,27 +34356,30 @@ async function getVersionFilePath() {
     if (!projectVersionPath) {
         projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
     }
-    try {
-        await fs.access(projectVersionPath, fs.constants.R_OK);
-        return projectVersionPath;
-    } catch (error) {
-        core.debug(error);
+    if (projectVersionPath) {
         try {
-            projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
             await fs.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
         } catch (error) {
-            core.error(error);
+            core.debug(error);
             try {
-                projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
+                projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
                 await fs.access(projectVersionPath, fs.constants.R_OK);
                 return projectVersionPath;
             } catch (error) {
-                core.debug(error);
+                core.error(error);
+                try {
+                    projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
+                    await fs.access(projectVersionPath, fs.constants.R_OK);
+                    return projectVersionPath;
+                } catch (error) {
+                    core.debug(error);
+                }
             }
         }
-        core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
     }
+    core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
+    return undefined;
 }
 
 function getUnityVersionsFromInput() {
@@ -45401,7 +45404,7 @@ const main = async () => {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
             // for now just export the highest installed version
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
-            if (modules.includes('android') && unityProjectPath != undefined) {
+            if (modules.includes('android') && unityProjectPath !== undefined) {
                 await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
             }
             editors.push([version, unityEditorPath]);
