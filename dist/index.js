@@ -34353,6 +34353,9 @@ function getDefaultModules() {
 
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
+    if (projectVersionPath !== undefined && projectVersionPath.toLowerCase() === 'none') {
+        return undefined;
+    }
     if (!projectVersionPath) {
         projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
     }
