@@ -6,7 +6,9 @@ const core = require('@actions/core');
 const main = async () => {
     try {
         const [versions, architecture, modules, unityProjectPath] = await ValidateInputs();
-        core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+        if (unityProjectPath) {
+            core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+        }
         const unityHubPath = await unityHub.Get();
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
         const editors = [];
@@ -14,7 +16,7 @@ const main = async () => {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
             // for now just export the highest installed version
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
-            if (modules.includes('android')) {
+            if (modules.includes('android') && unityProjectPath !== undefined) {
                 await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
             }
             editors.push([version, unityEditorPath]);

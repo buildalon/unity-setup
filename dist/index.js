@@ -34259,20 +34259,22 @@ async function ValidateInputs() {
     if (modules.length == 0) {
         throw Error('No modules or build-targets provided!');
     }
-    const versionFilePath = await getVersionFilePath();
-    core.info(`versionFilePath:\n  > "${versionFilePath}"`);
-    const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
     const versions = getUnityVersionsFromInput();
-    if (versions.length === 0) {
-        versions.push([unityVersion, changeset]);
+    const versionFilePath = await getVersionFilePath();
+    const unityProjectPath = versionFilePath !== undefined ? path.join(versionFilePath, '..', '..') : undefined;
+    if (versionFilePath) {
+        core.info(`versionFilePath:\n  > "${versionFilePath}"`);
+        core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
+        const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
+        if (versions.length === 0) {
+            versions.push([unityVersion, changeset]);
+        }
     }
     versions.sort(([a], [b]) => semver.compare(a, b, true));
     core.info(`Unity Versions:`);
     for (const [version, changeset] of versions) {
         core.info(`  > ${version} (${changeset})`);
     }
-    const unityProjectPath = path.join(versionFilePath, '..', '..');
-    core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
     return [versions, architecture, modules, unityProjectPath];
 }
 
@@ -34351,31 +34353,36 @@ function getDefaultModules() {
 
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
-    if (projectVersionPath) {
-    } else {
+    if (projectVersionPath !== undefined && projectVersionPath.toLowerCase() === 'none') {
+        return undefined;
+    }
+    if (!projectVersionPath) {
         projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
     }
-    try {
-        await fs.access(projectVersionPath, fs.constants.R_OK);
-        return projectVersionPath;
-    } catch (error) {
-        core.debug(error);
+    if (projectVersionPath) {
         try {
-            projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
             await fs.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
         } catch (error) {
-            core.error(error);
+            core.debug(error);
             try {
-                projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
+                projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
                 await fs.access(projectVersionPath, fs.constants.R_OK);
                 return projectVersionPath;
             } catch (error) {
-                core.debug(error);
+                core.error(error);
+                try {
+                    projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
+                    await fs.access(projectVersionPath, fs.constants.R_OK);
+                    return projectVersionPath;
+                } catch (error) {
+                    // ignore
+                }
             }
         }
-        throw Error(`Could not find ProjectVersion.txt in ${projectVersionPath}`);
     }
+    core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
+    return undefined;
 }
 
 function getUnityVersionsFromInput() {
@@ -34723,7 +34730,7 @@ async function execUnityHub(args) {
             });
             break;
         case 'linux': // xvfb-run --auto-servernum "~/Unity Hub/UnityHub.AppImage" --headless help
-            core.info(`[command]"xvfb-run" --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
+            core.info(`[command]xvfb-run --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
             await exec.exec('xvfb-run', ['--auto-servernum', hubPath, '--headless', ...args], {
                 listeners: {
                     stdline: (data) => {
@@ -45386,7 +45393,9 @@ const core = __nccwpck_require__(2186);
 const main = async () => {
     try {
         const [versions, architecture, modules, unityProjectPath] = await ValidateInputs();
-        core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+        if (unityProjectPath) {
+            core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+        }
         const unityHubPath = await unityHub.Get();
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
         const editors = [];
@@ -45394,7 +45403,7 @@ const main = async () => {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
             // for now just export the highest installed version
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
-            if (modules.includes('android')) {
+            if (modules.includes('android') && unityProjectPath !== undefined) {
                 await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
             }
             editors.push([version, unityEditorPath]);
