@@ -47,15 +47,9 @@ jobs:
             modules: mac-server
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: RageAgainstThePixel/com.utilities.buildpipeine
-          path: com.utilities.buildpipline
-          ref: development
 
       - uses: ./ # buildalon/unity-setup
         with:
-          version-file: com.utilities.buildpipline/Utilities.BuildPipeline/ProjectSettings/ProjectVersion.txt
           unity-version: ${{ matrix.unity-versions }}
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
