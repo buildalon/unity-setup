@@ -16,7 +16,7 @@ const main = async () => {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
             // for now just export the highest installed version
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
-            if (modules.includes('android')) {
+            if (modules.includes('android') && unityProjectPath != undefined) {
                 await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
             }
             editors.push([version, unityEditorPath]);

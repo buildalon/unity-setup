@@ -159,7 +159,7 @@ async function getVersionFilePath() {
                 core.debug(error);
             }
         }
-        debug.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
+        core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
     }
 }
 

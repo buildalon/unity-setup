@@ -34376,7 +34376,7 @@ async function getVersionFilePath() {
                 core.debug(error);
             }
         }
-        debug.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
+        core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
     }
 }
 
@@ -45402,7 +45402,7 @@ const main = async () => {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
             // for now just export the highest installed version
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
-            if (modules.includes('android')) {
+            if (modules.includes('android') && unityProjectPath != undefined) {
                 await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
             }
             editors.push([version, unityEditorPath]);
