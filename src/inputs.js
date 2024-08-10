@@ -136,8 +136,7 @@ function getDefaultModules() {
 
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
-    if (projectVersionPath) {
-    } else {
+    if (!projectVersionPath) {
         projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
     }
     try {
