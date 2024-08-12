@@ -1,11 +1,11 @@
-const { FindGlobPattern } = require('./utility');
-const core = require('@actions/core');
-const fs = require('fs').promises;
-const semver = require('semver');
-const path = require('path');
-const os = require('os');
+import { FindGlobPattern } from './utility';
+import core = require('@actions/core');
+import semver = require('semver');
+import path = require('path');
+import os = require('os');
+import fs = require('fs');
 
-async function ValidateInputs() {
+async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined]> {
     const modules = [];
     const architecture = core.getInput('architecture') || getInstallationArch();
     if (architecture) {
@@ -61,7 +61,7 @@ async function ValidateInputs() {
     return [versions, architecture, modules, unityProjectPath];
 }
 
-function getArrayInput(key) {
+function getArrayInput(key: string): string[] {
     let input = core.getInput(key);
     if (!input) { return []; }
     core.debug(`raw input | ${key}: ${input}`);
@@ -73,7 +73,7 @@ function getArrayInput(key) {
     return array;
 }
 
-function getInstallationArch() {
+function getInstallationArch(): string | undefined {
     switch (os.arch()) {
         case 'arm64':
             return 'arm64';
@@ -84,7 +84,7 @@ function getInstallationArch() {
     }
 }
 
-function getPlatformTargetModuleMap() {
+function getPlatformTargetModuleMap(): { [key: string]: string } {
     const osType = os.type();
     let moduleMap = undefined;
     if (osType == 'Linux') {
@@ -121,7 +121,7 @@ function getPlatformTargetModuleMap() {
     return moduleMap;
 }
 
-function getDefaultModules() {
+function getDefaultModules(): string[] {
     switch (process.platform) {
         case 'linux':
             return ['linux-il2cpp', 'android', 'ios'];
@@ -134,7 +134,7 @@ function getDefaultModules() {
     }
 }
 
-async function getVersionFilePath() {
+async function getVersionFilePath(): Promise<string | undefined> {
     let projectVersionPath = core.getInput('version-file');
     if (projectVersionPath !== undefined && projectVersionPath.toLowerCase() === 'none') {
         return undefined;
@@ -144,19 +144,19 @@ async function getVersionFilePath() {
     }
     if (projectVersionPath) {
         try {
-            await fs.access(projectVersionPath, fs.constants.R_OK);
+            await fs.promises.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
         } catch (error) {
             core.debug(error);
             try {
                 projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
-                await fs.access(projectVersionPath, fs.constants.R_OK);
+                await fs.promises.access(projectVersionPath, fs.constants.R_OK);
                 return projectVersionPath;
             } catch (error) {
                 core.error(error);
                 try {
                     projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
-                    await fs.access(projectVersionPath, fs.constants.R_OK);
+                    await fs.promises.access(projectVersionPath, fs.constants.R_OK);
                     return projectVersionPath;
                 } catch (error) {
                     // ignore
@@ -168,7 +168,7 @@ async function getVersionFilePath() {
     return undefined;
 }
 
-function getUnityVersionsFromInput() {
+function getUnityVersionsFromInput(): string[][] {
     const versions = [];
     const inputVersions = core.getInput('unity-version');
     if (!inputVersions || inputVersions.length == 0) {
@@ -182,8 +182,8 @@ function getUnityVersionsFromInput() {
     return versions;
 }
 
-async function getUnityVersionFromFile(versionFilePath) {
-    const versionString = await fs.readFile(versionFilePath, 'utf8');
+async function getUnityVersionFromFile(versionFilePath: string): Promise<[string, string]> {
+    const versionString = await fs.promises.readFile(versionFilePath, 'utf8');
     core.debug(`ProjectSettings.txt:\n${versionString}`);
     const match = versionString.match(/m_EditorVersionWithRevision: (?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[fab]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/);
     if (!match) {
@@ -198,4 +198,4 @@ async function getUnityVersionFromFile(versionFilePath) {
     return [match.groups.version, match.groups.changeset];
 }
 
-module.exports = { ValidateInputs };
+export { ValidateInputs }

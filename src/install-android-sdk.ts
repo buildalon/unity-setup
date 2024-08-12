@@ -1,17 +1,18 @@
-const { GetEditorRootPath, ReadFileContents, FindGlobPattern } = require('./utility');
-const core = require('@actions/core');
-const exec = require('@actions/exec');
-const fs = require('fs').promises;
-const path = require('path');
-const os = require('os');
+import { GetEditorRootPath, ReadFileContents, FindGlobPattern } from './utility';
+import core = require('@actions/core');
+import exec = require('@actions/exec');
+import path = require('path');
+import os = require('os');
+import fs = require('fs');
 
-async function CheckAndroidSdkInstalled(editorPath, projectPath) {
+async function CheckAndroidSdkInstalled(editorPath: string, projectPath: string): Promise<void> {
     let sdkPath = undefined;
     await createRepositoryCfg();
     const rootEditorPath = await GetEditorRootPath(editorPath);
     const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
     const projectSettingsContent = await ReadFileContents(projectSettingsPath);
-    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/));
+    const matchResult = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
+    const androidTargetSdk = matchResult ? parseInt(matchResult[0]) : 0;
     core.debug(`AndroidTargetSdkVersion:\n  > ${androidTargetSdk}`);
     if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
     core.startGroup('Validating Android Target SDK Installed...');
@@ -37,24 +38,24 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
     }
 }
 
-async function createRepositoryCfg() {
+async function createRepositoryCfg(): Promise<void> {
     const androidPath = path.join(os.homedir(), '.android');
-    await fs.mkdir(androidPath, { recursive: true });
-    const fileHandle = await fs.open(path.join(androidPath, 'repositories.cfg'), 'w');
+    await fs.promises.mkdir(androidPath, { recursive: true });
+    const fileHandle = await fs.promises.open(path.join(androidPath, 'repositories.cfg'), 'w');
     await fileHandle.close();
 }
 
-async function getJDKPath(rootEditorPath) {
+async function getJDKPath(rootEditorPath: string): Promise<string> {
     const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
     if (!jdkPath) {
-        throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
+        throw new Error(`Failed to resolve OpenJDK in ${rootEditorPath}`);
     }
-    await fs.access(jdkPath, fs.constants.R_OK);
+    await fs.promises.access(jdkPath, fs.constants.R_OK);
     core.debug(`jdkPath:\n  > "${jdkPath}"`);
     return jdkPath;
 }
 
-async function getSdkManager(rootEditorPath) {
+async function getSdkManager(rootEditorPath: string): Promise<string> {
     let globPath;
     switch (process.platform) {
         case 'darwin':
@@ -69,18 +70,18 @@ async function getSdkManager(rootEditorPath) {
     }
     const sdkmanagerPath = await FindGlobPattern(globPath);
     if (!sdkmanagerPath) {
-        throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
+        throw new Error(`Failed to resolve sdkmanager in ${globPath}`);
     }
-    await fs.access(sdkmanagerPath, fs.constants.R_OK);
+    await fs.promises.access(sdkmanagerPath, fs.constants.R_OK);
     core.debug(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
     return sdkmanagerPath;
 }
 
-async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
+async function getAndroidSdkPath(rootEditorPath: string, androidTargetSdk: number): Promise<string | undefined> {
     core.debug(`Attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
     const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     try {
-        await fs.access(sdkPath, fs.constants.R_OK);
+        await fs.promises.access(sdkPath, fs.constants.R_OK);
     } catch (error) {
         core.debug(`android-${androidTargetSdk} not installed`);
         return undefined;
@@ -89,7 +90,7 @@ async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
     return sdkPath;
 }
 
-async function execSdkManager(sdkManagerPath, javaSdk, args) {
+async function execSdkManager(sdkManagerPath: string, javaSdk: string, args: string[]): Promise<void> {
     const acceptBuffer = Buffer.from(Array(10).fill('y').join(os.EOL), 'utf8');
     core.info(`[command] "${sdkManagerPath}" ${args.join(' ')}`);
     let output = '';
@@ -116,4 +117,4 @@ async function execSdkManager(sdkManagerPath, javaSdk, args) {
     }
 }
 
-module.exports = { CheckAndroidSdkInstalled };
+export { CheckAndroidSdkInstalled }

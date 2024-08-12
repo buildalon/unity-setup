@@ -1,9 +1,9 @@
-const core = require('@actions/core');
-const glob = require('@actions/glob');
-const fs = require('fs').promises;
-const path = require('path');
+import core = require('@actions/core');
+import glob = require('@actions/glob');
+import path = require('path');
+import fs = require('fs');
 
-async function GetHubRootPath(hubPath) {
+async function GetHubRootPath(hubPath: string): Promise<string> {
     core.debug(`searching for hub root path: ${hubPath}`);
     let hubRootPath = hubPath;
     switch (process.platform) {
@@ -20,7 +20,7 @@ async function GetHubRootPath(hubPath) {
     return hubRootPath;
 }
 
-async function GetEditorRootPath(editorPath) {
+async function GetEditorRootPath(editorPath: string): Promise<string> {
     core.debug(`searching for editor root path: ${editorPath}`);
     let editorRootPath = editorPath;
     switch (process.platform) {
@@ -34,13 +34,13 @@ async function GetEditorRootPath(editorPath) {
             editorRootPath = path.join(editorPath, '../../');
             break
     }
-    await fs.access(editorRootPath, fs.constants.R_OK);
+    await fs.promises.access(editorRootPath, fs.constants.R_OK);
     core.debug(`found editor root path: ${editorRootPath}`);
     return editorRootPath;
 }
 
-async function ReadFileContents(filePath) {
-    const fileHandle = await fs.open(filePath, 'r');
+async function ReadFileContents(filePath: string): Promise<string> {
+    const fileHandle = await fs.promises.open(filePath, 'r');
     try {
         const projectSettingsContent = await fileHandle.readFile('utf8');
         return projectSettingsContent;
@@ -49,7 +49,7 @@ async function ReadFileContents(filePath) {
     }
 }
 
-async function FindGlobPattern(pattern) {
+async function FindGlobPattern(pattern: string): Promise<string | undefined> {
     core.debug(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
@@ -58,4 +58,4 @@ async function FindGlobPattern(pattern) {
     }
 }
 
-module.exports = { GetHubRootPath, GetEditorRootPath, ReadFileContents, FindGlobPattern };
+export { GetHubRootPath, GetEditorRootPath, ReadFileContents, FindGlobPattern }
