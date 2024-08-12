@@ -11,7 +11,8 @@ async function CheckAndroidSdkInstalled(editorPath: string, projectPath: string)
     const rootEditorPath = await GetEditorRootPath(editorPath);
     const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
     const projectSettingsContent = await ReadFileContents(projectSettingsPath);
-    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/)[0]);
+    const matchResult = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
+    const androidTargetSdk = matchResult ? parseInt(matchResult[0]) : 0;
     core.debug(`AndroidTargetSdkVersion:\n  > ${androidTargetSdk}`);
     if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
     core.startGroup('Validating Android Target SDK Installed...');
