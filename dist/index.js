@@ -34212,16 +34212,19 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 7229:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 7063:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { FindGlobPattern } = __nccwpck_require__(4345);
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ValidateInputs = ValidateInputs;
+const utility_1 = __nccwpck_require__(5418);
 const core = __nccwpck_require__(2186);
-const fs = (__nccwpck_require__(7147).promises);
 const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(1017);
 const os = __nccwpck_require__(2037);
-
+const fs = __nccwpck_require__(7147);
 async function ValidateInputs() {
     const modules = [];
     const architecture = core.getInput('architecture') || getInstallationArch();
@@ -34233,10 +34236,12 @@ async function ValidateInputs() {
     if (buildTargets.length == 0) {
         if (modulesInput.length > 0) {
             modules.push(...modulesInput);
-        } else {
+        }
+        else {
             modules.push(...getDefaultModules());
         }
-    } else {
+    }
+    else {
         modules.push(...modulesInput);
     }
     core.info(`modules:`);
@@ -34277,10 +34282,11 @@ async function ValidateInputs() {
     }
     return [versions, architecture, modules, unityProjectPath];
 }
-
 function getArrayInput(key) {
     let input = core.getInput(key);
-    if (!input) { return []; }
+    if (!input) {
+        return [];
+    }
     core.debug(`raw input | ${key}: ${input}`);
     let array = input.split(/,?\s+/).filter(Boolean);
     core.debug(`split | ${key}:`);
@@ -34289,7 +34295,6 @@ function getArrayInput(key) {
     }
     return array;
 }
-
 function getInstallationArch() {
     switch (os.arch()) {
         case 'arm64':
@@ -34300,7 +34305,6 @@ function getInstallationArch() {
             throw Error(`${os.arch()} not supported`);
     }
 }
-
 function getPlatformTargetModuleMap() {
     const osType = os.type();
     let moduleMap = undefined;
@@ -34311,7 +34315,8 @@ function getPlatformTargetModuleMap() {
             "WebGL": "webgl",
             "iOS": "ios",
         };
-    } else if (osType == 'Darwin') {
+    }
+    else if (osType == 'Darwin') {
         moduleMap = {
             "StandaloneOSX": "mac-il2cpp",
             "iOS": "ios",
@@ -34321,7 +34326,8 @@ function getPlatformTargetModuleMap() {
             "WebGL": "webgl",
             "VisionOS": "visionos"
         };
-    } else if (osType == 'Windows_NT') {
+    }
+    else if (osType == 'Windows_NT') {
         moduleMap = {
             "StandaloneWindows64": "windows-il2cpp",
             "WSAPlayer": "universal-windows-platform",
@@ -34332,12 +34338,12 @@ function getPlatformTargetModuleMap() {
             "Lumin": "lumin",
             "WebGL": "webgl",
         };
-    } else {
+    }
+    else {
         throw Error(`${osType} not supported`);
     }
     return moduleMap;
 }
-
 function getDefaultModules() {
     switch (process.platform) {
         case 'linux':
@@ -34350,33 +34356,34 @@ function getDefaultModules() {
             throw Error(`${process.platform} not supported`);
     }
 }
-
 async function getVersionFilePath() {
     let projectVersionPath = core.getInput('version-file');
     if (projectVersionPath !== undefined && projectVersionPath.toLowerCase() === 'none') {
         return undefined;
     }
     if (!projectVersionPath) {
-        projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
+        projectVersionPath = await (0, utility_1.FindGlobPattern)(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
     }
     if (projectVersionPath) {
         try {
-            await fs.access(projectVersionPath, fs.constants.R_OK);
+            await fs.promises.access(projectVersionPath, fs.constants.R_OK);
             return projectVersionPath;
-        } catch (error) {
+        }
+        catch (error) {
             core.debug(error);
             try {
                 projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
-                await fs.access(projectVersionPath, fs.constants.R_OK);
+                await fs.promises.access(projectVersionPath, fs.constants.R_OK);
                 return projectVersionPath;
-            } catch (error) {
+            }
+            catch (error) {
                 core.error(error);
                 try {
-                    projectVersionPath = await FindGlobPattern(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
-                    await fs.access(projectVersionPath, fs.constants.R_OK);
+                    projectVersionPath = await (0, utility_1.FindGlobPattern)(path.join(process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt'));
+                    await fs.promises.access(projectVersionPath, fs.constants.R_OK);
                     return projectVersionPath;
-                } catch (error) {
-                    // ignore
+                }
+                catch (error) {
                 }
             }
         }
@@ -34384,7 +34391,6 @@ async function getVersionFilePath() {
     core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
     return undefined;
 }
-
 function getUnityVersionsFromInput() {
     const versions = [];
     const inputVersions = core.getInput('unity-version');
@@ -34398,9 +34404,8 @@ function getUnityVersionsFromInput() {
     }
     return versions;
 }
-
 async function getUnityVersionFromFile(versionFilePath) {
-    const versionString = await fs.readFile(versionFilePath, 'utf8');
+    const versionString = await fs.promises.readFile(versionFilePath, 'utf8');
     core.debug(`ProjectSettings.txt:\n${versionString}`);
     const match = versionString.match(/m_EditorVersionWithRevision: (?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[fab]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/);
     if (!match) {
@@ -34415,30 +34420,33 @@ async function getUnityVersionFromFile(versionFilePath) {
     return [match.groups.version, match.groups.changeset];
 }
 
-module.exports = { ValidateInputs };
-
 
 /***/ }),
 
-/***/ 133:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 521:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { GetEditorRootPath, ReadFileContents, FindGlobPattern } = __nccwpck_require__(4345);
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CheckAndroidSdkInstalled = CheckAndroidSdkInstalled;
+const utility_1 = __nccwpck_require__(5418);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
-const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 const os = __nccwpck_require__(2037);
-
+const fs = __nccwpck_require__(7147);
 async function CheckAndroidSdkInstalled(editorPath, projectPath) {
     let sdkPath = undefined;
     await createRepositoryCfg();
-    const rootEditorPath = await GetEditorRootPath(editorPath);
+    const rootEditorPath = await (0, utility_1.GetEditorRootPath)(editorPath);
     const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
-    const projectSettingsContent = await ReadFileContents(projectSettingsPath);
-    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/));
+    const projectSettingsContent = await (0, utility_1.ReadFileContents)(projectSettingsPath);
+    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/)[0]);
     core.debug(`AndroidTargetSdkVersion:\n  > ${androidTargetSdk}`);
-    if (androidTargetSdk === undefined || androidTargetSdk === 0) { return; }
+    if (androidTargetSdk === undefined || androidTargetSdk === 0) {
+        return;
+    }
     core.startGroup('Validating Android Target SDK Installed...');
     try {
         sdkPath = await getAndroidSdkPath(rootEditorPath, androidTargetSdk);
@@ -34457,28 +34465,26 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
             throw new Error(`Failed to install android-${androidTargetSdk} in ${rootEditorPath}`);
         }
         core.info(`Target Android SDK Installed in:\n  > "${sdkPath}"`);
-    } finally {
+    }
+    finally {
         core.endGroup();
     }
 }
-
 async function createRepositoryCfg() {
     const androidPath = path.join(os.homedir(), '.android');
-    await fs.mkdir(androidPath, { recursive: true });
-    const fileHandle = await fs.open(path.join(androidPath, 'repositories.cfg'), 'w');
+    await fs.promises.mkdir(androidPath, { recursive: true });
+    const fileHandle = await fs.promises.open(path.join(androidPath, 'repositories.cfg'), 'w');
     await fileHandle.close();
 }
-
 async function getJDKPath(rootEditorPath) {
-    const jdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
+    const jdkPath = await (0, utility_1.FindGlobPattern)(path.join(rootEditorPath, '**', 'AndroidPlayer', 'OpenJDK'));
     if (!jdkPath) {
-        throw new Error(`Failed to resolve OpenJDK in ${globPath}\n  > ${globPaths}`);
+        throw new Error(`Failed to resolve OpenJDK in ${rootEditorPath}`);
     }
-    await fs.access(jdkPath, fs.constants.R_OK);
+    await fs.promises.access(jdkPath, fs.constants.R_OK);
     core.debug(`jdkPath:\n  > "${jdkPath}"`);
     return jdkPath;
 }
-
 async function getSdkManager(rootEditorPath) {
     let globPath;
     switch (process.platform) {
@@ -34492,28 +34498,27 @@ async function getSdkManager(rootEditorPath) {
         default:
             throw new Error(`Unsupported platform: ${process.platform}`);
     }
-    const sdkmanagerPath = await FindGlobPattern(globPath);
+    const sdkmanagerPath = await (0, utility_1.FindGlobPattern)(globPath);
     if (!sdkmanagerPath) {
-        throw new Error(`Failed to resolve sdkmanager in ${globPath}\n  > ${globPaths}`);
+        throw new Error(`Failed to resolve sdkmanager in ${globPath}`);
     }
-    await fs.access(sdkmanagerPath, fs.constants.R_OK);
+    await fs.promises.access(sdkmanagerPath, fs.constants.R_OK);
     core.debug(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
     return sdkmanagerPath;
 }
-
 async function getAndroidSdkPath(rootEditorPath, androidTargetSdk) {
     core.debug(`Attempting to locate Android SDK Path...\n  > editorPath: ${rootEditorPath}\n  > androidTargetSdk: ${androidTargetSdk}`);
-    const sdkPath = await FindGlobPattern(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
+    const sdkPath = await (0, utility_1.FindGlobPattern)(path.join(rootEditorPath, '**', 'AndroidPlayer', '**', `android-${androidTargetSdk}`));
     try {
-        await fs.access(sdkPath, fs.constants.R_OK);
-    } catch (error) {
+        await fs.promises.access(sdkPath, fs.constants.R_OK);
+    }
+    catch (error) {
         core.debug(`android-${androidTargetSdk} not installed`);
         return undefined;
     }
     core.debug(`sdkPath:\n  > "${sdkPath}"`);
     return sdkPath;
 }
-
 async function execSdkManager(sdkManagerPath, javaSdk, args) {
     const acceptBuffer = Buffer.from(Array(10).fill('y').join(os.EOL), 'utf8');
     core.info(`[command] "${sdkManagerPath}" ${args.join(' ')}`);
@@ -34535,33 +34540,36 @@ async function execSdkManager(sdkManagerPath, javaSdk, args) {
                 }
             }
         });
-    } catch (error) {
+    }
+    catch (error) {
         core.info(output);
         throw error;
     }
 }
 
-module.exports = { CheckAndroidSdkInstalled };
-
 
 /***/ }),
 
-/***/ 5798:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 2754:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { GetHubRootPath, GetEditorRootPath, ReadFileContents } = __nccwpck_require__(4345);
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Get = Get;
+exports.Unity = Unity;
+exports.ListInstalledEditors = ListInstalledEditors;
+const utility_1 = __nccwpck_require__(5418);
+const asar = __nccwpck_require__(6561);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
-const fs = (__nccwpck_require__(7147).promises);
 const semver = __nccwpck_require__(1383);
+const yaml = __nccwpck_require__(4083);
 const path = __nccwpck_require__(1017);
 const os = __nccwpck_require__(2037);
-const asar = __nccwpck_require__(6561);
-const yaml = __nccwpck_require__(4083);
-
+const fs = __nccwpck_require__(7147);
 const unityHub = init();
 let hubPath = unityHub.hubPath;
-
 function init() {
     switch (process.platform) {
         case 'win32':
@@ -34569,26 +34577,26 @@ function init() {
                 hubPath: 'C:/Program Files/Unity Hub/Unity Hub.exe',
                 editorRootPath: 'C:/Program Files/Unity/Hub/Editor/',
                 editorFileExtension: '/Editor/Unity.exe',
-            }
+            };
         case 'darwin':
             return {
                 hubPath: '/Applications/Unity Hub.app/Contents/MacOS/Unity Hub',
                 editorRootPath: '/Applications/Unity/Hub/Editor/',
                 editorFileExtension: '/Unity.app/Contents/MacOS/Unity',
-            }
+            };
         case 'linux':
             return {
                 hubPath: '/opt/unityhub/unityhub',
                 editorRootPath: `${process.env.HOME}/Unity/Hub/Editor/`,
                 editorFileExtension: '/Editor/Unity',
-            }
+            };
     }
 }
-
 async function Get() {
     try {
-        await fs.access(hubPath, fs.constants.X_OK);
-    } catch (error) {
+        await fs.promises.access(hubPath, fs.constants.X_OK);
+    }
+    catch (error) {
         hubPath = await installUnityHub();
     }
     const hubVersion = await getInstalledHubVersion();
@@ -34603,12 +34611,12 @@ async function Get() {
     core.startGroup('Unity Hub Options');
     try {
         await execUnityHub(['help']);
-    } finally {
+    }
+    finally {
         core.endGroup();
     }
     return hubPath;
 }
-
 async function installUnityHub() {
     let exitCode = undefined;
     switch (process.platform) {
@@ -34619,7 +34627,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.X_OK);
+                await fs.promises.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'darwin':
@@ -34629,7 +34637,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.X_OK);
+                await fs.promises.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'linux':
@@ -34650,16 +34658,15 @@ async function installUnityHub() {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
                 const hubPath = output.match(/UNITY_HUB (.+)/)[1];
-                await fs.access(hubPath, fs.constants.X_OK);
+                await fs.promises.access(hubPath, fs.constants.X_OK);
                 return hubPath;
             }
     }
 }
-
 async function getInstalledHubVersion() {
     try {
         let asarPath = undefined;
-        const baseHubPath = await GetHubRootPath(hubPath);
+        const baseHubPath = await (0, utility_1.GetHubRootPath)(hubPath);
         switch (process.platform) {
             case 'darwin':
                 asarPath = path.join(baseHubPath, 'Contents', 'Resources', 'app.asar');
@@ -34668,16 +34675,16 @@ async function getInstalledHubVersion() {
                 asarPath = path.join(baseHubPath, 'resources', 'app.asar');
                 break;
         }
-        await fs.access(asarPath, fs.constants.R_OK);
+        await fs.promises.access(asarPath, fs.constants.R_OK);
         const fileBuffer = asar.extractFile(asarPath, 'package.json');
         const packageJson = JSON.parse(fileBuffer.toString());
         return semver.coerce(packageJson.version);
-    } catch (error) {
+    }
+    catch (error) {
         core.error(error);
         return undefined;
     }
 }
-
 async function getLatestHubVersion() {
     try {
         let url = undefined;
@@ -34697,26 +34704,25 @@ async function getLatestHubVersion() {
         const parsed = yaml.parse(data);
         const version = semver.coerce(parsed.version);
         return version;
-    } catch (error) {
+    }
+    catch (error) {
         core.error(error);
         return undefined;
     }
 }
-
 const ignoredLines = [
     `This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). The promise rejected with the reason:`,
     `dri3 extension not supported`,
     `Failed to connect to the bus:`
 ];
-
 async function execUnityHub(args) {
     if (!hubPath) {
         throw new Error('Unity Hub Path is not set!');
     }
     let output = '';
     switch (process.platform) {
-        case 'win32': // "C:/Program Files/Unity Hub/Unity Hub.exe" -- --headless help
-        case 'darwin': // "/Applications/Unity Hub.app/Contents/MacOS/Unity Hub" -- --headless help
+        case 'win32':
+        case 'darwin':
             await exec.exec(`"${hubPath}"`, ['--', '--headless', ...args], {
                 listeners: {
                     stdout: (data) => {
@@ -34729,7 +34735,7 @@ async function execUnityHub(args) {
                 ignoreReturnCode: true
             });
             break;
-        case 'linux': // xvfb-run --auto-servernum "~/Unity Hub/UnityHub.AppImage" --headless help
+        case 'linux':
             core.info(`[command]xvfb-run --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
             await exec.exec('xvfb-run', ['--auto-servernum', hubPath, '--headless', ...args], {
                 listeners: {
@@ -34757,7 +34763,7 @@ async function execUnityHub(args) {
     const match = output.match(/Assertion (?<assert>.+) failed/g);
     if (match ||
         output.includes('async hook stack has become corrupted')) {
-        core.warning(`Install failed, retrying...`)
+        core.warning(`Install failed, retrying...`);
         return await execUnityHub(args);
     }
     if (output.includes('Error:')) {
@@ -34771,7 +34777,6 @@ async function execUnityHub(args) {
     }
     return output;
 }
-
 async function Unity(version, changeset, architecture, modules) {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
         core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
@@ -34782,32 +34787,32 @@ async function Unity(version, changeset, architecture, modules) {
         await installUnity(version, changeset, architecture, modules);
         editorPath = await checkInstalledEditors(version, architecture);
     }
-    await fs.access(editorPath, fs.constants.R_OK);
+    await fs.promises.access(editorPath, fs.constants.R_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     try {
         core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
-        [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
-    } finally {
+        const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
+        if (installedModules && installedModules.length > 0) {
+            core.info(`Installed Modules:`);
+            for (const module of installedModules) {
+                core.info(`  > ${module}`);
+            }
+        }
+        if (additionalModules && additionalModules.length > 0) {
+            core.info(`Additional Modules:`);
+            for (const module of additionalModules) {
+                core.info(`  > ${module}`);
+            }
+        }
+    }
+    finally {
         core.endGroup();
-    }
-    if (installedModules && installedModules.length > 0) {
-        core.info(`Installed Modules:`);
-        for (const module of installedModules) {
-            core.info(`  > ${module}`);
-        }
-    }
-    if (additionalModules && additionalModules.length > 0) {
-        core.info(`Additional Modules:`);
-        for (const module of additionalModules) {
-            core.info(`  > ${module}`);
-        }
     }
     return editorPath;
 }
-
 async function installUnity(version, changeset, architecture, modules) {
     core.startGroup(`Installing Unity ${version} (${changeset})...`);
-    let args = ['install', '--version', version, '--changeset', changeset];
+    const args = ['install', '--version', version, '--changeset', changeset];
     if (architecture) {
         args.push('-a', architecture);
     }
@@ -34820,19 +34825,17 @@ async function installUnity(version, changeset, architecture, modules) {
         if (output.includes(`Error while installing an editor or a module from changeset`)) {
             throw new Error(`Failed to install Unity ${version} (${changeset})`);
         }
-    } finally {
+    }
+    finally {
         core.endGroup();
     }
 }
-
 async function ListInstalledEditors() {
     await execUnityHub(['editors', '-i']);
 }
-
 function isArmCompatible(version) {
     return semver.compare(version, '2021.1.0f1', true) >= 0;
 }
-
 async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
     const output = await execUnityHub(['editors', '-i']);
     if (!output || output.trim().length === 0) {
@@ -34863,21 +34866,19 @@ async function checkInstalledEditors(version, architecture, failOnEmpty = true) 
         }
     }
     if (!editorPath) {
-        throw new Error(`Failed to find installed Unity Editor: ${version} ${architecture ?? ''}`);
+        throw new Error(`Failed to find installed Unity Editor: ${version} ${architecture !== null && architecture !== void 0 ? architecture : ''}`);
     }
     if (process.platform === 'darwin') {
         editorPath = path.join(editorPath, '/Contents/MacOS/Unity');
     }
-    await fs.access(editorPath, fs.constants.R_OK);
+    await fs.promises.access(editorPath, fs.constants.R_OK);
     core.debug(`Found installed Unity Editor: ${editorPath}`);
     return editorPath;
 }
-
 const archMap = {
     'arm64': 'Apple silicon',
     'x86_64': 'Intel',
 };
-
 async function checkEditorModules(editorPath, version, architecture, modules) {
     let args = ['install-modules', '--version', version];
     if (architecture) {
@@ -34887,7 +34888,7 @@ async function checkEditorModules(editorPath, version, architecture, modules) {
         args.push('-m', module);
     }
     const output = await execUnityHub([...args, '--cm']);
-    const editorRootPath = await GetEditorRootPath(editorPath);
+    const editorRootPath = await (0, utility_1.GetEditorRootPath)(editorPath);
     const modulesPath = path.join(editorRootPath, 'modules.json');
     core.debug(`Editor Modules Manifest:\n  > "${modulesPath}"`);
     const moduleMatches = output.matchAll(/Omitting module (?<module>.+) because it's already installed/g);
@@ -34913,25 +34914,28 @@ async function checkEditorModules(editorPath, version, architecture, modules) {
     }
     return [installedModules, additionalModules];
 }
-
 async function getModulesContent(modulesPath) {
-    const modulesContent = await ReadFileContents(modulesPath);
+    const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
 }
-
-module.exports = { Get, Unity, ListInstalledEditors }
 
 
 /***/ }),
 
-/***/ 4345:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 5418:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetHubRootPath = GetHubRootPath;
+exports.GetEditorRootPath = GetEditorRootPath;
+exports.ReadFileContents = ReadFileContents;
+exports.FindGlobPattern = FindGlobPattern;
 const core = __nccwpck_require__(2186);
 const glob = __nccwpck_require__(8090);
-const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
-
+const fs = __nccwpck_require__(7147);
 async function GetHubRootPath(hubPath) {
     core.debug(`searching for hub root path: ${hubPath}`);
     let hubRootPath = hubPath;
@@ -34941,14 +34945,13 @@ async function GetHubRootPath(hubPath) {
             break;
         case 'win32':
             hubRootPath = path.join(hubPath, '../');
-            break
+            break;
         case 'linux':
             hubRootPath = path.join(hubPath, '../');
             break;
     }
     return hubRootPath;
 }
-
 async function GetEditorRootPath(editorPath) {
     core.debug(`searching for editor root path: ${editorPath}`);
     let editorRootPath = editorPath;
@@ -34961,23 +34964,22 @@ async function GetEditorRootPath(editorPath) {
             break;
         case 'win32':
             editorRootPath = path.join(editorPath, '../../');
-            break
+            break;
     }
-    await fs.access(editorRootPath, fs.constants.R_OK);
+    await fs.promises.access(editorRootPath, fs.constants.R_OK);
     core.debug(`found editor root path: ${editorRootPath}`);
     return editorRootPath;
 }
-
 async function ReadFileContents(filePath) {
-    const fileHandle = await fs.open(filePath, 'r');
+    const fileHandle = await fs.promises.open(filePath, 'r');
     try {
         const projectSettingsContent = await fileHandle.readFile('utf8');
         return projectSettingsContent;
-    } finally {
+    }
+    finally {
         await fileHandle.close();
     }
 }
-
 async function FindGlobPattern(pattern) {
     core.debug(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
@@ -34986,8 +34988,6 @@ async function FindGlobPattern(pattern) {
         return file;
     }
 }
-
-module.exports = { GetHubRootPath, GetEditorRootPath, ReadFileContents, FindGlobPattern };
 
 
 /***/ }),
@@ -45383,16 +45383,19 @@ exports.visitAsync = visitAsync;
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
 (() => {
-const { CheckAndroidSdkInstalled } = __nccwpck_require__(133);
-const { ValidateInputs } = __nccwpck_require__(7229);
-const unityHub = __nccwpck_require__(5798);
-const core = __nccwpck_require__(2186);
+"use strict";
+var exports = __webpack_exports__;
 
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const install_android_sdk_1 = __nccwpck_require__(521);
+const inputs_1 = __nccwpck_require__(7063);
+const unityHub = __nccwpck_require__(2754);
+const core = __nccwpck_require__(2186);
 const main = async () => {
     try {
-        const [versions, architecture, modules, unityProjectPath] = await ValidateInputs();
+        const [versions, architecture, modules, unityProjectPath] = await (0, inputs_1.ValidateInputs)();
         if (unityProjectPath) {
             core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
         }
@@ -45401,10 +45404,9 @@ const main = async () => {
         const editors = [];
         for (const [version, changeset] of versions) {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
-            // for now just export the highest installed version
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
             if (modules.includes('android') && unityProjectPath !== undefined) {
-                await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
+                await (0, install_android_sdk_1.CheckAndroidSdkInstalled)(unityEditorPath, unityProjectPath);
             }
             editors.push([version, unityEditorPath]);
         }
@@ -45413,11 +45415,11 @@ const main = async () => {
         await unityHub.ListInstalledEditors();
         core.info('Unity Setup Complete!');
         process.exit(0);
-    } catch (error) {
+    }
+    catch (error) {
         core.setFailed(error);
     }
-}
-
+};
 main();
 
 })();

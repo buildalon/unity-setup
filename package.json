@@ -1,6 +1,6 @@
 {
   "name": "unity-setup",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A GitHub action for setting up the Unity Game Engine for CI/CD workflows.",
   "author": "Buildalon",
   "license": "MIT",
@@ -32,10 +32,15 @@
     "yaml": "^2.5.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.34.0"
+    "@types/node": "^22.2.0",
+    "@types/semver": "^7.5.8",
+    "@vercel/ncc": "^0.34.0",
+    "shx": "^0.3.4",
+    "typescript": "^5.5.4"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm install && npm ci && ncc build src/index.js -o dist --source-map --license licenses.txt"
+    "build": "npm run clean && npm run bundle",
+    "bundle": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "clean": "shx rm -rf dist/ out/ node_modules/ && npm install && npm ci"
   }
 }

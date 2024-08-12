@@ -1,17 +1,17 @@
-const { GetHubRootPath, GetEditorRootPath, ReadFileContents } = require('./utility');
-const core = require('@actions/core');
-const exec = require('@actions/exec');
-const fs = require('fs').promises;
-const semver = require('semver');
-const path = require('path');
-const os = require('os');
-const asar = require('@electron/asar');
-const yaml = require('yaml');
+import { GetHubRootPath, GetEditorRootPath, ReadFileContents } from './utility';
+import asar = require('@electron/asar');
+import core = require('@actions/core');
+import exec = require('@actions/exec');
+import semver = require('semver');
+import yaml = require('yaml');
+import path = require('path');
+import os = require('os');
+import fs = require('fs');
 
 const unityHub = init();
 let hubPath = unityHub.hubPath;
 
-function init() {
+function init(): { hubPath: string, editorRootPath: string, editorFileExtension: string } {
     switch (process.platform) {
         case 'win32':
             return {
@@ -34,9 +34,9 @@ function init() {
     }
 }
 
-async function Get() {
+async function Get(): Promise<string> {
     try {
-        await fs.access(hubPath, fs.constants.X_OK);
+        await fs.promises.access(hubPath, fs.constants.X_OK);
     } catch (error) {
         hubPath = await installUnityHub();
     }
@@ -58,7 +58,7 @@ async function Get() {
     return hubPath;
 }
 
-async function installUnityHub() {
+async function installUnityHub(): Promise<string> {
     let exitCode = undefined;
     switch (process.platform) {
         case 'win32':
@@ -68,7 +68,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.X_OK);
+                await fs.promises.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'darwin':
@@ -78,7 +78,7 @@ async function installUnityHub() {
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
-                await fs.access(unityHub.hubPath, fs.constants.X_OK);
+                await fs.promises.access(unityHub.hubPath, fs.constants.X_OK);
                 return unityHub.hubPath;
             }
         case 'linux':
@@ -99,13 +99,13 @@ async function installUnityHub() {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
                 const hubPath = output.match(/UNITY_HUB (.+)/)[1];
-                await fs.access(hubPath, fs.constants.X_OK);
+                await fs.promises.access(hubPath, fs.constants.X_OK);
                 return hubPath;
             }
     }
 }
 
-async function getInstalledHubVersion() {
+async function getInstalledHubVersion(): Promise<semver.SemVer> {
     try {
         let asarPath = undefined;
         const baseHubPath = await GetHubRootPath(hubPath);
@@ -117,7 +117,7 @@ async function getInstalledHubVersion() {
                 asarPath = path.join(baseHubPath, 'resources', 'app.asar');
                 break;
         }
-        await fs.access(asarPath, fs.constants.R_OK);
+        await fs.promises.access(asarPath, fs.constants.R_OK);
         const fileBuffer = asar.extractFile(asarPath, 'package.json');
         const packageJson = JSON.parse(fileBuffer.toString());
         return semver.coerce(packageJson.version);
@@ -127,7 +127,7 @@ async function getInstalledHubVersion() {
     }
 }
 
-async function getLatestHubVersion() {
+async function getLatestHubVersion(): Promise<semver.SemVer> {
     try {
         let url = undefined;
         switch (process.platform) {
@@ -158,7 +158,7 @@ const ignoredLines = [
     `Failed to connect to the bus:`
 ];
 
-async function execUnityHub(args) {
+async function execUnityHub(args: string[]): Promise<string> {
     if (!hubPath) {
         throw new Error('Unity Hub Path is not set!');
     }
@@ -221,7 +221,7 @@ async function execUnityHub(args) {
     return output;
 }
 
-async function Unity(version, changeset, architecture, modules) {
+async function Unity(version: string, changeset: string, architecture: string, modules: string[]): Promise<string> {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
         core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
         architecture = 'x86_64';
@@ -231,32 +231,32 @@ async function Unity(version, changeset, architecture, modules) {
         await installUnity(version, changeset, architecture, modules);
         editorPath = await checkInstalledEditors(version, architecture);
     }
-    await fs.access(editorPath, fs.constants.R_OK);
+    await fs.promises.access(editorPath, fs.constants.R_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     try {
         core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
-        [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
+        const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
+        if (installedModules && installedModules.length > 0) {
+            core.info(`Installed Modules:`);
+            for (const module of installedModules) {
+                core.info(`  > ${module}`);
+            }
+        }
+        if (additionalModules && additionalModules.length > 0) {
+            core.info(`Additional Modules:`);
+            for (const module of additionalModules) {
+                core.info(`  > ${module}`);
+            }
+        }
     } finally {
         core.endGroup();
-    }
-    if (installedModules && installedModules.length > 0) {
-        core.info(`Installed Modules:`);
-        for (const module of installedModules) {
-            core.info(`  > ${module}`);
-        }
-    }
-    if (additionalModules && additionalModules.length > 0) {
-        core.info(`Additional Modules:`);
-        for (const module of additionalModules) {
-            core.info(`  > ${module}`);
-        }
     }
     return editorPath;
 }
 
-async function installUnity(version, changeset, architecture, modules) {
+async function installUnity(version: string, changeset: string, architecture: string, modules: string[]): Promise<void> {
     core.startGroup(`Installing Unity ${version} (${changeset})...`);
-    let args = ['install', '--version', version, '--changeset', changeset];
+    const args = ['install', '--version', version, '--changeset', changeset];
     if (architecture) {
         args.push('-a', architecture);
     }
@@ -274,15 +274,15 @@ async function installUnity(version, changeset, architecture, modules) {
     }
 }
 
-async function ListInstalledEditors() {
+async function ListInstalledEditors(): Promise<void> {
     await execUnityHub(['editors', '-i']);
 }
 
-function isArmCompatible(version) {
+function isArmCompatible(version: string): boolean {
     return semver.compare(version, '2021.1.0f1', true) >= 0;
 }
 
-async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
+async function checkInstalledEditors(version: string, architecture: string, failOnEmpty = true): Promise<string> {
     const output = await execUnityHub(['editors', '-i']);
     if (!output || output.trim().length === 0) {
         if (failOnEmpty) {
@@ -317,7 +317,7 @@ async function checkInstalledEditors(version, architecture, failOnEmpty = true) 
     if (process.platform === 'darwin') {
         editorPath = path.join(editorPath, '/Contents/MacOS/Unity');
     }
-    await fs.access(editorPath, fs.constants.R_OK);
+    await fs.promises.access(editorPath, fs.constants.R_OK);
     core.debug(`Found installed Unity Editor: ${editorPath}`);
     return editorPath;
 }
@@ -325,9 +325,9 @@ async function checkInstalledEditors(version, architecture, failOnEmpty = true) 
 const archMap = {
     'arm64': 'Apple silicon',
     'x86_64': 'Intel',
-};
+}
 
-async function checkEditorModules(editorPath, version, architecture, modules) {
+async function checkEditorModules(editorPath: string, version: string, architecture: string, modules: string[]): Promise<[string[], string[]]> {
     let args = ['install-modules', '--version', version];
     if (architecture) {
         args.push('-a', architecture);
@@ -363,9 +363,9 @@ async function checkEditorModules(editorPath, version, architecture, modules) {
     return [installedModules, additionalModules];
 }
 
-async function getModulesContent(modulesPath) {
+async function getModulesContent(modulesPath: string): Promise<any> {
     const modulesContent = await ReadFileContents(modulesPath);
     return JSON.parse(modulesContent);
 }
 
-module.exports = { Get, Unity, ListInstalledEditors }
+export { Get, Unity, ListInstalledEditors }
