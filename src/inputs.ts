@@ -198,4 +198,4 @@ async function getUnityVersionFromFile(versionFilePath: string): Promise<[string
     return [match.groups.version, match.groups.changeset];
 }
 
-export { ValidateInputs };
+export { ValidateInputs }
