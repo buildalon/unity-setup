@@ -35,7 +35,7 @@ strategy:
 steps:
   - uses: buildalon/unity-setup@v1
     with:
-      version-file: 'path/to/your/ProjectSettings.ProjectVersion.txt'
+      version-file: 'path/to/your/unity/project/ProjectSettings/ProjectVersion.txt'
       unity-version: ${{ matrix.unity-versions }} # overrides version in version-file
       build-targets: ${{ matrix.build-targets }}
       modules: ${{ matrix.modules }}

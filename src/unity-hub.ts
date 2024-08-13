@@ -274,8 +274,8 @@ async function installUnity(version: string, changeset: string, architecture: st
     }
 }
 
-async function ListInstalledEditors(): Promise<void> {
-    await execUnityHub(['editors', '-i']);
+async function ListInstalledEditors(): Promise<string> {
+    return await execUnityHub(['editors', '-i']);
 }
 
 function isArmCompatible(version: string): boolean {
@@ -283,7 +283,7 @@ function isArmCompatible(version: string): boolean {
 }
 
 async function checkInstalledEditors(version: string, architecture: string, failOnEmpty = true): Promise<string> {
-    const output = await execUnityHub(['editors', '-i']);
+    const output = await ListInstalledEditors();
     if (!output || output.trim().length === 0) {
         if (failOnEmpty) {
             throw new Error('No Unity Editors installed!');

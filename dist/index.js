@@ -34442,7 +34442,8 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
     const rootEditorPath = await (0, utility_1.GetEditorRootPath)(editorPath);
     const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
     const projectSettingsContent = await (0, utility_1.ReadFileContents)(projectSettingsPath);
-    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/)[0]);
+    const matchResult = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
+    const androidTargetSdk = matchResult ? parseInt(matchResult[0]) : 0;
     core.debug(`AndroidTargetSdkVersion:\n  > ${androidTargetSdk}`);
     if (androidTargetSdk === undefined || androidTargetSdk === 0) {
         return;
@@ -34831,13 +34832,13 @@ async function installUnity(version, changeset, architecture, modules) {
     }
 }
 async function ListInstalledEditors() {
-    await execUnityHub(['editors', '-i']);
+    return await execUnityHub(['editors', '-i']);
 }
 function isArmCompatible(version) {
     return semver.compare(version, '2021.1.0f1', true) >= 0;
 }
 async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
-    const output = await execUnityHub(['editors', '-i']);
+    const output = await ListInstalledEditors();
     if (!output || output.trim().length === 0) {
         if (failOnEmpty) {
             throw new Error('No Unity Editors installed!');
@@ -45412,7 +45413,6 @@ const main = async () => {
         }
         const installedEditors = editors.map(([version, path]) => `\"${version}\":\"${path}\"`).join(',');
         core.exportVariable('UNITY_EDITORS', `[${installedEditors}]`);
-        await unityHub.ListInstalledEditors();
         core.info('Unity Setup Complete!');
         process.exit(0);
     }
