@@ -179,7 +179,7 @@ async function execUnityHub(args: string[]): Promise<string> {
             });
             break;
         case 'linux': // xvfb-run --auto-servernum "~/Unity Hub/UnityHub.AppImage" --headless help
-            core.info(`[command]xvfb-run --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
+            core.info(`[command]xvfb-run --auto-servernum ${hubPath} --headless ${args.join(' ')}`);
             await exec.exec('xvfb-run', ['--auto-servernum', hubPath, '--headless', ...args], {
                 listeners: {
                     stdline: (data) => {
@@ -233,6 +233,7 @@ async function Unity(version: string, changeset: string, architecture: string, m
     }
     await fs.promises.access(editorPath, fs.constants.R_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
+    core.addPath(path.dirname(editorPath));
     try {
         core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
