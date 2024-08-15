@@ -153,7 +153,8 @@ async function getLatestHubVersion(): Promise<semver.SemVer> {
 }
 
 const ignoredLines = [
-    `This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). The promise rejected with the reason:`,
+    `This error originated either by throwing inside of an async function without a catch block`,
+    `Unexpected error attempting to determine if executable file exists`,
     `dri3 extension not supported`,
     `Failed to connect to the bus:`
 ];
@@ -178,9 +179,9 @@ async function execUnityHub(args: string[]): Promise<string> {
                 ignoreReturnCode: true
             });
             break;
-        case 'linux': // xvfb-run --auto-servernum "~/Unity Hub/UnityHub.AppImage" --headless help
-            core.info(`[command]xvfb-run --auto-servernum ${hubPath} --headless ${args.join(' ')}`);
-            await exec.exec('xvfb-run', ['--auto-servernum', hubPath, '--headless', ...args], {
+        case 'linux': // unity-hub --headless help
+            core.info(`[command]unity-hub --headless ${args.join(' ')}`);
+            await exec.exec('unity-hub', ['--headless', ...args], {
                 listeners: {
                     stdline: (data) => {
                         const line = data.toString();
@@ -231,11 +232,11 @@ async function Unity(version: string, changeset: string, architecture: string, m
         await installUnity(version, changeset, architecture, modules);
         editorPath = await checkInstalledEditors(version, architecture);
     }
-    await fs.promises.access(editorPath, fs.constants.R_OK);
+    await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
-    core.addPath(path.dirname(editorPath));
+    core.addPath(editorPath);
     try {
-        core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
+        core.startGroup(`Checking installed modules for Unity ${version}(${changeset})...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
