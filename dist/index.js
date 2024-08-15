@@ -34793,7 +34793,7 @@ async function Unity(version, changeset, architecture, modules) {
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     core.addPath(editorPath);
     try {
-        core.startGroup(`Checking installed modules for Unity ${version}(${changeset})...`);
+        core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
