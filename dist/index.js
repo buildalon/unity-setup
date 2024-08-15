@@ -34442,7 +34442,8 @@ async function CheckAndroidSdkInstalled(editorPath, projectPath) {
     const rootEditorPath = await (0, utility_1.GetEditorRootPath)(editorPath);
     const projectSettingsPath = path.join(projectPath, 'ProjectSettings/ProjectSettings.asset');
     const projectSettingsContent = await (0, utility_1.ReadFileContents)(projectSettingsPath);
-    const androidTargetSdk = parseInt(projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/)[0]);
+    const matchResult = projectSettingsContent.match(/(?<=AndroidTargetSdkVersion: )\d+/);
+    const androidTargetSdk = matchResult ? parseInt(matchResult[0]) : 0;
     core.debug(`AndroidTargetSdkVersion:\n  > ${androidTargetSdk}`);
     if (androidTargetSdk === undefined || androidTargetSdk === 0) {
         return;
@@ -34711,7 +34712,8 @@ async function getLatestHubVersion() {
     }
 }
 const ignoredLines = [
-    `This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). The promise rejected with the reason:`,
+    `This error originated either by throwing inside of an async function without a catch block`,
+    `Unexpected error attempting to determine if executable file exists`,
     `dri3 extension not supported`,
     `Failed to connect to the bus:`
 ];
@@ -34736,8 +34738,8 @@ async function execUnityHub(args) {
             });
             break;
         case 'linux':
-            core.info(`[command]xvfb-run --auto-servernum "${hubPath}" --headless ${args.join(' ')}`);
-            await exec.exec('xvfb-run', ['--auto-servernum', hubPath, '--headless', ...args], {
+            core.info(`[command]unity-hub --headless ${args.join(' ')}`);
+            await exec.exec('unity-hub', ['--headless', ...args], {
                 listeners: {
                     stdline: (data) => {
                         const line = data.toString();
@@ -34787,8 +34789,9 @@ async function Unity(version, changeset, architecture, modules) {
         await installUnity(version, changeset, architecture, modules);
         editorPath = await checkInstalledEditors(version, architecture);
     }
-    await fs.promises.access(editorPath, fs.constants.R_OK);
+    await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
+    core.addPath(editorPath);
     try {
         core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
@@ -34831,13 +34834,13 @@ async function installUnity(version, changeset, architecture, modules) {
     }
 }
 async function ListInstalledEditors() {
-    await execUnityHub(['editors', '-i']);
+    return await execUnityHub(['editors', '-i']);
 }
 function isArmCompatible(version) {
     return semver.compare(version, '2021.1.0f1', true) >= 0;
 }
 async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
-    const output = await execUnityHub(['editors', '-i']);
+    const output = await ListInstalledEditors();
     if (!output || output.trim().length === 0) {
         if (failOnEmpty) {
             throw new Error('No Unity Editors installed!');
@@ -45412,7 +45415,6 @@ const main = async () => {
         }
         const installedEditors = editors.map(([version, path]) => `\"${version}\":\"${path}\"`).join(',');
         core.exportVariable('UNITY_EDITORS', `[${installedEditors}]`);
-        await unityHub.ListInstalledEditors();
         core.info('Unity Setup Complete!');
         process.exit(0);
     }

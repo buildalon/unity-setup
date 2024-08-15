@@ -23,7 +23,6 @@ const main = async () => {
         }
         const installedEditors = editors.map(([version, path]) => `\"${version}\":\"${path}\"`).join(',');
         core.exportVariable('UNITY_EDITORS', `[${installedEditors}]`);
-        await unityHub.ListInstalledEditors();
         core.info('Unity Setup Complete!');
         process.exit(0);
     } catch (error) {
