@@ -13,12 +13,12 @@ strategy:
   matrix:
     os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
     unity-versions:
-      - 'in version file'
+      - None
       - 2019.4.40f1 (ffc62b691db5)
-      - 2020.3.48f1 (b805b124c6b7)
-      - 2021.3.41f1 (6c5a9e20c022)
-      - 2022.3.40f1 (cbdda657d2f0)
-      - 6000.0.13f1 (53a692e3fca9)
+      - 2020.x
+      - 2021.3.x
+      - 2022.3
+      - 6000
     include:
       - os: ubuntu-latest
         build-targets: StandaloneLinux64, Android, iOS

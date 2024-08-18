@@ -56,7 +56,8 @@ async function ValidateInputs(): Promise<[string[][], string | undefined, string
     versions.sort(([a], [b]) => semver.compare(a, b, true));
     core.info(`Unity Versions:`);
     for (const [version, changeset] of versions) {
-        core.info(`  > ${version} (${changeset})`);
+        const changesetStr = changeset ? ` (${changeset})` : '';
+        core.info(`  > ${version}${changesetStr}`);
     }
     return [versions, architecture, modules, unityProjectPath];
 }
@@ -174,10 +175,15 @@ function getUnityVersionsFromInput(): string[][] {
     if (!inputVersions || inputVersions.length == 0) {
         return versions;
     }
-    const versionRegEx = new RegExp(/(?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[fab]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/g);
+    const versionRegEx = new RegExp(/(?<version>(?:(?<major>\d+)\.?)(?:(?<minor>\d+)\.?)?(?:(?<patch>\d+[fab]\d+)?\b))\s?(?:\((?<changeset>\w+)\))?/g);
     const matches = Array.from(inputVersions.matchAll(versionRegEx));
+    core.debug(`Unity Versions from input:`);
     for (const match of matches) {
-        versions.push([match.groups.version, match.groups.changeset]);
+        const version = match.groups.version.replace(/\.$/, '');
+        const changeset = match.groups.changeset;
+        const changesetStr = changeset ? ` (${changeset})` : '';
+        core.debug(`${version}${changesetStr}`);
+        versions.push([version, changeset]);
     }
     return versions;
 }
