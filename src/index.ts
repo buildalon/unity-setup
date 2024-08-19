@@ -26,7 +26,7 @@ const main = async () => {
         core.info('Unity Setup Complete!');
         process.exit(0);
     } catch (error) {
-        core.setFailed(error);
+        core.setFailed(error.stack);
     }
 }
 
