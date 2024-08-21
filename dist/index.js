@@ -34802,7 +34802,6 @@ async function Unity(version, changeset, architecture, modules) {
     }
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
-    core.addPath(editorPath);
     try {
         const changesetStr = changeset ? ` (${changeset})` : '';
         core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);

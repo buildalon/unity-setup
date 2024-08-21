@@ -239,7 +239,6 @@ async function Unity(version: string, changeset: string, architecture: string, m
     }
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
-    core.addPath(editorPath);
     try {
         const changesetStr = changeset ? ` (${changeset})` : '';
         core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);
