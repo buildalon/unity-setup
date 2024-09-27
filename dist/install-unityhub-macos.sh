@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+sudo sh -c 'dbus-uuidgen >/etc/machine-id && mkdir -p /var/lib/dbus/ && ln -sf /etc/machine-id /var/lib/dbus/machine-id'
 echo "::group::Installing Unity Hub..."
 baseUrl="https://public-cdn.cloud.unity3d.com/hub/prod"
 url="$baseUrl/UnityHubSetup.dmg"
