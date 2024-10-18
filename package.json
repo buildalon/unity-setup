@@ -1,6 +1,6 @@
 {
   "name": "unity-setup",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "A GitHub action for setting up the Unity Game Engine for CI/CD workflows.",
   "author": "Buildalon",
   "license": "MIT",
@@ -41,6 +41,7 @@
   "scripts": {
     "build": "npm run clean && npm run bundle",
     "bundle": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "watch": "ncc build src/index.ts -o dist --source-map --license licenses.txt --watch",
     "clean": "npm install && shx rm -rf dist/ out/ node_modules/ && npm ci"
   }
 }
