@@ -34826,19 +34826,17 @@ async function Unity(version, changeset, architecture, modules) {
 }
 async function getLatestRelease(version, isSilicon) {
     const releases = (await execUnityHub([`editors`, `--releases`])).split('\n');
-    for (const release of releases) {
-        if (!release || release.trim().length === 0) {
-            continue;
-        }
-        const semVersion = semver.coerce(version);
-        const semVerRelease = semver.coerce(release);
-        core.debug(`Checking ${semVersion} against ${semVerRelease}`);
-        if (semver.satisfies(semVerRelease, `^${semVersion}`)) {
-            const match = release.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-            if (match && match.groups && match.groups.version) {
-                core.info(`Found Unity ${match.groups.version}`);
-                return [match.groups.version, undefined];
-            }
+    const semVersion = semver.coerce(version);
+    const validReleases = releases
+        .map(release => semver.coerce(release))
+        .filter(release => release && semver.satisfies(release, `^${semVersion}`))
+        .sort((a, b) => semver.compare(b, a));
+    for (const release of validReleases) {
+        const originalRelease = releases.find(r => r.includes(release.version));
+        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
+        if (match && match.groups && match.groups.version) {
+            core.info(`Found Unity ${match.groups.version}`);
+            return [match.groups.version, undefined];
         }
     }
     core.info(`Searching for Unity ${version} release...`);
