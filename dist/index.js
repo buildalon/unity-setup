@@ -34829,11 +34829,11 @@ async function getLatestRelease(version, isSilicon) {
     const semVersion = semver.coerce(version);
     const validReleases = releases
         .map(release => semver.coerce(release))
-        .filter(release => release && semver.satisfies(release, `^${semVersion}`) && release.version.endsWith('f1'))
+        .filter(release => release && semver.satisfies(release, `^${semVersion}`))
         .sort((a, b) => semver.compare(b, a));
     for (const release of validReleases) {
         const originalRelease = releases.find(r => r.includes(release.version));
-        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
+        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[f]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
         if (match && match.groups && match.groups.version) {
             core.info(`Found Unity ${match.groups.version}`);
             return [match.groups.version, undefined];
@@ -34856,7 +34856,7 @@ async function parseReleases(version, data) {
         const semVersion = semver.coerce(version);
         const semVerRelease = semver.coerce(release.version);
         core.debug(`Checking ${semVersion} against ${semVerRelease}`);
-        if (semver.satisfies(semVerRelease, `^${semVersion}`) && release.version.endsWith('f1')) {
+        if (semver.satisfies(semVerRelease, `^${semVersion}`)) {
             core.debug(`Found Unity ${release.version} release.`);
             const match = release.downloadUrl.match(/download_unity\/(?<changeset>[a-zA-Z0-9]+)\//);
             if (match && match.groups && match.groups.changeset) {
