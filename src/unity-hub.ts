@@ -270,8 +270,15 @@ async function getLatestRelease(version: string, isSilicon: boolean): Promise<[s
         .sort((a, b) => semver.compare(b, a));
     for (const release of validReleases) {
         const originalRelease = releases.find(r => r.includes(release.version));
-        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[f]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-        if (match && match.groups && match.groups.version) {
+        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
+        if (!(match && match.groups && match.groups.version)) { continue; }
+        if (version.includes('a') && match.groups.version.includes('a')) {
+            core.info(`Found Unity ${match.groups.version}`);
+            return [match.groups.version, undefined];
+        } else if (version.includes('b') && match.groups.version.includes('b')) {
+            core.info(`Found Unity ${match.groups.version}`);
+            return [match.groups.version, undefined];
+        } else if (match.groups.version.includes('f')) {
             core.info(`Found Unity ${match.groups.version}`);
             return [match.groups.version, undefined];
         }
