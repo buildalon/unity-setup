@@ -34837,15 +34837,9 @@ async function getLatestRelease(version, isSilicon) {
         if (!(match && match.groups && match.groups.version)) {
             continue;
         }
-        if (version.includes('a') && match.groups.version.includes('a')) {
-            core.info(`Found Unity ${match.groups.version}`);
-            return [match.groups.version, undefined];
-        }
-        else if (version.includes('b') && match.groups.version.includes('b')) {
-            core.info(`Found Unity ${match.groups.version}`);
-            return [match.groups.version, undefined];
-        }
-        else if (match.groups.version.includes('f')) {
+        if ((version.includes('a') && match.groups.version.includes('a')) ||
+            (version.includes('b') && match.groups.version.includes('b')) ||
+            match.groups.version.includes('f')) {
             core.info(`Found Unity ${match.groups.version}`);
             return [match.groups.version, undefined];
         }
