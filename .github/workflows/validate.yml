@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         unity-versions:
           - None
           - 2019.4.40f1 (ffc62b691db5)
