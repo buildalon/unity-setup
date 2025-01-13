@@ -34819,6 +34819,12 @@ async function Unity(version, changeset, architecture, modules) {
             }
         }
     }
+    catch (error) {
+        if (error.message.includes(`No modules found`)) {
+            uninstallUnity(editorPath);
+            await Unity(version, changeset, architecture, modules);
+        }
+    }
     finally {
         core.endGroup();
     }
@@ -34988,6 +34994,15 @@ async function checkEditorModules(editorPath, version, architecture, modules) {
 async function getModulesContent(modulesPath) {
     const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
+}
+async function uninstallUnity(editorPath) {
+    core.startGroup(`Uninstalling ${editorPath}...`);
+    try {
+        await fs.promises.rm(editorPath, { recursive: true });
+    }
+    finally {
+        core.endGroup();
+    }
 }
 
 
