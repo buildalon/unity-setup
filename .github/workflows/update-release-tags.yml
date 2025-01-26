@@ -1,0 +1,17 @@
+name: Update Release Tags
+on:
+  push:
+    tags: v?[0-9].[0-9].[0-9]
+jobs:
+  update-release-tags:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: RageAgainstThePixel/update-action-release-tags@v1
+        with:
+          update-major: true
+          update-minor: true
