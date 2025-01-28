@@ -34805,7 +34805,15 @@ async function Unity(version, changeset, architecture, modules) {
     }
     let editorPath = await checkInstalledEditors(version, architecture, false);
     if (!editorPath) {
-        await installUnity(version, changeset, architecture, modules);
+        try {
+            await installUnity(version, changeset, architecture, modules);
+        }
+        catch (error) {
+            if (error.message.includes('Editor already installed in this location')) {
+                uninstallUnity(editorPath);
+                await installUnity(version, changeset, architecture, modules);
+            }
+        }
         editorPath = await checkInstalledEditors(version, architecture);
     }
     await fs.promises.access(editorPath, fs.constants.X_OK);

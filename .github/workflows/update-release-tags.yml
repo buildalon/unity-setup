@@ -1,7 +1,8 @@
 name: Update Release Tags
 on:
   push:
-    tags: v?[0-9].[0-9].[0-9]
+    tags: '*'
+  workflow_dispatch:
 jobs:
   update-release-tags:
     runs-on: ubuntu-latest
