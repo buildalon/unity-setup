@@ -207,7 +207,7 @@ async function execUnityHub(args: string[]): Promise<string> {
     const match = output.match(/Assertion (?<assert>.+) failed/g);
     if (match ||
         output.includes('async hook stack has become corrupted')) {
-        core.warning(`Install failed, retrying...`)
+        core.warning(`Install failed, retrying...`);
         return await execUnityHub(args);
     }
     if (output.includes('Error:')) {
@@ -234,7 +234,14 @@ async function Unity(version: string, changeset: string, architecture: string, m
     }
     let editorPath = await checkInstalledEditors(version, architecture, false);
     if (!editorPath) {
-        await installUnity(version, changeset, architecture, modules);
+        try {
+            await installUnity(version, changeset, architecture, modules);
+        } catch (error) {
+            if (error.message.includes('Editor already installed in this location')) {
+                uninstallUnity(editorPath);
+                await installUnity(version, changeset, architecture, modules);
+            }
+        }
         editorPath = await checkInstalledEditors(version, architecture);
     }
     await fs.promises.access(editorPath, fs.constants.X_OK);
