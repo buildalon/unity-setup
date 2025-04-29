@@ -449,7 +449,11 @@ async function getModulesContent(modulesPath: string): Promise<any> {
 async function getChangeset(version: string): Promise<string> {
     const url = `https://unity.com/releases/editor/whats-new/${version}`;
     const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch changeset for Unity ${version}: ${response.statusText}`);
+    }
     const data = await response.text();
+    core.info(`Unity ${version} release notes:\n${url}`);
     const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return match.groups.changeset;
