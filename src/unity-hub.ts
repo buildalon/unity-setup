@@ -325,8 +325,10 @@ async function parseReleases(version: string, data: string): Promise<[string, st
 }
 
 async function installUnity(version: string, changeset: string, architecture: string, modules: string[]): Promise<void> {
-    const changesetStr = changeset ? ` (${changeset})` : '';
-    core.startGroup(`Installing Unity ${version}${changesetStr}...`);
+    if (!changeset) {
+        changeset = await getChangeset(version);
+    }
+    core.startGroup(`Installing Unity ${version} (${changeset})...`);
     const args = ['install', '--version', version];
     if (changeset) {
         args.push('--changeset', changeset);
@@ -442,6 +444,17 @@ async function checkEditorModules(editorPath: string, version: string, architect
 async function getModulesContent(modulesPath: string): Promise<any> {
     const modulesContent = await ReadFileContents(modulesPath);
     return JSON.parse(modulesContent);
+}
+
+async function getChangeset(version: string): Promise<string> {
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    const response = await fetch(url);
+    const data = await response.text();
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)\/?/g);
+    if (match && match.groups && match.groups.changeset) {
+        return match.groups.changeset;
+    }
+    throw new Error(`Failed to find changeset for Unity ${version}`);
 }
 
 async function removePath(targetPath: string): Promise<void> {

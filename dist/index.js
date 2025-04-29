@@ -34654,8 +34654,10 @@ async function parseReleases(version, data) {
     throw new Error(`Failed to find Unity ${version} release. Please provide a valid changeset.`);
 }
 async function installUnity(version, changeset, architecture, modules) {
-    const changesetStr = changeset ? ` (${changeset})` : '';
-    core.startGroup(`Installing Unity ${version}${changesetStr}...`);
+    if (!changeset) {
+        changeset = await getChangeset(version);
+    }
+    core.startGroup(`Installing Unity ${version} (${changeset})...`);
     const args = ['install', '--version', version];
     if (changeset) {
         args.push('--changeset', changeset);
@@ -34768,6 +34770,16 @@ async function checkEditorModules(editorPath, version, architecture, modules) {
 async function getModulesContent(modulesPath) {
     const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
+}
+async function getChangeset(version) {
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    const response = await fetch(url);
+    const data = await response.text();
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)\/?/g);
+    if (match && match.groups && match.groups.changeset) {
+        return match.groups.changeset;
+    }
+    throw new Error(`Failed to find changeset for Unity ${version}`);
 }
 async function removePath(targetPath) {
     core.startGroup(`deleting ${targetPath}...`);
