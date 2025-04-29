@@ -34769,10 +34769,10 @@ async function getModulesContent(modulesPath) {
     const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
 }
-async function removePath(path) {
-    core.startGroup(`deleting ${path}...`);
+async function removePath(targetPath) {
+    core.startGroup(`deleting ${targetPath}...`);
     try {
-        await fs.promises.rm(path, { recursive: true });
+        await fs.promises.rm(targetPath, { recursive: true });
     }
     finally {
         core.endGroup();

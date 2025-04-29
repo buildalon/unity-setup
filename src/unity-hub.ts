@@ -444,10 +444,10 @@ async function getModulesContent(modulesPath: string): Promise<any> {
     return JSON.parse(modulesContent);
 }
 
-async function removePath(path: string): Promise<void> {
-    core.startGroup(`deleting ${path}...`);
+async function removePath(targetPath: string): Promise<void> {
+    core.startGroup(`deleting ${targetPath}...`);
     try {
-        await fs.promises.rm(path, { recursive: true });
+        await fs.promises.rm(targetPath, { recursive: true });
     } finally {
         core.endGroup();
     }
