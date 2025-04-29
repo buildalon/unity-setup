@@ -234,6 +234,10 @@ export async function Unity(version: string, changeset: string, architecture: st
         version = latestVersion;
         changeset = latestChangeset
     }
+    if (!changeset) {
+        core.info(`Fetching changeset for Unity ${version}...`);
+        changeset = await getChangeset(version);
+    }
     let editorPath = await checkInstalledEditors(version, architecture, false);
     if (!editorPath) {
         try {
@@ -249,8 +253,7 @@ export async function Unity(version: string, changeset: string, architecture: st
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     try {
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);
+        core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
@@ -325,10 +328,6 @@ async function parseReleases(version: string, data: string): Promise<[string, st
 }
 
 async function installUnity(version: string, changeset: string, architecture: string, modules: string[]): Promise<void> {
-    if (!changeset) {
-        core.info(`Fetching changeset for Unity ${version}...`);
-        changeset = await getChangeset(version);
-    }
     core.startGroup(`Installing Unity ${version} (${changeset})...`);
     const args = ['install', '--version', version];
     if (changeset) {

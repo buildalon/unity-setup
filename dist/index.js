@@ -34561,6 +34561,10 @@ async function Unity(version, changeset, architecture, modules) {
         version = latestVersion;
         changeset = latestChangeset;
     }
+    if (!changeset) {
+        core.info(`Fetching changeset for Unity ${version}...`);
+        changeset = await getChangeset(version);
+    }
     let editorPath = await checkInstalledEditors(version, architecture, false);
     if (!editorPath) {
         try {
@@ -34577,8 +34581,7 @@ async function Unity(version, changeset, architecture, modules) {
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     try {
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);
+        core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
@@ -34654,10 +34657,6 @@ async function parseReleases(version, data) {
     throw new Error(`Failed to find Unity ${version} release. Please provide a valid changeset.`);
 }
 async function installUnity(version, changeset, architecture, modules) {
-    if (!changeset) {
-        core.info(`Fetching changeset for Unity ${version}...`);
-        changeset = await getChangeset(version);
-    }
     core.startGroup(`Installing Unity ${version} (${changeset})...`);
     const args = ['install', '--version', version];
     if (changeset) {
