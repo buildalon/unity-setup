@@ -1,9 +1,11 @@
 #!/bin/bash
-set -e
+set -xe
 echo "::group::Installing Unity Hub..."
 baseUrl="https://public-cdn.cloud.unity3d.com/hub/prod"
-url="$baseUrl/UnityHubSetup.dmg"
-downloadPath="$RUNNER_TEMP/UnityHubSetup.dmg"
+cpuArch=$(uname -m)
+fileName="UnityHubSetup"
+url="$baseUrl/$fileName-$cpuArch.dmg"
+downloadPath="$RUNNER_TEMP/$fileName-$cpuArch.dmg"
 echo "Downloading Unity Hub from $url to $downloadPath..."
 wget -qO "$downloadPath" "$url"
 if [ ! -f "$downloadPath" ]; then
