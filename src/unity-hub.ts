@@ -226,7 +226,7 @@ async function execUnityHub(args: string[]): Promise<string> {
 
 export async function Unity(version: string, changeset: string, architecture: string, modules: string[]): Promise<string> {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
-        core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
+        core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
         architecture = 'x86_64';
     }
     if (!changeset) {
@@ -354,7 +354,7 @@ export async function ListInstalledEditors(): Promise<string> {
 
 function isArmCompatible(version: string): boolean {
     const semVersion = semver.coerce(version);
-    if (semVersion.major < 2021) { return false; }
+    if (semVersion.major < 2020) { return false; }
     return semver.compare(semVersion, '2021.1.0f1', true) >= 0;
 }
 

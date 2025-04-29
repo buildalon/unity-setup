@@ -34553,7 +34553,7 @@ async function execUnityHub(args) {
 }
 async function Unity(version, changeset, architecture, modules) {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
-        core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
+        core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
         architecture = 'x86_64';
     }
     if (!changeset) {
@@ -34682,7 +34682,7 @@ async function ListInstalledEditors() {
 }
 function isArmCompatible(version) {
     const semVersion = semver.coerce(version);
-    if (semVersion.major < 2021) {
+    if (semVersion.major < 2020) {
         return false;
     }
     return semver.compare(semVersion, '2021.1.0f1', true) >= 0;
