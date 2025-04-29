@@ -34,7 +34,7 @@ function init(): { hubPath: string, editorRootPath: string, editorFileExtension:
     }
 }
 
-async function Get(): Promise<string> {
+export async function Get(): Promise<string> {
     try {
         await fs.promises.access(hubPath, fs.constants.X_OK);
     } catch (error) {
@@ -44,6 +44,8 @@ async function Get(): Promise<string> {
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
     if (semver.lt(hubVersion, latestHubVersion)) {
+        core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
+        await removePath(hubPath);
         core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
         hubPath = await installUnityHub();
     }
@@ -222,7 +224,7 @@ async function execUnityHub(args: string[]): Promise<string> {
     return output;
 }
 
-async function Unity(version: string, changeset: string, architecture: string, modules: string[]): Promise<string> {
+export async function Unity(version: string, changeset: string, architecture: string, modules: string[]): Promise<string> {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
         core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
         architecture = 'x86_64';
@@ -238,7 +240,7 @@ async function Unity(version: string, changeset: string, architecture: string, m
             await installUnity(version, changeset, architecture, modules);
         } catch (error) {
             if (error.message.includes('Editor already installed in this location')) {
-                uninstallUnity(editorPath);
+                removePath(editorPath);
                 await installUnity(version, changeset, architecture, modules);
             }
         }
@@ -264,7 +266,7 @@ async function Unity(version: string, changeset: string, architecture: string, m
         }
     } catch (error) {
         if (error.message.includes(`No modules found`)) {
-            uninstallUnity(editorPath);
+            removePath(editorPath);
             await Unity(version, changeset, architecture, modules);
         }
     } finally {
@@ -346,7 +348,7 @@ async function installUnity(version: string, changeset: string, architecture: st
     }
 }
 
-async function ListInstalledEditors(): Promise<string> {
+export async function ListInstalledEditors(): Promise<string> {
     return await execUnityHub(['editors', '-i']);
 }
 
@@ -442,13 +444,11 @@ async function getModulesContent(modulesPath: string): Promise<any> {
     return JSON.parse(modulesContent);
 }
 
-async function uninstallUnity(editorPath: string): Promise<void> {
-    core.startGroup(`Uninstalling ${editorPath}...`);
+async function removePath(path: string): Promise<void> {
+    core.startGroup(`deleting ${path}...`);
     try {
-        await fs.promises.rm(editorPath, { recursive: true });
+        await fs.promises.rm(path, { recursive: true });
     } finally {
         core.endGroup();
     }
 }
-
-export { Get, Unity, ListInstalledEditors }

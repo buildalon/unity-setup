@@ -3,7 +3,7 @@ import glob = require('@actions/glob');
 import path = require('path');
 import fs = require('fs');
 
-async function GetHubRootPath(hubPath: string): Promise<string> {
+export async function GetHubRootPath(hubPath: string): Promise<string> {
     core.debug(`searching for hub root path: ${hubPath}`);
     let hubRootPath = hubPath;
     switch (process.platform) {
@@ -20,7 +20,7 @@ async function GetHubRootPath(hubPath: string): Promise<string> {
     return hubRootPath;
 }
 
-async function GetEditorRootPath(editorPath: string): Promise<string> {
+export async function GetEditorRootPath(editorPath: string): Promise<string> {
     core.debug(`searching for editor root path: ${editorPath}`);
     let editorRootPath = editorPath;
     switch (process.platform) {
@@ -39,7 +39,7 @@ async function GetEditorRootPath(editorPath: string): Promise<string> {
     return editorRootPath;
 }
 
-async function ReadFileContents(filePath: string): Promise<string> {
+export async function ReadFileContents(filePath: string): Promise<string> {
     const fileHandle = await fs.promises.open(filePath, 'r');
     try {
         const projectSettingsContent = await fileHandle.readFile('utf8');
@@ -49,7 +49,7 @@ async function ReadFileContents(filePath: string): Promise<string> {
     }
 }
 
-async function FindGlobPattern(pattern: string): Promise<string | undefined> {
+export async function FindGlobPattern(pattern: string): Promise<string | undefined> {
     core.debug(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
@@ -57,5 +57,3 @@ async function FindGlobPattern(pattern: string): Promise<string | undefined> {
         return file;
     }
 }
-
-export { GetHubRootPath, GetEditorRootPath, ReadFileContents, FindGlobPattern }

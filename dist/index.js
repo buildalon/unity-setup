@@ -8,7 +8,11 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -21,7 +25,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -83,13 +87,13 @@ class Command {
     }
 }
 function escapeData(s) {
-    return utils_1.toCommandValue(s)
+    return (0, utils_1.toCommandValue)(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function escapeProperty(s) {
-    return utils_1.toCommandValue(s)
+    return (0, utils_1.toCommandValue)(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
@@ -107,7 +111,11 @@ function escapeProperty(s) {
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -120,7 +128,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -134,7 +142,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
+exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
 const command_1 = __nccwpck_require__(7351);
 const file_command_1 = __nccwpck_require__(717);
 const utils_1 = __nccwpck_require__(5278);
@@ -154,7 +162,7 @@ var ExitCode;
      * A code indicating that the action was a failure
      */
     ExitCode[ExitCode["Failure"] = 1] = "Failure";
-})(ExitCode = exports.ExitCode || (exports.ExitCode = {}));
+})(ExitCode || (exports.ExitCode = ExitCode = {}));
 //-----------------------------------------------------------------------
 // Variables
 //-----------------------------------------------------------------------
@@ -165,13 +173,13 @@ var ExitCode;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    const convertedVal = utils_1.toCommandValue(val);
+    const convertedVal = (0, utils_1.toCommandValue)(val);
     process.env[name] = convertedVal;
     const filePath = process.env['GITHUB_ENV'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('ENV', file_command_1.prepareKeyValueMessage(name, val));
+        return (0, file_command_1.issueFileCommand)('ENV', (0, file_command_1.prepareKeyValueMessage)(name, val));
     }
-    command_1.issueCommand('set-env', { name }, convertedVal);
+    (0, command_1.issueCommand)('set-env', { name }, convertedVal);
 }
 exports.exportVariable = exportVariable;
 /**
@@ -179,7 +187,7 @@ exports.exportVariable = exportVariable;
  * @param secret value of the secret
  */
 function setSecret(secret) {
-    command_1.issueCommand('add-mask', {}, secret);
+    (0, command_1.issueCommand)('add-mask', {}, secret);
 }
 exports.setSecret = setSecret;
 /**
@@ -189,10 +197,10 @@ exports.setSecret = setSecret;
 function addPath(inputPath) {
     const filePath = process.env['GITHUB_PATH'] || '';
     if (filePath) {
-        file_command_1.issueFileCommand('PATH', inputPath);
+        (0, file_command_1.issueFileCommand)('PATH', inputPath);
     }
     else {
-        command_1.issueCommand('add-path', {}, inputPath);
+        (0, command_1.issueCommand)('add-path', {}, inputPath);
     }
     process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
 }
@@ -267,10 +275,10 @@ exports.getBooleanInput = getBooleanInput;
 function setOutput(name, value) {
     const filePath = process.env['GITHUB_OUTPUT'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('OUTPUT', file_command_1.prepareKeyValueMessage(name, value));
+        return (0, file_command_1.issueFileCommand)('OUTPUT', (0, file_command_1.prepareKeyValueMessage)(name, value));
     }
     process.stdout.write(os.EOL);
-    command_1.issueCommand('set-output', { name }, utils_1.toCommandValue(value));
+    (0, command_1.issueCommand)('set-output', { name }, (0, utils_1.toCommandValue)(value));
 }
 exports.setOutput = setOutput;
 /**
@@ -279,7 +287,7 @@ exports.setOutput = setOutput;
  *
  */
 function setCommandEcho(enabled) {
-    command_1.issue('echo', enabled ? 'on' : 'off');
+    (0, command_1.issue)('echo', enabled ? 'on' : 'off');
 }
 exports.setCommandEcho = setCommandEcho;
 //-----------------------------------------------------------------------
@@ -310,7 +318,7 @@ exports.isDebug = isDebug;
  * @param message debug message
  */
 function debug(message) {
-    command_1.issueCommand('debug', {}, message);
+    (0, command_1.issueCommand)('debug', {}, message);
 }
 exports.debug = debug;
 /**
@@ -319,7 +327,7 @@ exports.debug = debug;
  * @param properties optional properties to add to the annotation.
  */
 function error(message, properties = {}) {
-    command_1.issueCommand('error', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('error', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.error = error;
 /**
@@ -328,7 +336,7 @@ exports.error = error;
  * @param properties optional properties to add to the annotation.
  */
 function warning(message, properties = {}) {
-    command_1.issueCommand('warning', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('warning', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.warning = warning;
 /**
@@ -337,7 +345,7 @@ exports.warning = warning;
  * @param properties optional properties to add to the annotation.
  */
 function notice(message, properties = {}) {
-    command_1.issueCommand('notice', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('notice', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.notice = notice;
 /**
@@ -356,14 +364,14 @@ exports.info = info;
  * @param name The name of the output group
  */
 function startGroup(name) {
-    command_1.issue('group', name);
+    (0, command_1.issue)('group', name);
 }
 exports.startGroup = startGroup;
 /**
  * End an output group.
  */
 function endGroup() {
-    command_1.issue('endgroup');
+    (0, command_1.issue)('endgroup');
 }
 exports.endGroup = endGroup;
 /**
@@ -401,9 +409,9 @@ exports.group = group;
 function saveState(name, value) {
     const filePath = process.env['GITHUB_STATE'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('STATE', file_command_1.prepareKeyValueMessage(name, value));
+        return (0, file_command_1.issueFileCommand)('STATE', (0, file_command_1.prepareKeyValueMessage)(name, value));
     }
-    command_1.issueCommand('save-state', { name }, utils_1.toCommandValue(value));
+    (0, command_1.issueCommand)('save-state', { name }, (0, utils_1.toCommandValue)(value));
 }
 exports.saveState = saveState;
 /**
@@ -439,6 +447,10 @@ var path_utils_1 = __nccwpck_require__(2981);
 Object.defineProperty(exports, "toPosixPath", ({ enumerable: true, get: function () { return path_utils_1.toPosixPath; } }));
 Object.defineProperty(exports, "toWin32Path", ({ enumerable: true, get: function () { return path_utils_1.toWin32Path; } }));
 Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: function () { return path_utils_1.toPlatformPath; } }));
+/**
+ * Platform utilities exports
+ */
+exports.platform = __importStar(__nccwpck_require__(5243));
 //# sourceMappingURL=core.js.map
 
 /***/ }),
@@ -451,7 +463,11 @@ Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: funct
 // For internal use, subject to change.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -464,7 +480,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -472,9 +488,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareKeyValueMessage = exports.issueFileCommand = void 0;
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
+const crypto = __importStar(__nccwpck_require__(6113));
 const fs = __importStar(__nccwpck_require__(7147));
 const os = __importStar(__nccwpck_require__(2037));
-const uuid_1 = __nccwpck_require__(5840);
 const utils_1 = __nccwpck_require__(5278);
 function issueFileCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
@@ -484,14 +500,14 @@ function issueFileCommand(command, message) {
     if (!fs.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
     }
-    fs.appendFileSync(filePath, `${utils_1.toCommandValue(message)}${os.EOL}`, {
+    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
         encoding: 'utf8'
     });
 }
 exports.issueFileCommand = issueFileCommand;
 function prepareKeyValueMessage(key, value) {
-    const delimiter = `ghadelimiter_${uuid_1.v4()}`;
-    const convertedValue = utils_1.toCommandValue(value);
+    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
+    const convertedValue = (0, utils_1.toCommandValue)(value);
     // These should realistically never happen, but just in case someone finds a
     // way to exploit uuid generation let's not allow keys or values that contain
     // the delimiter.
@@ -576,9 +592,9 @@ class OidcClient {
                     const encodedAudience = encodeURIComponent(audience);
                     id_token_url = `${id_token_url}&audience=${encodedAudience}`;
                 }
-                core_1.debug(`ID token url is ${id_token_url}`);
+                (0, core_1.debug)(`ID token url is ${id_token_url}`);
                 const id_token = yield OidcClient.getCall(id_token_url);
-                core_1.setSecret(id_token);
+                (0, core_1.setSecret)(id_token);
                 return id_token;
             }
             catch (error) {
@@ -599,7 +615,11 @@ exports.OidcClient = OidcClient;
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -612,7 +632,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -654,6 +674,107 @@ function toPlatformPath(pth) {
 }
 exports.toPlatformPath = toPlatformPath;
 //# sourceMappingURL=path-utils.js.map
+
+/***/ }),
+
+/***/ 5243:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDetails = exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = void 0;
+const os_1 = __importDefault(__nccwpck_require__(2037));
+const exec = __importStar(__nccwpck_require__(1514));
+const getWindowsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
+        silent: true
+    });
+    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
+        silent: true
+    });
+    return {
+        name: name.trim(),
+        version: version.trim()
+    };
+});
+const getMacOsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    const { stdout } = yield exec.getExecOutput('sw_vers', undefined, {
+        silent: true
+    });
+    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : '';
+    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : '';
+    return {
+        name,
+        version
+    };
+});
+const getLinuxInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout } = yield exec.getExecOutput('lsb_release', ['-i', '-r', '-s'], {
+        silent: true
+    });
+    const [name, version] = stdout.trim().split('\n');
+    return {
+        name,
+        version
+    };
+});
+exports.platform = os_1.default.platform();
+exports.arch = os_1.default.arch();
+exports.isWindows = exports.platform === 'win32';
+exports.isMacOS = exports.platform === 'darwin';
+exports.isLinux = exports.platform === 'linux';
+function getDetails() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return Object.assign(Object.assign({}, (yield (exports.isWindows
+            ? getWindowsInfo()
+            : exports.isMacOS
+                ? getMacOsInfo()
+                : getLinuxInfo()))), { platform: exports.platform,
+            arch: exports.arch,
+            isWindows: exports.isWindows,
+            isMacOS: exports.isMacOS,
+            isLinux: exports.isLinux });
+    });
+}
+exports.getDetails = getDetails;
+//# sourceMappingURL=platform.js.map
 
 /***/ }),
 
@@ -3576,7 +3697,7 @@ class HttpClient {
         }
         const usingSsl = parsedUrl.protocol === 'https:';
         proxyAgent = new undici_1.ProxyAgent(Object.assign({ uri: proxyUrl.href, pipelining: !this._keepAlive ? 0 : 1 }, ((proxyUrl.username || proxyUrl.password) && {
-            token: `${proxyUrl.username}:${proxyUrl.password}`
+            token: `Basic ${Buffer.from(`${proxyUrl.username}:${proxyUrl.password}`).toString('base64')}`
         })));
         this._proxyAgentDispatcher = proxyAgent;
         if (usingSsl && this._ignoreSslError) {
@@ -3690,11 +3811,11 @@ function getProxyUrl(reqUrl) {
     })();
     if (proxyVar) {
         try {
-            return new URL(proxyVar);
+            return new DecodedURL(proxyVar);
         }
         catch (_a) {
             if (!proxyVar.startsWith('http://') && !proxyVar.startsWith('https://'))
-                return new URL(`http://${proxyVar}`);
+                return new DecodedURL(`http://${proxyVar}`);
         }
     }
     else {
@@ -3752,6 +3873,19 @@ function isLoopbackAddress(host) {
         hostLower.startsWith('127.') ||
         hostLower.startsWith('[::1]') ||
         hostLower.startsWith('[0:0:0:0:0:0:0:1]'));
+}
+class DecodedURL extends URL {
+    constructor(url, base) {
+        super(url, base);
+        this._decodedUsername = decodeURIComponent(super.username);
+        this._decodedPassword = decodeURIComponent(super.password);
+    }
+    get username() {
+        return this._decodedUsername;
+    }
+    get password() {
+        return this._decodedPassword;
+    }
 }
 //# sourceMappingURL=proxy.js.map
 
@@ -4254,755 +4388,1032 @@ function copyFile(srcFile, destFile, force) {
 /***/ }),
 
 /***/ 6561:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
-
-const fs = __nccwpck_require__(8688)
-const path = __nccwpck_require__(1017)
-const minimatch = __nccwpck_require__(3973)
-
-const Filesystem = __nccwpck_require__(7335)
-const disk = __nccwpck_require__(5859)
-const crawlFilesystem = __nccwpck_require__(8259)
-
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPackage = createPackage;
+exports.createPackageWithOptions = createPackageWithOptions;
+exports.createPackageFromFiles = createPackageFromFiles;
+exports.createPackageFromStreams = createPackageFromStreams;
+exports.statFile = statFile;
+exports.getRawHeader = getRawHeader;
+exports.listPackage = listPackage;
+exports.extractFile = extractFile;
+exports.extractAll = extractAll;
+exports.uncache = uncache;
+exports.uncacheAll = uncacheAll;
+const path = __importStar(__nccwpck_require__(1017));
+const minimatch_1 = __importDefault(__nccwpck_require__(3973));
+const wrapped_fs_1 = __importDefault(__nccwpck_require__(8688));
+const filesystem_1 = __nccwpck_require__(7335);
+const disk = __importStar(__nccwpck_require__(5859));
+const crawlfs_1 = __nccwpck_require__(8259);
 /**
  * Whether a directory should be excluded from packing due to the `--unpack-dir" option.
  *
- * @param {string} dirPath - directory path to check
- * @param {string} pattern - literal prefix [for backward compatibility] or glob pattern
- * @param {array} unpackDirs - Array of directory paths previously marked as unpacked
+ * @param dirPath - directory path to check
+ * @param pattern - literal prefix [for backward compatibility] or glob pattern
+ * @param unpackDirs - Array of directory paths previously marked as unpacked
  */
-function isUnpackedDir (dirPath, pattern, unpackDirs) {
-  if (dirPath.startsWith(pattern) || minimatch(dirPath, pattern)) {
-    if (!unpackDirs.includes(dirPath)) {
-      unpackDirs.push(dirPath)
+function isUnpackedDir(dirPath, pattern, unpackDirs) {
+    if (dirPath.startsWith(pattern) || (0, minimatch_1.default)(dirPath, pattern)) {
+        if (!unpackDirs.includes(dirPath)) {
+            unpackDirs.push(dirPath);
+        }
+        return true;
     }
-    return true
-  } else {
-    return unpackDirs.some(unpackDir => dirPath.startsWith(unpackDir))
-  }
+    else {
+        return unpackDirs.some((unpackDir) => dirPath.startsWith(unpackDir) && !path.relative(unpackDir, dirPath).startsWith('..'));
+    }
 }
-
-module.exports.createPackage = async function (src, dest) {
-  return module.exports.createPackageWithOptions(src, dest, {})
+async function createPackage(src, dest) {
+    return createPackageWithOptions(src, dest, {});
 }
-
-module.exports.createPackageWithOptions = async function (src, dest, options) {
-  const globOptions = options.globOptions ? options.globOptions : {}
-  globOptions.dot = options.dot === undefined ? true : options.dot
-
-  const pattern = src + (options.pattern ? options.pattern : '/**/*')
-
-  const [filenames, metadata] = await crawlFilesystem(pattern, globOptions)
-  return module.exports.createPackageFromFiles(src, dest, filenames, metadata, options)
+async function createPackageWithOptions(src, dest, options) {
+    const globOptions = options.globOptions ? options.globOptions : {};
+    globOptions.dot = options.dot === undefined ? true : options.dot;
+    const pattern = src + (options.pattern ? options.pattern : '/**/*');
+    const [filenames, metadata] = await (0, crawlfs_1.crawl)(pattern, globOptions);
+    return createPackageFromFiles(src, dest, filenames, metadata, options);
 }
-
 /**
  * Create an ASAR archive from a list of filenames.
  *
- * @param {string} src: Base path. All files are relative to this.
- * @param {string} dest: Archive filename (& path).
- * @param {array} filenames: List of filenames relative to src.
- * @param {object} metadata: Object with filenames as keys and {type='directory|file|link', stat: fs.stat} as values. (Optional)
- * @param {object} options: Options passed to `createPackageWithOptions`.
-*/
-module.exports.createPackageFromFiles = async function (src, dest, filenames, metadata, options) {
-  if (typeof metadata === 'undefined' || metadata === null) { metadata = {} }
-  if (typeof options === 'undefined' || options === null) { options = {} }
-
-  src = path.normalize(src)
-  dest = path.normalize(dest)
-  filenames = filenames.map(function (filename) { return path.normalize(filename) })
-
-  const filesystem = new Filesystem(src)
-  const files = []
-  const unpackDirs = []
-
-  let filenamesSorted = []
-  if (options.ordering) {
-    const orderingFiles = (await fs.readFile(options.ordering)).toString().split('\n').map(line => {
-      if (line.includes(':')) { line = line.split(':').pop() }
-      line = line.trim()
-      if (line.startsWith('/')) { line = line.slice(1) }
-      return line
-    })
-
-    const ordering = []
-    for (const file of orderingFiles) {
-      const pathComponents = file.split(path.sep)
-      let str = src
-      for (const pathComponent of pathComponents) {
-        str = path.join(str, pathComponent)
-        ordering.push(str)
-      }
-    }
-
-    let missing = 0
-    const total = filenames.length
-
-    for (const file of ordering) {
-      if (!filenamesSorted.includes(file) && filenames.includes(file)) {
-        filenamesSorted.push(file)
-      }
-    }
-
-    for (const file of filenames) {
-      if (!filenamesSorted.includes(file)) {
-        filenamesSorted.push(file)
-        missing += 1
-      }
-    }
-
-    console.log(`Ordering file has ${((total - missing) / total) * 100}% coverage.`)
-  } else {
-    filenamesSorted = filenames
-  }
-
-  const handleFile = async function (filename) {
-    if (!metadata[filename]) {
-      metadata[filename] = await crawlFilesystem.determineFileType(filename)
-    }
-    const file = metadata[filename]
-
-    let shouldUnpack
-    switch (file.type) {
-      case 'directory':
-        if (options.unpackDir) {
-          shouldUnpack = isUnpackedDir(path.relative(src, filename), options.unpackDir, unpackDirs)
-        } else {
-          shouldUnpack = false
+ * @param src - Base path. All files are relative to this.
+ * @param dest - Archive filename (& path).
+ * @param filenames - List of filenames relative to src.
+ * @param [metadata] - Object with filenames as keys and {type='directory|file|link', stat: fs.stat} as values. (Optional)
+ * @param [options] - Options passed to `createPackageWithOptions`.
+ */
+async function createPackageFromFiles(src, dest, filenames, metadata = {}, options = {}) {
+    src = path.normalize(src);
+    dest = path.normalize(dest);
+    filenames = filenames.map(function (filename) {
+        return path.normalize(filename);
+    });
+    const filesystem = new filesystem_1.Filesystem(src);
+    const files = [];
+    const links = [];
+    const unpackDirs = [];
+    let filenamesSorted = [];
+    if (options.ordering) {
+        const orderingFiles = (await wrapped_fs_1.default.readFile(options.ordering))
+            .toString()
+            .split('\n')
+            .map((line) => {
+            if (line.includes(':')) {
+                line = line.split(':').pop();
+            }
+            line = line.trim();
+            if (line.startsWith('/')) {
+                line = line.slice(1);
+            }
+            return line;
+        });
+        const ordering = [];
+        for (const file of orderingFiles) {
+            const pathComponents = file.split(path.sep);
+            let str = src;
+            for (const pathComponent of pathComponents) {
+                str = path.join(str, pathComponent);
+                ordering.push(str);
+            }
         }
-        filesystem.insertDirectory(filename, shouldUnpack)
-        break
-      case 'file':
-        shouldUnpack = false
-        if (options.unpack) {
-          shouldUnpack = minimatch(filename, options.unpack, { matchBase: true })
+        let missing = 0;
+        const total = filenames.length;
+        for (const file of ordering) {
+            if (!filenamesSorted.includes(file) && filenames.includes(file)) {
+                filenamesSorted.push(file);
+            }
         }
-        if (!shouldUnpack && options.unpackDir) {
-          const dirName = path.relative(src, path.dirname(filename))
-          shouldUnpack = isUnpackedDir(dirName, options.unpackDir, unpackDirs)
+        for (const file of filenames) {
+            if (!filenamesSorted.includes(file)) {
+                filenamesSorted.push(file);
+                missing += 1;
+            }
         }
-        files.push({ filename: filename, unpack: shouldUnpack })
-        return filesystem.insertFile(filename, shouldUnpack, file, options)
-      case 'link':
-        filesystem.insertLink(filename)
-        break
+        console.log(`Ordering file has ${((total - missing) / total) * 100}% coverage.`);
     }
-    return Promise.resolve()
-  }
-
-  const insertsDone = async function () {
-    await fs.mkdirp(path.dirname(dest))
-    return disk.writeFilesystem(dest, filesystem, files, metadata)
-  }
-
-  const names = filenamesSorted.slice()
-
-  const next = async function (name) {
-    if (!name) { return insertsDone() }
-
-    await handleFile(name)
-    return next(names.shift())
-  }
-
-  return next(names.shift())
-}
-
-module.exports.statFile = function (archive, filename, followLinks) {
-  const filesystem = disk.readFilesystemSync(archive)
-  return filesystem.getFile(filename, followLinks)
-}
-
-module.exports.getRawHeader = function (archive) {
-  return disk.readArchiveHeaderSync(archive)
-}
-
-module.exports.listPackage = function (archive, options) {
-  return disk.readFilesystemSync(archive).listFiles(options)
-}
-
-module.exports.extractFile = function (archive, filename) {
-  const filesystem = disk.readFilesystemSync(archive)
-  return disk.readFileSync(filesystem, filename, filesystem.getFile(filename))
-}
-
-module.exports.extractAll = function (archive, dest) {
-  const filesystem = disk.readFilesystemSync(archive)
-  const filenames = filesystem.listFiles()
-
-  // under windows just extract links as regular files
-  const followLinks = process.platform === 'win32'
-
-  // create destination directory
-  fs.mkdirpSync(dest)
-
-  const extractionErrors = []
-  for (const fullPath of filenames) {
-    // Remove leading slash
-    const filename = fullPath.substr(1)
-    const destFilename = path.join(dest, filename)
-    const file = filesystem.getFile(filename, followLinks)
-    if (file.files) {
-      // it's a directory, create it and continue with the next entry
-      fs.mkdirpSync(destFilename)
-    } else if (file.link) {
-      // it's a symlink, create a symlink
-      const linkSrcPath = path.dirname(path.join(dest, file.link))
-      const linkDestPath = path.dirname(destFilename)
-      const relativePath = path.relative(linkDestPath, linkSrcPath)
-      // try to delete output file, because we can't overwrite a link
-      try {
-        fs.unlinkSync(destFilename)
-      } catch {}
-      const linkTo = path.join(relativePath, path.basename(file.link))
-      fs.symlinkSync(linkTo, destFilename)
-    } else {
-      // it's a file, try to extract it
-      try {
-        const content = disk.readFileSync(filesystem, filename, file)
-        fs.writeFileSync(destFilename, content)
-        if (file.executable) {
-          fs.chmodSync(destFilename, '755')
-        }
-      } catch (e) {
-        extractionErrors.push(e)
-      }
+    else {
+        filenamesSorted = filenames;
     }
-  }
-  if (extractionErrors.length) {
-    throw new Error(
-      'Unable to extract some files:\n\n' +
-      extractionErrors.map(error => error.stack).join('\n\n'))
-  }
+    const handleFile = async function (filename) {
+        if (!metadata[filename]) {
+            const fileType = await (0, crawlfs_1.determineFileType)(filename);
+            if (!fileType) {
+                throw new Error('Unknown file type for file: ' + filename);
+            }
+            metadata[filename] = fileType;
+        }
+        const file = metadata[filename];
+        const shouldUnpackPath = function (relativePath, unpack, unpackDir) {
+            let shouldUnpack = false;
+            if (unpack) {
+                shouldUnpack = (0, minimatch_1.default)(filename, unpack, { matchBase: true });
+            }
+            if (!shouldUnpack && unpackDir) {
+                shouldUnpack = isUnpackedDir(relativePath, unpackDir, unpackDirs);
+            }
+            return shouldUnpack;
+        };
+        let shouldUnpack;
+        switch (file.type) {
+            case 'directory':
+                shouldUnpack = shouldUnpackPath(path.relative(src, filename), undefined, options.unpackDir);
+                filesystem.insertDirectory(filename, shouldUnpack);
+                break;
+            case 'file':
+                shouldUnpack = shouldUnpackPath(path.relative(src, path.dirname(filename)), options.unpack, options.unpackDir);
+                files.push({ filename, unpack: shouldUnpack });
+                return filesystem.insertFile(filename, () => wrapped_fs_1.default.createReadStream(filename), shouldUnpack, file, options);
+            case 'link':
+                shouldUnpack = shouldUnpackPath(path.relative(src, filename), options.unpack, options.unpackDir);
+                links.push({ filename, unpack: shouldUnpack });
+                filesystem.insertLink(filename, shouldUnpack);
+                break;
+        }
+        return Promise.resolve();
+    };
+    const insertsDone = async function () {
+        await wrapped_fs_1.default.mkdirp(path.dirname(dest));
+        return disk.writeFilesystem(dest, filesystem, { files, links }, metadata);
+    };
+    const names = filenamesSorted.slice();
+    const next = async function (name) {
+        if (!name) {
+            return insertsDone();
+        }
+        await handleFile(name);
+        return next(names.shift());
+    };
+    return next(names.shift());
 }
-
-module.exports.uncache = function (archive) {
-  return disk.uncacheFilesystem(archive)
+/**
+ * Create an ASAR archive from a list of streams.
+ *
+ * @param dest - Archive filename (& path).
+ * @param streams - List of streams to be piped in-memory into asar filesystem. Insertion order is preserved.
+ */
+async function createPackageFromStreams(dest, streams) {
+    // We use an ambiguous root `src` since we're piping directly from a stream and the `filePath` for the stream is already relative to the src/root
+    const src = '.';
+    const filesystem = new filesystem_1.Filesystem(src);
+    const files = [];
+    const links = [];
+    const handleFile = async function (stream) {
+        const { path: destinationPath, type } = stream;
+        const filename = path.normalize(destinationPath);
+        switch (type) {
+            case 'directory':
+                filesystem.insertDirectory(filename, stream.unpacked);
+                break;
+            case 'file':
+                files.push({
+                    filename,
+                    streamGenerator: stream.streamGenerator,
+                    link: undefined,
+                    mode: stream.stat.mode,
+                    unpack: stream.unpacked,
+                });
+                return filesystem.insertFile(filename, stream.streamGenerator, stream.unpacked, {
+                    type: 'file',
+                    stat: stream.stat,
+                });
+            case 'link':
+                links.push({
+                    filename,
+                    streamGenerator: stream.streamGenerator,
+                    link: stream.symlink,
+                    mode: stream.stat.mode,
+                    unpack: stream.unpacked,
+                });
+                filesystem.insertLink(filename, stream.unpacked, path.dirname(filename), stream.symlink, src);
+                break;
+        }
+        return Promise.resolve();
+    };
+    const insertsDone = async function () {
+        await wrapped_fs_1.default.mkdirp(path.dirname(dest));
+        return disk.streamFilesystem(dest, filesystem, { files, links });
+    };
+    const streamQueue = streams.slice();
+    const next = async function (stream) {
+        if (!stream) {
+            return insertsDone();
+        }
+        await handleFile(stream);
+        return next(streamQueue.shift());
+    };
+    return next(streamQueue.shift());
 }
-
-module.exports.uncacheAll = function () {
-  disk.uncacheAll()
+function statFile(archivePath, filename, followLinks = true) {
+    const filesystem = disk.readFilesystemSync(archivePath);
+    return filesystem.getFile(filename, followLinks);
 }
-
+function getRawHeader(archivePath) {
+    return disk.readArchiveHeaderSync(archivePath);
+}
+function listPackage(archivePath, options) {
+    return disk.readFilesystemSync(archivePath).listFiles(options);
+}
+function extractFile(archivePath, filename, followLinks = true) {
+    const filesystem = disk.readFilesystemSync(archivePath);
+    const fileInfo = filesystem.getFile(filename, followLinks);
+    if ('link' in fileInfo || 'files' in fileInfo) {
+        throw new Error('Expected to find file at: ' + filename + ' but found a directory or link');
+    }
+    return disk.readFileSync(filesystem, filename, fileInfo);
+}
+function extractAll(archivePath, dest) {
+    const filesystem = disk.readFilesystemSync(archivePath);
+    const filenames = filesystem.listFiles();
+    // under windows just extract links as regular files
+    const followLinks = process.platform === 'win32';
+    // create destination directory
+    wrapped_fs_1.default.mkdirpSync(dest);
+    const extractionErrors = [];
+    for (const fullPath of filenames) {
+        // Remove leading slash
+        const filename = fullPath.substr(1);
+        const destFilename = path.join(dest, filename);
+        const file = filesystem.getFile(filename, followLinks);
+        if (path.relative(dest, destFilename).startsWith('..')) {
+            throw new Error(`${fullPath}: file "${destFilename}" writes out of the package`);
+        }
+        if ('files' in file) {
+            // it's a directory, create it and continue with the next entry
+            wrapped_fs_1.default.mkdirpSync(destFilename);
+        }
+        else if ('link' in file) {
+            // it's a symlink, create a symlink
+            const linkSrcPath = path.dirname(path.join(dest, file.link));
+            const linkDestPath = path.dirname(destFilename);
+            const relativePath = path.relative(linkDestPath, linkSrcPath);
+            // try to delete output file, because we can't overwrite a link
+            try {
+                wrapped_fs_1.default.unlinkSync(destFilename);
+            }
+            catch (_a) { }
+            const linkTo = path.join(relativePath, path.basename(file.link));
+            if (path.relative(dest, linkSrcPath).startsWith('..')) {
+                throw new Error(`${fullPath}: file "${file.link}" links out of the package to "${linkSrcPath}"`);
+            }
+            wrapped_fs_1.default.symlinkSync(linkTo, destFilename);
+        }
+        else {
+            // it's a file, try to extract it
+            try {
+                const content = disk.readFileSync(filesystem, filename, file);
+                wrapped_fs_1.default.writeFileSync(destFilename, content);
+                if (file.executable) {
+                    wrapped_fs_1.default.chmodSync(destFilename, '755');
+                }
+            }
+            catch (e) {
+                extractionErrors.push(e);
+            }
+        }
+    }
+    if (extractionErrors.length) {
+        throw new Error('Unable to extract some files:\n\n' +
+            extractionErrors.map((error) => error.stack).join('\n\n'));
+    }
+}
+function uncache(archivePath) {
+    return disk.uncacheFilesystem(archivePath);
+}
+function uncacheAll() {
+    disk.uncacheAll();
+}
+// Export everything in default, too
+exports["default"] = {
+    createPackage,
+    createPackageWithOptions,
+    createPackageFromFiles,
+    createPackageFromStreams,
+    statFile,
+    getRawHeader,
+    listPackage,
+    extractFile,
+    extractAll,
+    uncache,
+    uncacheAll,
+};
+//# sourceMappingURL=asar.js.map
 
 /***/ }),
 
 /***/ 8259:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
-
-const { promisify } = __nccwpck_require__(3837)
-
-const fs = __nccwpck_require__(8688)
-const glob = promisify(__nccwpck_require__(1957))
-
-async function determineFileType (filename) {
-  const stat = await fs.lstat(filename)
-  if (stat.isFile()) {
-    return { type: 'file', stat }
-  } else if (stat.isDirectory()) {
-    return { type: 'directory', stat }
-  } else if (stat.isSymbolicLink()) {
-    return { type: 'link', stat }
-  }
-}
-
-module.exports = async function (dir, options) {
-  const metadata = {}
-  const crawled = await glob(dir, options)
-  const results = await Promise.all(crawled.map(async filename => [filename, await determineFileType(filename)]))
-  const links = []
-  const filenames = results.map(([filename, type]) => {
-    if (type) {
-      metadata[filename] = type
-      if (type.type === 'link') links.push(filename)
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
-    return filename
-  }).filter((filename) => {
-    // Newer glob can return files inside symlinked directories, to avoid
-    // those appearing in archives we need to manually exclude theme here
-    const exactLinkIndex = links.findIndex(link => filename === link)
-    return links.every((link, index) => {
-      if (index === exactLinkIndex) return true
-      return !filename.startsWith(link)
-    })
-  })
-  return [filenames, metadata]
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.determineFileType = determineFileType;
+exports.crawl = crawl;
+const util_1 = __nccwpck_require__(3837);
+const glob_1 = __nccwpck_require__(1957);
+const wrapped_fs_1 = __importDefault(__nccwpck_require__(8688));
+const path = __importStar(__nccwpck_require__(1017));
+const glob = (0, util_1.promisify)(glob_1.glob);
+async function determineFileType(filename) {
+    const stat = await wrapped_fs_1.default.lstat(filename);
+    if (stat.isFile()) {
+        return { type: 'file', stat };
+    }
+    else if (stat.isDirectory()) {
+        return { type: 'directory', stat };
+    }
+    else if (stat.isSymbolicLink()) {
+        return { type: 'link', stat };
+    }
+    return null;
 }
-module.exports.determineFileType = determineFileType
-
+async function crawl(dir, options) {
+    const metadata = {};
+    const crawled = await glob(dir, options);
+    const results = await Promise.all(crawled.map(async (filename) => [filename, await determineFileType(filename)]));
+    const links = [];
+    const filenames = results
+        .map(([filename, type]) => {
+        if (type) {
+            metadata[filename] = type;
+            if (type.type === 'link')
+                links.push(filename);
+        }
+        return filename;
+    })
+        .filter((filename) => {
+        // Newer glob can return files inside symlinked directories, to avoid
+        // those appearing in archives we need to manually exclude theme here
+        const exactLinkIndex = links.findIndex((link) => filename === link);
+        return links.every((link, index) => {
+            if (index === exactLinkIndex) {
+                return true;
+            }
+            const isFileWithinSymlinkDir = filename.startsWith(link);
+            // symlink may point outside the directory: https://github.com/electron/asar/issues/303
+            const relativePath = path.relative(link, path.dirname(filename));
+            return !isFileWithinSymlinkDir || relativePath.startsWith('..');
+        });
+    });
+    return [filenames, metadata];
+}
+//# sourceMappingURL=crawlfs.js.map
 
 /***/ }),
 
 /***/ 5859:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
-
-const fs = __nccwpck_require__(8688)
-const path = __nccwpck_require__(1017)
-const pickle = __nccwpck_require__(4646)
-
-const Filesystem = __nccwpck_require__(7335)
-let filesystemCache = {}
-
-async function copyFile (dest, src, filename) {
-  const srcFile = path.join(src, filename)
-  const targetFile = path.join(dest, filename)
-
-  const [content, stats] = await Promise.all([fs.readFile(srcFile), fs.stat(srcFile), fs.mkdirp(path.dirname(targetFile))])
-  return fs.writeFile(targetFile, content, { mode: stats.mode })
-}
-
-async function streamTransformedFile (originalFilename, outStream, transformed) {
-  return new Promise((resolve, reject) => {
-    const stream = fs.createReadStream(transformed ? transformed.path : originalFilename)
-    stream.pipe(outStream, { end: false })
-    stream.on('error', reject)
-    stream.on('end', () => resolve())
-  })
-}
-
-const writeFileListToStream = async function (dest, filesystem, out, list, metadata) {
-  for (const file of list) {
-    if (file.unpack) { // the file should not be packed into archive
-      const filename = path.relative(filesystem.src, file.filename)
-      await copyFile(`${dest}.unpacked`, filesystem.src, filename)
-    } else {
-      await streamTransformedFile(file.filename, out, metadata[file.filename].transformed)
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
-  }
-  return out.end()
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.writeFilesystem = writeFilesystem;
+exports.streamFilesystem = streamFilesystem;
+exports.readArchiveHeaderSync = readArchiveHeaderSync;
+exports.readFilesystemSync = readFilesystemSync;
+exports.uncacheFilesystem = uncacheFilesystem;
+exports.uncacheAll = uncacheAll;
+exports.readFileSync = readFileSync;
+const path = __importStar(__nccwpck_require__(1017));
+const wrapped_fs_1 = __importDefault(__nccwpck_require__(8688));
+const pickle_1 = __nccwpck_require__(4646);
+const filesystem_1 = __nccwpck_require__(7335);
+const util_1 = __nccwpck_require__(3837);
+const stream = __importStar(__nccwpck_require__(2781));
+const pipeline = (0, util_1.promisify)(stream.pipeline);
+let filesystemCache = Object.create(null);
+async function copyFile(dest, src, filename) {
+    const srcFile = path.join(src, filename);
+    const targetFile = path.join(dest, filename);
+    const [content, stats] = await Promise.all([
+        wrapped_fs_1.default.readFile(srcFile),
+        wrapped_fs_1.default.stat(srcFile),
+        wrapped_fs_1.default.mkdirp(path.dirname(targetFile)),
+    ]);
+    return wrapped_fs_1.default.writeFile(targetFile, content, { mode: stats.mode });
 }
-
-module.exports.writeFilesystem = async function (dest, filesystem, files, metadata) {
-  const headerPickle = pickle.createEmpty()
-  headerPickle.writeString(JSON.stringify(filesystem.header))
-  const headerBuf = headerPickle.toBuffer()
-
-  const sizePickle = pickle.createEmpty()
-  sizePickle.writeUInt32(headerBuf.length)
-  const sizeBuf = sizePickle.toBuffer()
-
-  const out = fs.createWriteStream(dest)
-  await new Promise((resolve, reject) => {
-    out.on('error', reject)
-    out.write(sizeBuf)
-    return out.write(headerBuf, () => resolve())
-  })
-  return writeFileListToStream(dest, filesystem, out, files, metadata)
+async function streamTransformedFile(stream, outStream) {
+    return new Promise((resolve, reject) => {
+        stream.pipe(outStream, { end: false });
+        stream.on('error', reject);
+        stream.on('end', () => resolve());
+    });
 }
-
-module.exports.readArchiveHeaderSync = function (archive) {
-  const fd = fs.openSync(archive, 'r')
-  let size
-  let headerBuf
-  try {
-    const sizeBuf = Buffer.alloc(8)
-    if (fs.readSync(fd, sizeBuf, 0, 8, null) !== 8) {
-      throw new Error('Unable to read header size')
+const writeFileListToStream = async function (dest, filesystem, out, lists, metadata) {
+    const { files, links } = lists;
+    for (const file of files) {
+        if (file.unpack) {
+            // the file should not be packed into archive
+            const filename = path.relative(filesystem.getRootPath(), file.filename);
+            await copyFile(`${dest}.unpacked`, filesystem.getRootPath(), filename);
+        }
+        else {
+            const transformed = metadata[file.filename].transformed;
+            const stream = wrapped_fs_1.default.createReadStream(transformed ? transformed.path : file.filename);
+            await streamTransformedFile(stream, out);
+        }
     }
-
-    const sizePickle = pickle.createFromBuffer(sizeBuf)
-    size = sizePickle.createIterator().readUInt32()
-    headerBuf = Buffer.alloc(size)
-    if (fs.readSync(fd, headerBuf, 0, size, null) !== size) {
-      throw new Error('Unable to read header')
+    for (const file of links.filter((f) => f.unpack)) {
+        // the symlink needs to be recreated outside in .unpacked
+        const filename = path.relative(filesystem.getRootPath(), file.filename);
+        const link = await wrapped_fs_1.default.readlink(file.filename);
+        await createSymlink(dest, filename, link);
     }
-  } finally {
-    fs.closeSync(fd)
-  }
-
-  const headerPickle = pickle.createFromBuffer(headerBuf)
-  const header = headerPickle.createIterator().readString()
-  return { headerString: header, header: JSON.parse(header), headerSize: size }
+    return out.end();
+};
+async function writeFilesystem(dest, filesystem, lists, metadata) {
+    const out = await createFilesystemWriteStream(filesystem, dest);
+    return writeFileListToStream(dest, filesystem, out, lists, metadata);
 }
-
-module.exports.readFilesystemSync = function (archive) {
-  if (!filesystemCache[archive]) {
-    const header = this.readArchiveHeaderSync(archive)
-    const filesystem = new Filesystem(archive)
-    filesystem.header = header.header
-    filesystem.headerSize = header.headerSize
-    filesystemCache[archive] = filesystem
-  }
-  return filesystemCache[archive]
-}
-
-module.exports.uncacheFilesystem = function (archive) {
-  if (filesystemCache[archive]) {
-    filesystemCache[archive] = undefined
-    return true
-  }
-  return false
-}
-
-module.exports.uncacheAll = function () {
-  filesystemCache = {}
-}
-
-module.exports.readFileSync = function (filesystem, filename, info) {
-  let buffer = Buffer.alloc(info.size)
-  if (info.size <= 0) { return buffer }
-  if (info.unpacked) {
-    // it's an unpacked file, copy it.
-    buffer = fs.readFileSync(path.join(`${filesystem.src}.unpacked`, filename))
-  } else {
-    // Node throws an exception when reading 0 bytes into a 0-size buffer,
-    // so we short-circuit the read in this case.
-    const fd = fs.openSync(filesystem.src, 'r')
+async function streamFilesystem(dest, filesystem, lists) {
+    var _a, e_1, _b, _c;
+    const out = await createFilesystemWriteStream(filesystem, dest);
+    const { files, links } = lists;
     try {
-      const offset = 8 + filesystem.headerSize + parseInt(info.offset)
-      fs.readSync(fd, buffer, 0, info.size, offset)
-    } finally {
-      fs.closeSync(fd)
+        for (var _d = true, files_1 = __asyncValues(files), files_1_1; files_1_1 = await files_1.next(), _a = files_1_1.done, !_a; _d = true) {
+            _c = files_1_1.value;
+            _d = false;
+            const file = _c;
+            // the file should not be packed into archive
+            if (file.unpack) {
+                const targetFile = path.join(`${dest}.unpacked`, file.filename);
+                await wrapped_fs_1.default.mkdirp(path.dirname(targetFile));
+                const writeStream = wrapped_fs_1.default.createWriteStream(targetFile, { mode: file.mode });
+                await pipeline(file.streamGenerator(), writeStream);
+            }
+            else {
+                await streamTransformedFile(file.streamGenerator(), out);
+            }
+        }
     }
-  }
-  return buffer
+    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+    finally {
+        try {
+            if (!_d && !_a && (_b = files_1.return)) await _b.call(files_1);
+        }
+        finally { if (e_1) throw e_1.error; }
+    }
+    for (const file of links.filter((f) => f.unpack && f.link)) {
+        // the symlink needs to be recreated outside in .unpacked
+        await createSymlink(dest, file.filename, file.link);
+    }
+    return out.end();
 }
-
+function readArchiveHeaderSync(archivePath) {
+    const fd = wrapped_fs_1.default.openSync(archivePath, 'r');
+    let size;
+    let headerBuf;
+    try {
+        const sizeBuf = Buffer.alloc(8);
+        if (wrapped_fs_1.default.readSync(fd, sizeBuf, 0, 8, null) !== 8) {
+            throw new Error('Unable to read header size');
+        }
+        const sizePickle = pickle_1.Pickle.createFromBuffer(sizeBuf);
+        size = sizePickle.createIterator().readUInt32();
+        headerBuf = Buffer.alloc(size);
+        if (wrapped_fs_1.default.readSync(fd, headerBuf, 0, size, null) !== size) {
+            throw new Error('Unable to read header');
+        }
+    }
+    finally {
+        wrapped_fs_1.default.closeSync(fd);
+    }
+    const headerPickle = pickle_1.Pickle.createFromBuffer(headerBuf);
+    const header = headerPickle.createIterator().readString();
+    return { headerString: header, header: JSON.parse(header), headerSize: size };
+}
+function readFilesystemSync(archivePath) {
+    if (!filesystemCache[archivePath]) {
+        const header = readArchiveHeaderSync(archivePath);
+        const filesystem = new filesystem_1.Filesystem(archivePath);
+        filesystem.setHeader(header.header, header.headerSize);
+        filesystemCache[archivePath] = filesystem;
+    }
+    return filesystemCache[archivePath];
+}
+function uncacheFilesystem(archivePath) {
+    if (filesystemCache[archivePath]) {
+        filesystemCache[archivePath] = undefined;
+        return true;
+    }
+    return false;
+}
+function uncacheAll() {
+    filesystemCache = {};
+}
+function readFileSync(filesystem, filename, info) {
+    let buffer = Buffer.alloc(info.size);
+    if (info.size <= 0) {
+        return buffer;
+    }
+    if (info.unpacked) {
+        // it's an unpacked file, copy it.
+        buffer = wrapped_fs_1.default.readFileSync(path.join(`${filesystem.getRootPath()}.unpacked`, filename));
+    }
+    else {
+        // Node throws an exception when reading 0 bytes into a 0-size buffer,
+        // so we short-circuit the read in this case.
+        const fd = wrapped_fs_1.default.openSync(filesystem.getRootPath(), 'r');
+        try {
+            const offset = 8 + filesystem.getHeaderSize() + parseInt(info.offset);
+            wrapped_fs_1.default.readSync(fd, buffer, 0, info.size, offset);
+        }
+        finally {
+            wrapped_fs_1.default.closeSync(fd);
+        }
+    }
+    return buffer;
+}
+async function createFilesystemWriteStream(filesystem, dest) {
+    const headerPickle = pickle_1.Pickle.createEmpty();
+    headerPickle.writeString(JSON.stringify(filesystem.getHeader()));
+    const headerBuf = headerPickle.toBuffer();
+    const sizePickle = pickle_1.Pickle.createEmpty();
+    sizePickle.writeUInt32(headerBuf.length);
+    const sizeBuf = sizePickle.toBuffer();
+    const out = wrapped_fs_1.default.createWriteStream(dest);
+    await new Promise((resolve, reject) => {
+        out.on('error', reject);
+        out.write(sizeBuf);
+        return out.write(headerBuf, () => resolve());
+    });
+    return out;
+}
+async function createSymlink(dest, filepath, link) {
+    // if symlink is within subdirectories, then we need to recreate dir structure
+    await wrapped_fs_1.default.mkdirp(path.join(`${dest}.unpacked`, path.dirname(filepath)));
+    // create symlink within unpacked dir
+    await wrapped_fs_1.default.symlink(link, path.join(`${dest}.unpacked`, filepath)).catch(async (error) => {
+        if (error.code === 'EPERM' && error.syscall === 'symlink') {
+            throw new Error('Could not create symlinks for unpacked assets. On Windows, consider activating Developer Mode to allow non-admin users to create symlinks by following the instructions at https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development.');
+        }
+        throw error;
+    });
+}
+//# sourceMappingURL=disk.js.map
 
 /***/ }),
 
 /***/ 7335:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
-
-const fs = __nccwpck_require__(8688)
-const os = __nccwpck_require__(2037)
-const path = __nccwpck_require__(1017)
-const { promisify } = __nccwpck_require__(3837)
-const stream = __nccwpck_require__(2781)
-const getFileIntegrity = __nccwpck_require__(1985)
-
-const UINT32_MAX = 2 ** 32 - 1
-
-const pipeline = promisify(stream.pipeline)
-
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Filesystem = void 0;
+const os = __importStar(__nccwpck_require__(2037));
+const path = __importStar(__nccwpck_require__(1017));
+const util_1 = __nccwpck_require__(3837);
+const stream = __importStar(__nccwpck_require__(2781));
+const integrity_1 = __nccwpck_require__(1985);
+const wrapped_fs_1 = __importDefault(__nccwpck_require__(8688));
+const UINT32_MAX = 2 ** 32 - 1;
+const pipeline = (0, util_1.promisify)(stream.pipeline);
 class Filesystem {
-  constructor (src) {
-    this.src = path.resolve(src)
-    this.header = { files: Object.create(null) }
-    this.offset = BigInt(0)
-  }
-
-  searchNodeFromDirectory (p) {
-    let json = this.header
-    const dirs = p.split(path.sep)
-    for (const dir of dirs) {
-      if (dir !== '.') {
-        if (!json.files[dir]) {
-          json.files[dir] = { files: Object.create(null) }
+    constructor(src) {
+        this.src = path.resolve(src);
+        this.header = { files: Object.create(null) };
+        this.headerSize = 0;
+        this.offset = BigInt(0);
+    }
+    getRootPath() {
+        return this.src;
+    }
+    getHeader() {
+        return this.header;
+    }
+    getHeaderSize() {
+        return this.headerSize;
+    }
+    setHeader(header, headerSize) {
+        this.header = header;
+        this.headerSize = headerSize;
+    }
+    searchNodeFromDirectory(p) {
+        let json = this.header;
+        const dirs = p.split(path.sep);
+        for (const dir of dirs) {
+            if (dir !== '.') {
+                if ('files' in json) {
+                    if (!json.files[dir]) {
+                        json.files[dir] = { files: Object.create(null) };
+                    }
+                    json = json.files[dir];
+                }
+                else {
+                    throw new Error('Unexpected directory state while traversing: ' + p);
+                }
+            }
         }
-        json = json.files[dir]
-      }
+        return json;
     }
-    return json
-  }
-
-  searchNodeFromPath (p) {
-    p = path.relative(this.src, p)
-    if (!p) { return this.header }
-    const name = path.basename(p)
-    const node = this.searchNodeFromDirectory(path.dirname(p))
-    if (node.files == null) {
-      node.files = Object.create(null)
+    searchNodeFromPath(p) {
+        p = path.relative(this.src, p);
+        if (!p) {
+            return this.header;
+        }
+        const name = path.basename(p);
+        const node = this.searchNodeFromDirectory(path.dirname(p));
+        if (!node.files) {
+            node.files = Object.create(null);
+        }
+        if (!node.files[name]) {
+            node.files[name] = Object.create(null);
+        }
+        return node.files[name];
     }
-    if (node.files[name] == null) {
-      node.files[name] = Object.create(null)
+    insertDirectory(p, shouldUnpack) {
+        const node = this.searchNodeFromPath(p);
+        if (shouldUnpack) {
+            node.unpacked = shouldUnpack;
+        }
+        node.files = node.files || Object.create(null);
+        return node.files;
     }
-    return node.files[name]
-  }
-
-  insertDirectory (p, shouldUnpack) {
-    const node = this.searchNodeFromPath(p)
-    if (shouldUnpack) {
-      node.unpacked = shouldUnpack
+    async insertFile(p, streamGenerator, shouldUnpack, file, options = {}) {
+        const dirNode = this.searchNodeFromPath(path.dirname(p));
+        const node = this.searchNodeFromPath(p);
+        if (shouldUnpack || dirNode.unpacked) {
+            node.size = file.stat.size;
+            node.unpacked = true;
+            node.integrity = await (0, integrity_1.getFileIntegrity)(streamGenerator());
+            return Promise.resolve();
+        }
+        let size;
+        const transformed = options.transform && options.transform(p);
+        if (transformed) {
+            const tmpdir = await wrapped_fs_1.default.mkdtemp(path.join(os.tmpdir(), 'asar-'));
+            const tmpfile = path.join(tmpdir, path.basename(p));
+            const out = wrapped_fs_1.default.createWriteStream(tmpfile);
+            await pipeline(streamGenerator(), transformed, out);
+            file.transformed = {
+                path: tmpfile,
+                stat: await wrapped_fs_1.default.lstat(tmpfile),
+            };
+            size = file.transformed.stat.size;
+        }
+        else {
+            size = file.stat.size;
+        }
+        // JavaScript cannot precisely present integers >= UINT32_MAX.
+        if (size > UINT32_MAX) {
+            throw new Error(`${p}: file size can not be larger than 4.2GB`);
+        }
+        node.size = size;
+        node.offset = this.offset.toString();
+        node.integrity = await (0, integrity_1.getFileIntegrity)(streamGenerator());
+        if (process.platform !== 'win32' && file.stat.mode & 0o100) {
+            node.executable = true;
+        }
+        this.offset += BigInt(size);
     }
-    node.files = node.files || Object.create(null)
-    return node.files
-  }
-
-  async insertFile (p, shouldUnpack, file, options) {
-    const dirNode = this.searchNodeFromPath(path.dirname(p))
-    const node = this.searchNodeFromPath(p)
-    if (shouldUnpack || dirNode.unpacked) {
-      node.size = file.stat.size
-      node.unpacked = true
-      node.integrity = await getFileIntegrity(p)
-      return Promise.resolve()
+    insertLink(p, shouldUnpack, parentPath = wrapped_fs_1.default.realpathSync(path.dirname(p)), symlink = wrapped_fs_1.default.readlinkSync(p), // /var/tmp => /private/var
+    src = wrapped_fs_1.default.realpathSync(this.src)) {
+        const link = this.resolveLink(src, parentPath, symlink);
+        if (link.startsWith('..')) {
+            throw new Error(`${p}: file "${link}" links out of the package`);
+        }
+        const node = this.searchNodeFromPath(p);
+        const dirNode = this.searchNodeFromPath(path.dirname(p));
+        if (shouldUnpack || dirNode.unpacked) {
+            node.unpacked = true;
+        }
+        node.link = link;
+        return link;
     }
-
-    let size
-
-    const transformed = options.transform && options.transform(p)
-    if (transformed) {
-      const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'asar-'))
-      const tmpfile = path.join(tmpdir, path.basename(p))
-      const out = fs.createWriteStream(tmpfile)
-      const readStream = fs.createReadStream(p)
-
-      await pipeline(readStream, transformed, out)
-      file.transformed = {
-        path: tmpfile,
-        stat: await fs.lstat(tmpfile)
-      }
-      size = file.transformed.stat.size
-    } else {
-      size = file.stat.size
+    resolveLink(src, parentPath, symlink) {
+        const target = path.join(parentPath, symlink);
+        const link = path.relative(src, target);
+        return link;
     }
-
-    // JavaScript cannot precisely present integers >= UINT32_MAX.
-    if (size > UINT32_MAX) {
-      throw new Error(`${p}: file size can not be larger than 4.2GB`)
+    listFiles(options) {
+        const files = [];
+        const fillFilesFromMetadata = function (basePath, metadata) {
+            if (!('files' in metadata)) {
+                return;
+            }
+            for (const [childPath, childMetadata] of Object.entries(metadata.files)) {
+                const fullPath = path.join(basePath, childPath);
+                const packState = 'unpacked' in childMetadata && childMetadata.unpacked ? 'unpack' : 'pack  ';
+                files.push(options && options.isPack ? `${packState} : ${fullPath}` : fullPath);
+                fillFilesFromMetadata(fullPath, childMetadata);
+            }
+        };
+        fillFilesFromMetadata('/', this.header);
+        return files;
     }
-
-    node.size = size
-    node.offset = this.offset.toString()
-    node.integrity = await getFileIntegrity(p)
-    if (process.platform !== 'win32' && (file.stat.mode & 0o100)) {
-      node.executable = true
+    getNode(p, followLinks = true) {
+        const node = this.searchNodeFromDirectory(path.dirname(p));
+        const name = path.basename(p);
+        if ('link' in node && followLinks) {
+            return this.getNode(path.join(node.link, name));
+        }
+        if (name) {
+            return node.files[name];
+        }
+        else {
+            return node;
+        }
     }
-    this.offset += BigInt(size)
-  }
-
-  insertLink (p) {
-    const symlink = fs.readlinkSync(p)
-    // /var => /private/var
-    const parentPath = fs.realpathSync(path.dirname(p))
-    const link = path.relative(fs.realpathSync(this.src), path.join(parentPath, symlink))
-    if (link.startsWith('..')) {
-      throw new Error(`${p}: file "${link}" links out of the package`)
+    getFile(p, followLinks = true) {
+        const info = this.getNode(p, followLinks);
+        if (!info) {
+            throw new Error(`"${p}" was not found in this archive`);
+        }
+        // if followLinks is false we don't resolve symlinks
+        if ('link' in info && followLinks) {
+            return this.getFile(info.link, followLinks);
+        }
+        else {
+            return info;
+        }
     }
-    const node = this.searchNodeFromPath(p)
-    node.link = link
-    return link
-  }
-
-  listFiles (options) {
-    const files = []
-
-    const fillFilesFromMetadata = function (basePath, metadata) {
-      if (!metadata.files) {
-        return
-      }
-
-      for (const [childPath, childMetadata] of Object.entries(metadata.files)) {
-        const fullPath = path.join(basePath, childPath)
-        const packState = childMetadata.unpacked ? 'unpack' : 'pack  '
-        files.push((options && options.isPack) ? `${packState} : ${fullPath}` : fullPath)
-        fillFilesFromMetadata(fullPath, childMetadata)
-      }
-    }
-
-    fillFilesFromMetadata('/', this.header)
-    return files
-  }
-
-  getNode (p) {
-    const node = this.searchNodeFromDirectory(path.dirname(p))
-    const name = path.basename(p)
-    if (name) {
-      return node.files[name]
-    } else {
-      return node
-    }
-  }
-
-  getFile (p, followLinks) {
-    followLinks = typeof followLinks === 'undefined' ? true : followLinks
-    const info = this.getNode(p)
-
-    if (!info) {
-      throw new Error(`"${p}" was not found in this archive`)
-    }
-
-    // if followLinks is false we don't resolve symlinks
-    if (info.link && followLinks) {
-      return this.getFile(info.link)
-    } else {
-      return info
-    }
-  }
 }
-
-module.exports = Filesystem
-
+exports.Filesystem = Filesystem;
+//# sourceMappingURL=filesystem.js.map
 
 /***/ }),
 
 /***/ 1985:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-const crypto = __nccwpck_require__(6113)
-const fs = __nccwpck_require__(7147)
-const stream = __nccwpck_require__(2781)
-const { promisify } = __nccwpck_require__(3837)
+"use strict";
 
-const ALGORITHM = 'SHA256'
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getFileIntegrity = getFileIntegrity;
+const crypto = __importStar(__nccwpck_require__(6113));
+const stream = __importStar(__nccwpck_require__(2781));
+const util_1 = __nccwpck_require__(3837);
+const ALGORITHM = 'SHA256';
 // 4MB default block size
-const BLOCK_SIZE = 4 * 1024 * 1024
-
-const pipeline = promisify(stream.pipeline)
-
-function hashBlock (block) {
-  return crypto.createHash(ALGORITHM).update(block).digest('hex')
+const BLOCK_SIZE = 4 * 1024 * 1024;
+const pipeline = (0, util_1.promisify)(stream.pipeline);
+function hashBlock(block) {
+    return crypto.createHash(ALGORITHM).update(block).digest('hex');
 }
-
-async function getFileIntegrity (path) {
-  const fileHash = crypto.createHash(ALGORITHM)
-
-  const blocks = []
-  let currentBlockSize = 0
-  let currentBlock = []
-
-  await pipeline(
-    fs.createReadStream(path),
-    new stream.PassThrough({
-      decodeStrings: false,
-      transform (_chunk, encoding, callback) {
-        fileHash.update(_chunk)
-
-        function handleChunk (chunk) {
-          const diffToSlice = Math.min(BLOCK_SIZE - currentBlockSize, chunk.byteLength)
-          currentBlockSize += diffToSlice
-          currentBlock.push(chunk.slice(0, diffToSlice))
-          if (currentBlockSize === BLOCK_SIZE) {
-            blocks.push(hashBlock(Buffer.concat(currentBlock)))
-            currentBlock = []
-            currentBlockSize = 0
-          }
-          if (diffToSlice < chunk.byteLength) {
-            handleChunk(chunk.slice(diffToSlice))
-          }
-        }
-        handleChunk(_chunk)
-        callback()
-      },
-      flush (callback) {
-        blocks.push(hashBlock(Buffer.concat(currentBlock)))
-        currentBlock = []
-        callback()
-      }
-    })
-  )
-
-  return {
-    algorithm: ALGORITHM,
-    hash: fileHash.digest('hex'),
-    blockSize: BLOCK_SIZE,
-    blocks: blocks
-  }
+async function getFileIntegrity(inputFileStream) {
+    const fileHash = crypto.createHash(ALGORITHM);
+    const blockHashes = [];
+    let currentBlockSize = 0;
+    let currentBlock = [];
+    await pipeline(inputFileStream, new stream.PassThrough({
+        decodeStrings: false,
+        transform(_chunk, encoding, callback) {
+            fileHash.update(_chunk);
+            function handleChunk(chunk) {
+                const diffToSlice = Math.min(BLOCK_SIZE - currentBlockSize, chunk.byteLength);
+                currentBlockSize += diffToSlice;
+                currentBlock.push(chunk.slice(0, diffToSlice));
+                if (currentBlockSize === BLOCK_SIZE) {
+                    blockHashes.push(hashBlock(Buffer.concat(currentBlock)));
+                    currentBlock = [];
+                    currentBlockSize = 0;
+                }
+                if (diffToSlice < chunk.byteLength) {
+                    handleChunk(chunk.slice(diffToSlice));
+                }
+            }
+            handleChunk(_chunk);
+            callback();
+        },
+        flush(callback) {
+            blockHashes.push(hashBlock(Buffer.concat(currentBlock)));
+            currentBlock = [];
+            callback();
+        },
+    }));
+    return {
+        algorithm: ALGORITHM,
+        hash: fileHash.digest('hex'),
+        blockSize: BLOCK_SIZE,
+        blocks: blockHashes,
+    };
 }
-
-module.exports = getFileIntegrity
-
+//# sourceMappingURL=integrity.js.map
 
 /***/ }),
 
 /***/ 4646:
-/***/ ((module) => {
+/***/ ((__unused_webpack_module, exports) => {
 
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Pickle = void 0;
 // sizeof(T).
-const SIZE_INT32 = 4
-const SIZE_UINT32 = 4
-const SIZE_INT64 = 8
-const SIZE_UINT64 = 8
-const SIZE_FLOAT = 4
-const SIZE_DOUBLE = 8
-
+const SIZE_INT32 = 4;
+const SIZE_UINT32 = 4;
+const SIZE_INT64 = 8;
+const SIZE_UINT64 = 8;
+const SIZE_FLOAT = 4;
+const SIZE_DOUBLE = 8;
 // The allocation granularity of the payload.
-const PAYLOAD_UNIT = 64
-
+const PAYLOAD_UNIT = 64;
 // Largest JS number.
-const CAPACITY_READ_ONLY = 9007199254740992
-
+const CAPACITY_READ_ONLY = 9007199254740992;
 // Aligns 'i' by rounding it up to the next multiple of 'alignment'.
 const alignInt = function (i, alignment) {
-  return i + (alignment - (i % alignment)) % alignment
-}
-
+    return i + ((alignment - (i % alignment)) % alignment);
+};
 // PickleIterator reads data from a Pickle. The Pickle object must remain valid
 // while the PickleIterator object is in use.
-const PickleIterator = (function () {
-  function PickleIterator (pickle) {
-    this.payload = pickle.header
-    this.payloadOffset = pickle.headerSize
-    this.readIndex = 0
-    this.endIndex = pickle.getPayloadSize()
-  }
-
-  PickleIterator.prototype.readBool = function () {
-    return this.readInt() !== 0
-  }
-
-  PickleIterator.prototype.readInt = function () {
-    return this.readBytes(SIZE_INT32, Buffer.prototype.readInt32LE)
-  }
-
-  PickleIterator.prototype.readUInt32 = function () {
-    return this.readBytes(SIZE_UINT32, Buffer.prototype.readUInt32LE)
-  }
-
-  PickleIterator.prototype.readInt64 = function () {
-    return this.readBytes(SIZE_INT64, Buffer.prototype.readInt64LE)
-  }
-
-  PickleIterator.prototype.readUInt64 = function () {
-    return this.readBytes(SIZE_UINT64, Buffer.prototype.readUInt64LE)
-  }
-
-  PickleIterator.prototype.readFloat = function () {
-    return this.readBytes(SIZE_FLOAT, Buffer.prototype.readFloatLE)
-  }
-
-  PickleIterator.prototype.readDouble = function () {
-    return this.readBytes(SIZE_DOUBLE, Buffer.prototype.readDoubleLE)
-  }
-
-  PickleIterator.prototype.readString = function () {
-    return this.readBytes(this.readInt()).toString()
-  }
-
-  PickleIterator.prototype.readBytes = function (length, method) {
-    const readPayloadOffset = this.getReadPayloadOffsetAndAdvance(length)
-    if (method != null) {
-      return method.call(this.payload, readPayloadOffset, length)
-    } else {
-      return this.payload.slice(readPayloadOffset, readPayloadOffset + length)
+class PickleIterator {
+    constructor(pickle) {
+        this.payload = pickle.getHeader();
+        this.payloadOffset = pickle.getHeaderSize();
+        this.readIndex = 0;
+        this.endIndex = pickle.getPayloadSize();
     }
-  }
-
-  PickleIterator.prototype.getReadPayloadOffsetAndAdvance = function (length) {
-    if (length > this.endIndex - this.readIndex) {
-      this.readIndex = this.endIndex
-      throw new Error('Failed to read data with length of ' + length)
+    readBool() {
+        return this.readInt() !== 0;
     }
-    const readPayloadOffset = this.payloadOffset + this.readIndex
-    this.advance(length)
-    return readPayloadOffset
-  }
-
-  PickleIterator.prototype.advance = function (size) {
-    const alignedSize = alignInt(size, SIZE_UINT32)
-    if (this.endIndex - this.readIndex < alignedSize) {
-      this.readIndex = this.endIndex
-    } else {
-      this.readIndex += alignedSize
+    readInt() {
+        return this.readBytes(SIZE_INT32, Buffer.prototype.readInt32LE);
     }
-  }
-
-  return PickleIterator
-})()
-
+    readUInt32() {
+        return this.readBytes(SIZE_UINT32, Buffer.prototype.readUInt32LE);
+    }
+    readInt64() {
+        return this.readBytes(SIZE_INT64, Buffer.prototype.readBigInt64LE);
+    }
+    readUInt64() {
+        return this.readBytes(SIZE_UINT64, Buffer.prototype.readBigUInt64LE);
+    }
+    readFloat() {
+        return this.readBytes(SIZE_FLOAT, Buffer.prototype.readFloatLE);
+    }
+    readDouble() {
+        return this.readBytes(SIZE_DOUBLE, Buffer.prototype.readDoubleLE);
+    }
+    readString() {
+        return this.readBytes(this.readInt()).toString();
+    }
+    readBytes(length, method) {
+        const readPayloadOffset = this.getReadPayloadOffsetAndAdvance(length);
+        if (method != null) {
+            return method.call(this.payload, readPayloadOffset, length);
+        }
+        else {
+            return this.payload.slice(readPayloadOffset, readPayloadOffset + length);
+        }
+    }
+    getReadPayloadOffsetAndAdvance(length) {
+        if (length > this.endIndex - this.readIndex) {
+            this.readIndex = this.endIndex;
+            throw new Error('Failed to read data with length of ' + length);
+        }
+        const readPayloadOffset = this.payloadOffset + this.readIndex;
+        this.advance(length);
+        return readPayloadOffset;
+    }
+    advance(size) {
+        const alignedSize = alignInt(size, SIZE_UINT32);
+        if (this.endIndex - this.readIndex < alignedSize) {
+            this.readIndex = this.endIndex;
+        }
+        else {
+            this.readIndex += alignedSize;
+        }
+    }
+}
 // This class provides facilities for basic binary value packing and unpacking.
 //
 // The Pickle class supports appending primitive values (ints, strings, etc.)
@@ -5019,163 +5430,143 @@ const PickleIterator = (function () {
 // payload.  It can optionally support additional space in the header.  That
 // space is controlled by the header_size parameter passed to the Pickle
 // constructor.
-const Pickle = (function () {
-  function Pickle (buffer) {
-    if (buffer) {
-      this.initFromBuffer(buffer)
-    } else {
-      this.initEmpty()
+class Pickle {
+    constructor(buffer) {
+        if (buffer) {
+            this.header = buffer;
+            this.headerSize = buffer.length - this.getPayloadSize();
+            this.capacityAfterHeader = CAPACITY_READ_ONLY;
+            this.writeOffset = 0;
+            if (this.headerSize > buffer.length) {
+                this.headerSize = 0;
+            }
+            if (this.headerSize !== alignInt(this.headerSize, SIZE_UINT32)) {
+                this.headerSize = 0;
+            }
+            if (this.headerSize === 0) {
+                this.header = Buffer.alloc(0);
+            }
+        }
+        else {
+            this.header = Buffer.alloc(0);
+            this.headerSize = SIZE_UINT32;
+            this.capacityAfterHeader = 0;
+            this.writeOffset = 0;
+            this.resize(PAYLOAD_UNIT);
+            this.setPayloadSize(0);
+        }
     }
-  }
-
-  Pickle.prototype.initEmpty = function () {
-    this.header = Buffer.alloc(0)
-    this.headerSize = SIZE_UINT32
-    this.capacityAfterHeader = 0
-    this.writeOffset = 0
-    this.resize(PAYLOAD_UNIT)
-    this.setPayloadSize(0)
-  }
-
-  Pickle.prototype.initFromBuffer = function (buffer) {
-    this.header = buffer
-    this.headerSize = buffer.length - this.getPayloadSize()
-    this.capacityAfterHeader = CAPACITY_READ_ONLY
-    this.writeOffset = 0
-    if (this.headerSize > buffer.length) {
-      this.headerSize = 0
+    static createEmpty() {
+        return new Pickle();
     }
-    if (this.headerSize !== alignInt(this.headerSize, SIZE_UINT32)) {
-      this.headerSize = 0
+    static createFromBuffer(buffer) {
+        return new Pickle(buffer);
     }
-    if (this.headerSize === 0) {
-      this.header = Buffer.alloc(0)
+    getHeader() {
+        return this.header;
     }
-  }
-
-  Pickle.prototype.createIterator = function () {
-    return new PickleIterator(this)
-  }
-
-  Pickle.prototype.toBuffer = function () {
-    return this.header.slice(0, this.headerSize + this.getPayloadSize())
-  }
-
-  Pickle.prototype.writeBool = function (value) {
-    return this.writeInt(value ? 1 : 0)
-  }
-
-  Pickle.prototype.writeInt = function (value) {
-    return this.writeBytes(value, SIZE_INT32, Buffer.prototype.writeInt32LE)
-  }
-
-  Pickle.prototype.writeUInt32 = function (value) {
-    return this.writeBytes(value, SIZE_UINT32, Buffer.prototype.writeUInt32LE)
-  }
-
-  Pickle.prototype.writeInt64 = function (value) {
-    return this.writeBytes(value, SIZE_INT64, Buffer.prototype.writeInt64LE)
-  }
-
-  Pickle.prototype.writeUInt64 = function (value) {
-    return this.writeBytes(value, SIZE_UINT64, Buffer.prototype.writeUInt64LE)
-  }
-
-  Pickle.prototype.writeFloat = function (value) {
-    return this.writeBytes(value, SIZE_FLOAT, Buffer.prototype.writeFloatLE)
-  }
-
-  Pickle.prototype.writeDouble = function (value) {
-    return this.writeBytes(value, SIZE_DOUBLE, Buffer.prototype.writeDoubleLE)
-  }
-
-  Pickle.prototype.writeString = function (value) {
-    const length = Buffer.byteLength(value, 'utf8')
-    if (!this.writeInt(length)) {
-      return false
+    getHeaderSize() {
+        return this.headerSize;
     }
-    return this.writeBytes(value, length)
-  }
-
-  Pickle.prototype.setPayloadSize = function (payloadSize) {
-    return this.header.writeUInt32LE(payloadSize, 0)
-  }
-
-  Pickle.prototype.getPayloadSize = function () {
-    return this.header.readUInt32LE(0)
-  }
-
-  Pickle.prototype.writeBytes = function (data, length, method) {
-    const dataLength = alignInt(length, SIZE_UINT32)
-    const newSize = this.writeOffset + dataLength
-    if (newSize > this.capacityAfterHeader) {
-      this.resize(Math.max(this.capacityAfterHeader * 2, newSize))
+    createIterator() {
+        return new PickleIterator(this);
     }
-    if (method != null) {
-      method.call(this.header, data, this.headerSize + this.writeOffset)
-    } else {
-      this.header.write(data, this.headerSize + this.writeOffset, length)
+    toBuffer() {
+        return this.header.slice(0, this.headerSize + this.getPayloadSize());
     }
-    const endOffset = this.headerSize + this.writeOffset + length
-    this.header.fill(0, endOffset, endOffset + dataLength - length)
-    this.setPayloadSize(newSize)
-    this.writeOffset = newSize
-    return true
-  }
-
-  Pickle.prototype.resize = function (newCapacity) {
-    newCapacity = alignInt(newCapacity, PAYLOAD_UNIT)
-    this.header = Buffer.concat([this.header, Buffer.alloc(newCapacity)])
-    this.capacityAfterHeader = newCapacity
-  }
-
-  return Pickle
-})()
-
-module.exports = {
-  createEmpty: function () {
-    return new Pickle()
-  },
-
-  createFromBuffer: function (buffer) {
-    return new Pickle(buffer)
-  }
+    writeBool(value) {
+        return this.writeInt(value ? 1 : 0);
+    }
+    writeInt(value) {
+        return this.writeBytes(value, SIZE_INT32, Buffer.prototype.writeInt32LE);
+    }
+    writeUInt32(value) {
+        return this.writeBytes(value, SIZE_UINT32, Buffer.prototype.writeUInt32LE);
+    }
+    writeInt64(value) {
+        return this.writeBytes(BigInt(value), SIZE_INT64, Buffer.prototype.writeBigInt64LE);
+    }
+    writeUInt64(value) {
+        return this.writeBytes(BigInt(value), SIZE_UINT64, Buffer.prototype.writeBigUInt64LE);
+    }
+    writeFloat(value) {
+        return this.writeBytes(value, SIZE_FLOAT, Buffer.prototype.writeFloatLE);
+    }
+    writeDouble(value) {
+        return this.writeBytes(value, SIZE_DOUBLE, Buffer.prototype.writeDoubleLE);
+    }
+    writeString(value) {
+        const length = Buffer.byteLength(value, 'utf8');
+        if (!this.writeInt(length)) {
+            return false;
+        }
+        return this.writeBytes(value, length);
+    }
+    setPayloadSize(payloadSize) {
+        return this.header.writeUInt32LE(payloadSize, 0);
+    }
+    getPayloadSize() {
+        return this.header.readUInt32LE(0);
+    }
+    writeBytes(data, length, method) {
+        const dataLength = alignInt(length, SIZE_UINT32);
+        const newSize = this.writeOffset + dataLength;
+        if (newSize > this.capacityAfterHeader) {
+            this.resize(Math.max(this.capacityAfterHeader * 2, newSize));
+        }
+        if (method) {
+            method.call(this.header, data, this.headerSize + this.writeOffset);
+        }
+        else {
+            this.header.write(data, this.headerSize + this.writeOffset, length);
+        }
+        const endOffset = this.headerSize + this.writeOffset + length;
+        this.header.fill(0, endOffset, endOffset + dataLength - length);
+        this.setPayloadSize(newSize);
+        this.writeOffset = newSize;
+        return true;
+    }
+    resize(newCapacity) {
+        newCapacity = alignInt(newCapacity, PAYLOAD_UNIT);
+        this.header = Buffer.concat([this.header, Buffer.alloc(newCapacity)]);
+        this.capacityAfterHeader = newCapacity;
+    }
 }
-
+exports.Pickle = Pickle;
+//# sourceMappingURL=pickle.js.map
 
 /***/ }),
 
 /***/ 8688:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-
-const fs = process.versions.electron ? __nccwpck_require__(2941) : __nccwpck_require__(7147)
-
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = 'electron' in process.versions ? __nccwpck_require__(2941) : __nccwpck_require__(7147);
 const promisifiedMethods = [
-  'lstat',
-  'mkdtemp',
-  'readFile',
-  'stat',
-  'writeFile'
-]
-
-const promisified = {}
-
+    'lstat',
+    'mkdtemp',
+    'readFile',
+    'stat',
+    'writeFile',
+    'symlink',
+    'readlink',
+];
+const promisified = {};
 for (const method of Object.keys(fs)) {
-  if (promisifiedMethods.includes(method)) {
-    promisified[method] = fs.promises[method]
-  } else {
-    promisified[method] = fs[method]
-  }
+    if (promisifiedMethods.includes(method)) {
+        promisified[method] = fs.promises[method];
+    }
+    else {
+        promisified[method] = fs[method];
+    }
 }
 // To make it more like fs-extra
-promisified.mkdirp = (dir) => fs.promises.mkdir(dir, { recursive: true })
-promisified.mkdirpSync = (dir) => fs.mkdirSync(dir, { recursive: true })
-
-module.exports = promisified
-
+promisified.mkdirp = (dir) => fs.promises.mkdir(dir, { recursive: true });
+promisified.mkdirpSync = (dir) => fs.mkdirSync(dir, { recursive: true });
+exports["default"] = promisified;
+//# sourceMappingURL=wrapped-fs.js.map
 
 /***/ }),
 
@@ -9251,7 +9642,7 @@ const testSet = (set, version, options) => {
 
 const debug = __nccwpck_require__(427)
 const { MAX_LENGTH, MAX_SAFE_INTEGER } = __nccwpck_require__(2293)
-const { safeRe: re, t } = __nccwpck_require__(9523)
+const { safeRe: re, safeSrc: src, t } = __nccwpck_require__(9523)
 
 const parseOptions = __nccwpck_require__(785)
 const { compareIdentifiers } = __nccwpck_require__(2463)
@@ -9261,7 +9652,7 @@ class SemVer {
 
     if (version instanceof SemVer) {
       if (version.loose === !!options.loose &&
-          version.includePrerelease === !!options.includePrerelease) {
+        version.includePrerelease === !!options.includePrerelease) {
         return version
       } else {
         version = version.version
@@ -9427,6 +9818,20 @@ class SemVer {
   // preminor will bump the version up to the next minor release, and immediately
   // down to pre-release. premajor and prepatch work the same way.
   inc (release, identifier, identifierBase) {
+    if (release.startsWith('pre')) {
+      if (!identifier && identifierBase === false) {
+        throw new Error('invalid increment argument: identifier is empty')
+      }
+      // Avoid an invalid semver results
+      if (identifier) {
+        const r = new RegExp(`^${this.options.loose ? src[t.PRERELEASELOOSE] : src[t.PRERELEASE]}$`)
+        const match = `-${identifier}`.match(r)
+        if (!match || match[1] !== identifier) {
+          throw new Error(`invalid identifier: ${identifier}`)
+        }
+      }
+    }
+
     switch (release) {
       case 'premajor':
         this.prerelease.length = 0
@@ -9456,6 +9861,12 @@ class SemVer {
           this.inc('patch', identifier, identifierBase)
         }
         this.inc('pre', identifier, identifierBase)
+        break
+      case 'release':
+        if (this.prerelease.length === 0) {
+          throw new Error(`version ${this.raw} is not a prerelease`)
+        }
+        this.prerelease.length = 0
         break
 
       case 'major':
@@ -9499,10 +9910,6 @@ class SemVer {
       // 1.0.0 'pre' would become 1.0.0-0 which is the wrong direction.
       case 'pre': {
         const base = Number(identifierBase) ? 1 : 0
-
-        if (!identifier && identifierBase === false) {
-          throw new Error('invalid increment argument: identifier is empty')
-        }
 
         if (this.prerelease.length === 0) {
           this.prerelease = [base]
@@ -9762,20 +10169,13 @@ const diff = (version1, version2) => {
       return 'major'
     }
 
-    // Otherwise it can be determined by checking the high version
-
-    if (highVersion.patch) {
-      // anything higher than a patch bump would result in the wrong version
+    // If the main part has no difference
+    if (lowVersion.compareMain(highVersion) === 0) {
+      if (lowVersion.minor && !lowVersion.patch) {
+        return 'minor'
+      }
       return 'patch'
     }
-
-    if (highVersion.minor) {
-      // anything higher than a minor bump would result in the wrong version
-      return 'minor'
-    }
-
-    // bumping major/minor/patch all have same result
-    return 'major'
   }
 
   // add the `pre` prefix if we are going to a prerelease version
@@ -10282,6 +10682,7 @@ exports = module.exports = {}
 const re = exports.re = []
 const safeRe = exports.safeRe = []
 const src = exports.src = []
+const safeSrc = exports.safeSrc = []
 const t = exports.t = {}
 let R = 0
 
@@ -10314,6 +10715,7 @@ const createToken = (name, value, isGlobal) => {
   debug(name, index, value)
   t[name] = index
   src[index] = value
+  safeSrc[index] = safe
   re[index] = new RegExp(value, isGlobal ? 'g' : undefined)
   safeRe[index] = new RegExp(safe, isGlobal ? 'g' : undefined)
 }
@@ -16694,7 +17096,7 @@ module.exports = {
 
 
 const { parseSetCookie } = __nccwpck_require__(4408)
-const { stringify, getHeadersList } = __nccwpck_require__(3121)
+const { stringify } = __nccwpck_require__(3121)
 const { webidl } = __nccwpck_require__(1744)
 const { Headers } = __nccwpck_require__(554)
 
@@ -16770,14 +17172,13 @@ function getSetCookies (headers) {
 
   webidl.brandCheck(headers, Headers, { strict: false })
 
-  const cookies = getHeadersList(headers).cookies
+  const cookies = headers.getSetCookie()
 
   if (!cookies) {
     return []
   }
 
-  // In older versions of undici, cookies is a list of name:value.
-  return cookies.map((pair) => parseSetCookie(Array.isArray(pair) ? pair[1] : pair))
+  return cookies.map((pair) => parseSetCookie(pair))
 }
 
 /**
@@ -17205,14 +17606,15 @@ module.exports = {
 /***/ }),
 
 /***/ 3121:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ ((module) => {
 
 "use strict";
 
 
-const assert = __nccwpck_require__(9491)
-const { kHeadersList } = __nccwpck_require__(2785)
-
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
 function isCTLExcludingHtab (value) {
   if (value.length === 0) {
     return false
@@ -17473,31 +17875,13 @@ function stringify (cookie) {
   return out.join('; ')
 }
 
-let kHeadersListNode
-
-function getHeadersList (headers) {
-  if (headers[kHeadersList]) {
-    return headers[kHeadersList]
-  }
-
-  if (!kHeadersListNode) {
-    kHeadersListNode = Object.getOwnPropertySymbols(headers).find(
-      (symbol) => symbol.description === 'headers list'
-    )
-
-    assert(kHeadersListNode, 'Headers cannot be parsed')
-  }
-
-  const headersList = headers[kHeadersListNode]
-  assert(headersList)
-
-  return headersList
-}
-
 module.exports = {
   isCTLExcludingHtab,
-  stringify,
-  getHeadersList
+  validateCookieName,
+  validateCookiePath,
+  validateCookieValue,
+  toIMFDate,
+  stringify
 }
 
 
@@ -21501,6 +21885,7 @@ const {
   isValidHeaderName,
   isValidHeaderValue
 } = __nccwpck_require__(2538)
+const util = __nccwpck_require__(3837)
 const { webidl } = __nccwpck_require__(1744)
 const assert = __nccwpck_require__(9491)
 
@@ -22054,6 +22439,9 @@ Object.defineProperties(Headers.prototype, {
   [Symbol.toStringTag]: {
     value: 'Headers',
     configurable: true
+  },
+  [util.inspect.custom]: {
+    enumerable: false
   }
 })
 
@@ -31230,6 +31618,20 @@ class Pool extends PoolBase {
       ? { ...options.interceptors }
       : undefined
     this[kFactory] = factory
+
+    this.on('connectionError', (origin, targets, error) => {
+      // If a connection error occurs, we remove the client from the pool,
+      // and emit a connectionError event. They will not be re-used.
+      // Fixes https://github.com/nodejs/undici/issues/3895
+      for (const target of targets) {
+        // Do not use kRemoveClient here, as it will close the client,
+        // but the client cannot be closed in this state.
+        const idx = this[kClients].indexOf(target)
+        if (idx !== -1) {
+          this[kClients].splice(idx, 1)
+        }
+      }
+    })
   }
 
   [kGetDispatcher] () {
@@ -33534,652 +33936,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5840:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(8628));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(6409));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(5122));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(9120));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(5332));
-
-var _version = _interopRequireDefault(__nccwpck_require__(1595));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(2746));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 4569:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5332:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2746:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 814:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 807:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 5274:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 8950:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).substr(1));
-}
-
-function stringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  const uuid = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase(); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 8628:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(807));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.default)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6409:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(5998));
-
-var _md = _interopRequireDefault(__nccwpck_require__(4569));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5998:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = _default;
-exports.URL = exports.DNS = void 0;
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(2746));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function _default(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (namespace.length !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.default)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 5122:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(807));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.default)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 9120:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(5998));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(5274));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6900:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(814));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 1595:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.substr(14, 1), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
-
-/***/ }),
-
 /***/ 2940:
 /***/ ((module) => {
 
@@ -34618,6 +34374,8 @@ async function Get() {
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
     if (semver.lt(hubVersion, latestHubVersion)) {
+        core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
+        await removePath(hubPath);
         core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
         hubPath = await installUnityHub();
     }
@@ -34810,7 +34568,7 @@ async function Unity(version, changeset, architecture, modules) {
         }
         catch (error) {
             if (error.message.includes('Editor already installed in this location')) {
-                uninstallUnity(editorPath);
+                removePath(editorPath);
                 await installUnity(version, changeset, architecture, modules);
             }
         }
@@ -34837,7 +34595,7 @@ async function Unity(version, changeset, architecture, modules) {
     }
     catch (error) {
         if (error.message.includes(`No modules found`)) {
-            uninstallUnity(editorPath);
+            removePath(editorPath);
             await Unity(version, changeset, architecture, modules);
         }
     }
@@ -35011,10 +34769,10 @@ async function getModulesContent(modulesPath) {
     const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
 }
-async function uninstallUnity(editorPath) {
-    core.startGroup(`Uninstalling ${editorPath}...`);
+async function removePath(path) {
+    core.startGroup(`deleting ${path}...`);
     try {
-        await fs.promises.rm(editorPath, { recursive: true });
+        await fs.promises.rm(path, { recursive: true });
     }
     finally {
         core.endGroup();
@@ -35214,6 +34972,14 @@ module.exports = require("net");
 
 /***/ }),
 
+/***/ 2254:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:buffer");
+
+/***/ }),
+
 /***/ 6005:
 /***/ ((module) => {
 
@@ -35227,6 +34993,14 @@ module.exports = require("node:crypto");
 
 "use strict";
 module.exports = require("node:events");
+
+/***/ }),
+
+/***/ 7742:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:process");
 
 /***/ }),
 
@@ -37047,8 +36821,8 @@ function composeCollection(CN, ctx, token, props, onError) {
             tag = kt;
         }
         else {
-            if (kt?.collection) {
-                onError(tagToken, 'BAD_COLLECTION_TYPE', `${kt.tag} used for ${expType} collection, but expects ${kt.collection}`, true);
+            if (kt) {
+                onError(tagToken, 'BAD_COLLECTION_TYPE', `${kt.tag} used for ${expType} collection, but expects ${kt.collection ?? 'scalar'}`, true);
             }
             else {
                 onError(tagToken, 'TAG_RESOLVE_FAILED', `Unresolved tag: ${tagName}`, true);
@@ -37088,6 +36862,7 @@ function composeDoc(options, directives, { offset, start, value, end }, onError)
     const opts = Object.assign({ _directives: directives }, options);
     const doc = new Document.Document(undefined, opts);
     const ctx = {
+        atKey: false,
         atRoot: true,
         directives: doc.directives,
         options: doc.options,
@@ -37132,6 +36907,7 @@ exports.composeDoc = composeDoc;
 
 
 var Alias = __nccwpck_require__(5639);
+var identity = __nccwpck_require__(5589);
 var composeCollection = __nccwpck_require__(8109);
 var composeScalar = __nccwpck_require__(4766);
 var resolveEnd = __nccwpck_require__(1250);
@@ -37139,6 +36915,7 @@ var utilEmptyScalarPosition = __nccwpck_require__(8781);
 
 const CN = { composeNode, composeEmptyNode };
 function composeNode(ctx, token, props, onError) {
+    const atKey = ctx.atKey;
     const { spaceBefore, comment, anchor, tag } = props;
     let node;
     let isSrcToken = true;
@@ -37174,6 +36951,14 @@ function composeNode(ctx, token, props, onError) {
     }
     if (anchor && node.anchor === '')
         onError(anchor, 'BAD_ALIAS', 'Anchor cannot be an empty string');
+    if (atKey &&
+        ctx.options.stringKeys &&
+        (!identity.isScalar(node) ||
+            typeof node.value !== 'string' ||
+            (node.tag && node.tag !== 'tag:yaml.org,2002:str'))) {
+        const msg = 'With stringKeys, all keys must be strings';
+        onError(tag ?? token, 'NON_STRING_KEY', msg);
+    }
     if (spaceBefore)
         node.spaceBefore = true;
     if (comment) {
@@ -37246,11 +37031,16 @@ function composeScalar(ctx, token, tagToken, onError) {
     const tagName = tagToken
         ? ctx.directives.tagName(tagToken.source, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg))
         : null;
-    const tag = tagToken && tagName
-        ? findScalarTagByName(ctx.schema, value, tagName, tagToken, onError)
-        : token.type === 'scalar'
-            ? findScalarTagByTest(ctx, value, token, onError)
-            : ctx.schema[identity.SCALAR];
+    let tag;
+    if (ctx.options.stringKeys && ctx.atKey) {
+        tag = ctx.schema[identity.SCALAR];
+    }
+    else if (tagName)
+        tag = findScalarTagByName(ctx.schema, value, tagName, tagToken, onError);
+    else if (token.type === 'scalar')
+        tag = findScalarTagByTest(ctx, value, token, onError);
+    else
+        tag = ctx.schema[identity.SCALAR];
     let scalar;
     try {
         const res = tag.resolve(value, msg => onError(tagToken ?? token, 'TAG_RESOLVE_FAILED', msg), ctx.options);
@@ -37298,8 +37088,9 @@ function findScalarTagByName(schema, value, tagName, tagToken, onError) {
     onError(tagToken, 'TAG_RESOLVE_FAILED', `Unresolved tag: ${tagName}`, tagName !== 'tag:yaml.org,2002:str');
     return schema[identity.SCALAR];
 }
-function findScalarTagByTest({ directives, schema }, value, token, onError) {
-    const tag = schema.tags.find(tag => tag.default && tag.test?.test(value)) || schema[identity.SCALAR];
+function findScalarTagByTest({ atKey, directives, schema }, value, token, onError) {
+    const tag = schema.tags.find(tag => (tag.default === true || (atKey && tag.default === 'key')) &&
+        tag.test?.test(value)) || schema[identity.SCALAR];
     if (schema.compat) {
         const compat = schema.compat.find(tag => tag.default && tag.test?.test(value)) ??
             schema[identity.SCALAR];
@@ -37324,6 +37115,7 @@ exports.composeScalar = composeScalar;
 "use strict";
 
 
+var node_process = __nccwpck_require__(7742);
 var directives = __nccwpck_require__(5400);
 var Document = __nccwpck_require__(42);
 var errors = __nccwpck_require__(4236);
@@ -37457,7 +37249,7 @@ class Composer {
     }
     /** Advance the composer by one CST token. */
     *next(token) {
-        if (process.env.LOG_STREAM)
+        if (node_process.env.LOG_STREAM)
             console.dir(token, { depth: null });
         switch (token.type) {
             case 'directive':
@@ -37605,12 +37397,14 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
             onError(offset, 'BAD_INDENT', startColMsg);
         }
         // key value
+        ctx.atKey = true;
         const keyStart = keyProps.end;
         const keyNode = key
             ? composeNode(ctx, key, keyProps, onError)
             : composeEmptyNode(ctx, keyStart, start, null, keyProps, onError);
         if (ctx.schema.compat)
             utilFlowIndentCheck.flowIndentCheck(bm.indent, key, onError);
+        ctx.atKey = false;
         if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
             onError(keyStart, 'DUPLICATE_KEY', 'Map keys must be unique');
         // value properties
@@ -37893,6 +37687,8 @@ function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, ta
     const seq = new NodeClass(ctx.schema);
     if (ctx.atRoot)
         ctx.atRoot = false;
+    if (ctx.atKey)
+        ctx.atKey = false;
     let offset = bs.offset;
     let commentEnd = null;
     for (const { start, value } of bs.items) {
@@ -38008,6 +37804,8 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
     const atRoot = ctx.atRoot;
     if (atRoot)
         ctx.atRoot = false;
+    if (ctx.atKey)
+        ctx.atKey = false;
     let offset = fc.offset + fc.start.source.length;
     for (let i = 0; i < fc.items.length; ++i) {
         const collItem = fc.items[i];
@@ -38087,12 +37885,14 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
         else {
             // item is a key+value pair
             // key value
+            ctx.atKey = true;
             const keyStart = props.end;
             const keyNode = key
                 ? composeNode(ctx, key, props, onError)
                 : composeEmptyNode(ctx, keyStart, start, null, props, onError);
             if (isBlock(key))
                 onError(keyNode.range, 'BLOCK_IN_FLOW', blockMsg);
+            ctx.atKey = false;
             // value properties
             const valueProps = resolveProps.resolveProps(sep ?? [], {
                 flow: fcName,
@@ -38153,6 +37953,8 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
                 const map = new YAMLMap.YAMLMap(ctx.schema);
                 map.flow = true;
                 map.items.push(pair);
+                const endRange = (valueNode ?? keyNode).range;
+                map.range = [keyNode.range[0], endRange[1], endRange[2]];
                 coll.items.push(map);
             }
             offset = valueNode ? valueNode.range[2] : valueProps.end;
@@ -38285,7 +38087,7 @@ function foldLines(source) {
         first = new RegExp('(.*?)(?<![ \t])[ \t]*\r?\n', 'sy');
         line = new RegExp('[ \t]*(.*?)(?:(?<![ \t])[ \t]*)?\r?\n', 'sy');
     }
-    catch (_) {
+    catch {
         first = /(.*?)[ \t]*\r?\n/sy;
         line = /[ \t]*(.*?)[ \t]*\r?\n/sy;
     }
@@ -38489,7 +38291,7 @@ function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIn
                 if (atNewline) {
                     if (comment)
                         comment += token.source;
-                    else
+                    else if (!found || indicator !== 'seq-item-ind')
                         spaceBefore = true;
                 }
                 else
@@ -38704,11 +38506,7 @@ function mapIncludes(ctx, items, search) {
         return false;
     const isEqual = typeof uniqueKeys === 'function'
         ? uniqueKeys
-        : (a, b) => a === b ||
-            (identity.isScalar(a) &&
-                identity.isScalar(b) &&
-                a.value === b.value &&
-                !(a.value === '<<' && ctx.schema.merge));
+        : (a, b) => a === b || (identity.isScalar(a) && identity.isScalar(b) && a.value === b.value);
     return items.some(pair => isEqual(pair.key, search));
 }
 
@@ -38760,6 +38558,7 @@ class Document {
             logLevel: 'warn',
             prettyErrors: true,
             strict: true,
+            stringKeys: false,
             uniqueKeys: true,
             version: '1.2'
         }, options);
@@ -38983,7 +38782,7 @@ class Document {
                     this.directives.yaml.version = '1.1';
                 else
                     this.directives = new directives.Directives({ version: '1.1' });
-                opt = { merge: true, resolveKnownTags: false, schema: 'yaml-1.1' };
+                opt = { resolveKnownTags: false, schema: 'yaml-1.1' };
                 break;
             case '1.2':
             case 'next':
@@ -38991,7 +38790,7 @@ class Document {
                     this.directives.yaml.version = version;
                 else
                     this.directives = new directives.Directives({ version });
-                opt = { merge: false, resolveKnownTags: true, schema: 'core' };
+                opt = { resolveKnownTags: true, schema: 'core' };
                 break;
             case null:
                 if (this.directives)
@@ -39165,6 +38964,7 @@ function applyReviver(reviver, obj, key, val) {
             for (let i = 0, len = val.length; i < len; ++i) {
                 const v0 = val[i];
                 const v1 = applyReviver(reviver, val, String(i), v0);
+                // eslint-disable-next-line @typescript-eslint/no-array-delete
                 if (v1 === undefined)
                     delete val[i];
                 else if (v1 !== v0)
@@ -39624,10 +39424,12 @@ exports.visitAsync = visit.visitAsync;
 /***/ }),
 
 /***/ 6909:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
+
+var node_process = __nccwpck_require__(7742);
 
 function debug(logLevel, ...messages) {
     if (logLevel === 'debug')
@@ -39635,10 +39437,8 @@ function debug(logLevel, ...messages) {
 }
 function warn(logLevel, warning) {
     if (logLevel === 'debug' || logLevel === 'warn') {
-        // https://github.com/typescript-eslint/typescript-eslint/issues/7478
-        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-        if (typeof process !== 'undefined' && process.emitWarning)
-            process.emitWarning(warning);
+        if (typeof node_process.emitWarning === 'function')
+            node_process.emitWarning(warning);
         else
             console.warn(warning);
     }
@@ -40335,24 +40135,17 @@ exports.YAMLSeq = YAMLSeq;
 
 
 var log = __nccwpck_require__(6909);
+var merge = __nccwpck_require__(9614);
 var stringify = __nccwpck_require__(8409);
 var identity = __nccwpck_require__(5589);
-var Scalar = __nccwpck_require__(9338);
 var toJS = __nccwpck_require__(2358);
 
-const MERGE_KEY = '<<';
 function addPairToJSMap(ctx, map, { key, value }) {
-    if (ctx?.doc.schema.merge && isMergeKey(key)) {
-        value = identity.isAlias(value) ? value.resolve(ctx.doc) : value;
-        if (identity.isSeq(value))
-            for (const it of value.items)
-                mergeToJSMap(ctx, map, it);
-        else if (Array.isArray(value))
-            for (const it of value)
-                mergeToJSMap(ctx, map, it);
-        else
-            mergeToJSMap(ctx, map, value);
-    }
+    if (identity.isNode(key) && key.addToJSMap)
+        key.addToJSMap(ctx, map, value);
+    // TODO: Should drop this special case for bare << handling
+    else if (merge.isMergeKey(ctx, key))
+        merge.addMergeToJSMap(ctx, map, value);
     else {
         const jsKey = toJS.toJS(key, '', ctx);
         if (map instanceof Map) {
@@ -40373,41 +40166,6 @@ function addPairToJSMap(ctx, map, { key, value }) {
                 });
             else
                 map[stringKey] = jsValue;
-        }
-    }
-    return map;
-}
-const isMergeKey = (key) => key === MERGE_KEY ||
-    (identity.isScalar(key) &&
-        key.value === MERGE_KEY &&
-        (!key.type || key.type === Scalar.Scalar.PLAIN));
-// If the value associated with a merge key is a single mapping node, each of
-// its key/value pairs is inserted into the current mapping, unless the key
-// already exists in it. If the value associated with the merge key is a
-// sequence, then this sequence is expected to contain mapping nodes and each
-// of these nodes is merged in turn according to its order in the sequence.
-// Keys in mapping nodes earlier in the sequence override keys specified in
-// later mapping nodes. -- http://yaml.org/type/merge.html
-function mergeToJSMap(ctx, map, value) {
-    const source = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
-    if (!identity.isMap(source))
-        throw new Error('Merge sources must be maps or map aliases');
-    const srcMap = source.toJSON(null, ctx, Map);
-    for (const [key, value] of srcMap) {
-        if (map instanceof Map) {
-            if (!map.has(key))
-                map.set(key, value);
-        }
-        else if (map instanceof Set) {
-            map.add(key);
-        }
-        else if (!Object.prototype.hasOwnProperty.call(map, key)) {
-            Object.defineProperty(map, key, {
-                value,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
         }
     }
     return map;
@@ -41856,6 +41614,7 @@ exports.LineCounter = LineCounter;
 "use strict";
 
 
+var node_process = __nccwpck_require__(7742);
 var cst = __nccwpck_require__(9169);
 var lexer = __nccwpck_require__(5976);
 
@@ -42022,7 +41781,7 @@ class Parser {
      */
     *next(source) {
         this.source = source;
-        if (process.env.LOG_TOKENS)
+        if (node_process.env.LOG_TOKENS)
             console.log('|', cst.prettyToken(source));
         if (this.atScalar) {
             this.atScalar = false;
@@ -42468,7 +42227,9 @@ class Parser {
                             const sep = it.sep;
                             sep.push(this.sourceToken);
                             // @ts-expect-error type guard is wrong here
-                            delete it.key, delete it.sep;
+                            delete it.key;
+                            // @ts-expect-error type guard is wrong here
+                            delete it.sep;
                             this.stack.push({
                                 type: 'block-map',
                                 offset: this.offset,
@@ -42526,7 +42287,20 @@ class Parser {
                 default: {
                     const bv = this.startBlockValue(map);
                     if (bv) {
-                        if (atMapIndent && bv.type !== 'block-seq') {
+                        if (bv.type === 'block-seq') {
+                            if (!it.explicitKey &&
+                                it.sep &&
+                                !includesToken(it.sep, 'newline')) {
+                                yield* this.pop({
+                                    type: 'error',
+                                    offset: this.offset,
+                                    message: 'Unexpected block-seq-ind on same line with key',
+                                    source: this.source
+                                });
+                                return;
+                            }
+                        }
+                        else if (atMapIndent) {
                             map.items.push({ start });
                         }
                         this.stack.push(bv);
@@ -42824,6 +42598,7 @@ var composer = __nccwpck_require__(9493);
 var Document = __nccwpck_require__(42);
 var errors = __nccwpck_require__(4236);
 var log = __nccwpck_require__(6909);
+var identity = __nccwpck_require__(5589);
 var lineCounter = __nccwpck_require__(1929);
 var parser = __nccwpck_require__(3328);
 
@@ -42915,6 +42690,8 @@ function stringify(value, replacer, options) {
         if (!keepUndefined)
             return undefined;
     }
+    if (identity.isDocument(value) && !_replacer)
+        return value.toString(options);
     return new Document.Document(value, _replacer, options).toString(options);
 }
 
@@ -42946,10 +42723,9 @@ class Schema {
             : compat
                 ? tags.getTags(null, compat)
                 : null;
-        this.merge = !!merge;
         this.name = (typeof schema === 'string' && schema) || 'core';
         this.knownTags = resolveKnownTags ? tags.coreKnownTags : {};
-        this.tags = tags.getTags(customTags, this.name);
+        this.tags = tags.getTags(customTags, this.name, merge);
         this.toStringOptions = toStringDefaults ?? null;
         Object.defineProperty(this, identity.MAP, { value: map.map });
         Object.defineProperty(this, identity.SCALAR, { value: string.string });
@@ -43279,7 +43055,7 @@ const jsonScalars = [
         identify: value => typeof value === 'boolean',
         default: true,
         tag: 'tag:yaml.org,2002:bool',
-        test: /^true|false$/,
+        test: /^true$|^false$/,
         resolve: str => str === 'true',
         stringify: stringifyJSON
     },
@@ -43332,6 +43108,7 @@ var int = __nccwpck_require__(3019);
 var schema = __nccwpck_require__(27);
 var schema$1 = __nccwpck_require__(4545);
 var binary = __nccwpck_require__(5724);
+var merge = __nccwpck_require__(9614);
 var omap = __nccwpck_require__(8974);
 var pairs = __nccwpck_require__(9841);
 var schema$2 = __nccwpck_require__(5389);
@@ -43357,6 +43134,7 @@ const tagsByName = {
     intOct: int.intOct,
     intTime: timestamp.intTime,
     map: map.map,
+    merge: merge.merge,
     null: _null.nullTag,
     omap: omap.omap,
     pairs: pairs.pairs,
@@ -43366,13 +43144,20 @@ const tagsByName = {
 };
 const coreKnownTags = {
     'tag:yaml.org,2002:binary': binary.binary,
+    'tag:yaml.org,2002:merge': merge.merge,
     'tag:yaml.org,2002:omap': omap.omap,
     'tag:yaml.org,2002:pairs': pairs.pairs,
     'tag:yaml.org,2002:set': set.set,
     'tag:yaml.org,2002:timestamp': timestamp.timestamp
 };
-function getTags(customTags, schemaName) {
-    let tags = schemas.get(schemaName);
+function getTags(customTags, schemaName, addMergeTag) {
+    const schemaTags = schemas.get(schemaName);
+    if (schemaTags && !customTags) {
+        return addMergeTag && !schemaTags.includes(merge.merge)
+            ? schemaTags.concat(merge.merge)
+            : schemaTags.slice();
+    }
+    let tags = schemaTags;
     if (!tags) {
         if (Array.isArray(customTags))
             tags = [];
@@ -43391,17 +43176,21 @@ function getTags(customTags, schemaName) {
     else if (typeof customTags === 'function') {
         tags = customTags(tags.slice());
     }
-    return tags.map(tag => {
-        if (typeof tag !== 'string')
-            return tag;
-        const tagObj = tagsByName[tag];
-        if (tagObj)
-            return tagObj;
-        const keys = Object.keys(tagsByName)
-            .map(key => JSON.stringify(key))
-            .join(', ');
-        throw new Error(`Unknown custom tag "${tag}"; use one of ${keys}`);
-    });
+    if (addMergeTag)
+        tags = tags.concat(merge.merge);
+    return tags.reduce((tags, tag) => {
+        const tagObj = typeof tag === 'string' ? tagsByName[tag] : tag;
+        if (!tagObj) {
+            const tagName = JSON.stringify(tag);
+            const keys = Object.keys(tagsByName)
+                .map(key => JSON.stringify(key))
+                .join(', ');
+            throw new Error(`Unknown custom tag ${tagName}; use one of ${keys}`);
+        }
+        if (!tags.includes(tagObj))
+            tags.push(tagObj);
+        return tags;
+    }, []);
 }
 
 exports.coreKnownTags = coreKnownTags;
@@ -43416,6 +43205,7 @@ exports.getTags = getTags;
 "use strict";
 
 
+var node_buffer = __nccwpck_require__(2254);
 var Scalar = __nccwpck_require__(9338);
 var stringifyString = __nccwpck_require__(6226);
 
@@ -43432,8 +43222,8 @@ const binary = {
      *   document.querySelector('#photo').src = URL.createObjectURL(blob)
      */
     resolve(src, onError) {
-        if (typeof Buffer === 'function') {
-            return Buffer.from(src, 'base64');
+        if (typeof node_buffer.Buffer === 'function') {
+            return node_buffer.Buffer.from(src, 'base64');
         }
         else if (typeof atob === 'function') {
             // On IE 11, atob() can't handle newlines
@@ -43449,13 +43239,15 @@ const binary = {
         }
     },
     stringify({ comment, type, value }, ctx, onComment, onChompKeep) {
+        if (!value)
+            return '';
         const buf = value; // checked earlier by binary.identify()
         let str;
-        if (typeof Buffer === 'function') {
+        if (typeof node_buffer.Buffer === 'function') {
             str =
-                buf instanceof Buffer
+                buf instanceof node_buffer.Buffer
                     ? buf.toString('base64')
-                    : Buffer.from(buf.buffer).toString('base64');
+                    : node_buffer.Buffer.from(buf.buffer).toString('base64');
         }
         else if (typeof btoa === 'function') {
             let s = '';
@@ -43665,6 +43457,82 @@ exports.intOct = intOct;
 
 /***/ }),
 
+/***/ 9614:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+var identity = __nccwpck_require__(5589);
+var Scalar = __nccwpck_require__(9338);
+
+// If the value associated with a merge key is a single mapping node, each of
+// its key/value pairs is inserted into the current mapping, unless the key
+// already exists in it. If the value associated with the merge key is a
+// sequence, then this sequence is expected to contain mapping nodes and each
+// of these nodes is merged in turn according to its order in the sequence.
+// Keys in mapping nodes earlier in the sequence override keys specified in
+// later mapping nodes. -- http://yaml.org/type/merge.html
+const MERGE_KEY = '<<';
+const merge = {
+    identify: value => value === MERGE_KEY ||
+        (typeof value === 'symbol' && value.description === MERGE_KEY),
+    default: 'key',
+    tag: 'tag:yaml.org,2002:merge',
+    test: /^<<$/,
+    resolve: () => Object.assign(new Scalar.Scalar(Symbol(MERGE_KEY)), {
+        addToJSMap: addMergeToJSMap
+    }),
+    stringify: () => MERGE_KEY
+};
+const isMergeKey = (ctx, key) => (merge.identify(key) ||
+    (identity.isScalar(key) &&
+        (!key.type || key.type === Scalar.Scalar.PLAIN) &&
+        merge.identify(key.value))) &&
+    ctx?.doc.schema.tags.some(tag => tag.tag === merge.tag && tag.default);
+function addMergeToJSMap(ctx, map, value) {
+    value = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
+    if (identity.isSeq(value))
+        for (const it of value.items)
+            mergeValue(ctx, map, it);
+    else if (Array.isArray(value))
+        for (const it of value)
+            mergeValue(ctx, map, it);
+    else
+        mergeValue(ctx, map, value);
+}
+function mergeValue(ctx, map, value) {
+    const source = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
+    if (!identity.isMap(source))
+        throw new Error('Merge sources must be maps or map aliases');
+    const srcMap = source.toJSON(null, ctx, Map);
+    for (const [key, value] of srcMap) {
+        if (map instanceof Map) {
+            if (!map.has(key))
+                map.set(key, value);
+        }
+        else if (map instanceof Set) {
+            map.add(key);
+        }
+        else if (!Object.prototype.hasOwnProperty.call(map, key)) {
+            Object.defineProperty(map, key, {
+                value,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+        }
+    }
+    return map;
+}
+
+exports.addMergeToJSMap = addMergeToJSMap;
+exports.isMergeKey = isMergeKey;
+exports.merge = merge;
+
+
+/***/ }),
+
 /***/ 8974:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -43854,6 +43722,7 @@ var binary = __nccwpck_require__(5724);
 var bool = __nccwpck_require__(2631);
 var float = __nccwpck_require__(8035);
 var int = __nccwpck_require__(9503);
+var merge = __nccwpck_require__(9614);
 var omap = __nccwpck_require__(8974);
 var pairs = __nccwpck_require__(9841);
 var set = __nccwpck_require__(7847);
@@ -43874,6 +43743,7 @@ const schema = [
     float.floatExp,
     float.float,
     binary.binary,
+    merge.merge,
     omap.omap,
     pairs.pairs,
     set.set,
@@ -44094,7 +43964,7 @@ const timestamp = {
         }
         return new Date(date);
     },
-    stringify: ({ value }) => value.toISOString().replace(/((T00:00)?:00)?\.000Z$/, '')
+    stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, '') ?? ''
 };
 
 exports.floatTime = floatTime;
@@ -44325,7 +44195,12 @@ function getTagObject(tags, item) {
     let obj;
     if (identity.isScalar(item)) {
         obj = item.value;
-        const match = tags.filter(t => t.identify?.(obj));
+        let match = tags.filter(t => t.identify?.(obj));
+        if (match.length > 1) {
+            const testMatch = match.filter(t => t.test);
+            if (testMatch.length > 0)
+                match = testMatch;
+        }
         tagObj =
             match.find(t => t.format === item.format) ?? match.find(t => !t.format);
     }
@@ -45099,23 +44974,32 @@ function blockString({ comment, type, value }, ctx, onComment, onChompKeep) {
         start = start.replace(/\n+/g, `$&${indent}`);
     }
     const indentSize = indent ? '2' : '1'; // root is at -1
-    let header = (literal ? '|' : '>') + (startWithSpace ? indentSize : '') + chomp;
+    // Leading | or > is added later
+    let header = (startWithSpace ? indentSize : '') + chomp;
     if (comment) {
         header += ' ' + commentString(comment.replace(/ ?[\r\n]+/g, ' '));
         if (onComment)
             onComment();
     }
-    if (literal) {
-        value = value.replace(/\n+/g, `$&${indent}`);
-        return `${header}\n${indent}${start}${value}${end}`;
+    if (!literal) {
+        const foldedValue = value
+            .replace(/\n+/g, '\n$&')
+            .replace(/(?:^|\n)([\t ].*)(?:([\n\t ]*)\n(?![\n\t ]))?/g, '$1$2') // more-indented lines aren't folded
+            //                ^ more-ind. ^ empty     ^ capture next empty lines only at end of indent
+            .replace(/\n+/g, `$&${indent}`);
+        let literalFallback = false;
+        const foldOptions = getFoldOptions(ctx, true);
+        if (blockQuote !== 'folded' && type !== Scalar.Scalar.BLOCK_FOLDED) {
+            foldOptions.onOverflow = () => {
+                literalFallback = true;
+            };
+        }
+        const body = foldFlowLines.foldFlowLines(`${start}${foldedValue}${end}`, indent, foldFlowLines.FOLD_BLOCK, foldOptions);
+        if (!literalFallback)
+            return `>${header}\n${indent}${body}`;
     }
-    value = value
-        .replace(/\n+/g, '\n$&')
-        .replace(/(?:^|\n)([\t ].*)(?:([\n\t ]*)\n(?![\n\t ]))?/g, '$1$2') // more-indented lines aren't folded
-        //                ^ more-ind. ^ empty     ^ capture next empty lines only at end of indent
-        .replace(/\n+/g, `$&${indent}`);
-    const body = foldFlowLines.foldFlowLines(`${start}${value}${end}`, indent, foldFlowLines.FOLD_BLOCK, getFoldOptions(ctx, true));
-    return `${header}\n${indent}${body}`;
+    value = value.replace(/\n+/g, `$&${indent}`);
+    return `|${header}\n${indent}${start}${value}${end}`;
 }
 function plainString(item, ctx, onComment, onChompKeep) {
     const { type, value } = item;
