@@ -34682,10 +34682,10 @@ async function ListInstalledEditors() {
 }
 function isArmCompatible(version) {
     const semVersion = semver.coerce(version);
-    if (semVersion.major < 2020) {
+    if (semVersion.major < 2021) {
         return false;
     }
-    return semver.compare(semVersion, '2021.1.0f1', true) >= 0;
+    return semver.compare(semVersion, '2021.0.0', true) >= 0;
 }
 async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
     const output = await ListInstalledEditors();
