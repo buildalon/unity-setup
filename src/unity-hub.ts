@@ -286,13 +286,14 @@ async function getLatestRelease(version: string, isSilicon: boolean): Promise<[s
         const originalRelease = releases.find(r => r.includes(release.version));
         const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
         if (!(match && match.groups && match.groups.version)) { continue; }
-        if ((version.includes('a') && match.groups.version.includes('a')) || (version.includes('b') && match.groups.version.includes('b')) || match.groups.version.includes('f')) {
-            core.debug(`Found Unity ${match.groups.version} from releases list.`);
-            version = match.groups.version;
-            break;
+        if ((version.includes('a') && match.groups.version.includes('a')) ||
+            (version.includes('b') && match.groups.version.includes('b')) ||
+            match.groups.version.includes('f')) {
+            core.info(`Found Unity ${match.groups.version}`);
+            return [match.groups.version, undefined];
         }
     }
-    core.info(`Searching for Unity ${version} release from online releases list...`);
+    core.debug(`Searching for Unity ${version} release from online releases list...`);
     const baseUrl = `https://public-cdn.cloud.unity3d.com/hub/prod`;
     const url = isSilicon
         ? `${baseUrl}/releases-silicon.json`
@@ -304,19 +305,18 @@ async function getLatestRelease(version: string, isSilicon: boolean): Promise<[s
 
 async function parseReleases(version: string, data: string): Promise<[string, string]> {
     const releases = JSON.parse(data);
-    core.info(`Found ${releases.official.length} official releases...`);
-    core.info(JSON.stringify(releases, null, 2));
+    core.debug(`Found ${releases.official.length} official releases...`);
     releases.official.sort((a: any, b: any) => semver.compare(a.version, b.version, true));
     for (const release of releases.official) {
         const semVersion = semver.coerce(version);
         const semVerRelease = semver.coerce(release.version);
-        core.info(`Checking ${semVersion} against ${semVerRelease}`);
+        core.debug(`Checking ${semVersion} against ${semVerRelease}`);
         if (semver.satisfies(semVerRelease, `^${semVersion}`)) {
-            core.info(`Found Unity ${release.version} release.`);
+            core.debug(`Found Unity ${release.version} release.`);
             const match = release.downloadUrl.match(/download_unity\/(?<changeset>[a-zA-Z0-9]+)\//);
             if (match && match.groups && match.groups.changeset) {
                 const changeset = match.groups.changeset;
-                core.info(`Found Unity ${release.version} (${changeset})`);
+                core.debug(`Found Unity ${release.version} (${changeset})`);
                 return [release.version, changeset];
             }
         }
