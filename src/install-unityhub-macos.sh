@@ -1,5 +1,5 @@
 #!/bin/bash
-set -xe
+set -e
 echo "::group::Installing Unity Hub..."
 baseUrl="https://public-cdn.cloud.unity3d.com/hub/prod"
 cpuArch=$(uname -m)
