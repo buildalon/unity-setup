@@ -34655,6 +34655,7 @@ async function parseReleases(version, data) {
 }
 async function installUnity(version, changeset, architecture, modules) {
     if (!changeset) {
+        core.info(`Fetching changeset for Unity ${version}...`);
         changeset = await getChangeset(version);
     }
     core.startGroup(`Installing Unity ${version} (${changeset})...`);

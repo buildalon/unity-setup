@@ -326,6 +326,7 @@ async function parseReleases(version: string, data: string): Promise<[string, st
 
 async function installUnity(version: string, changeset: string, architecture: string, modules: string[]): Promise<void> {
     if (!changeset) {
+        core.info(`Fetching changeset for Unity ${version}...`);
         changeset = await getChangeset(version);
     }
     core.startGroup(`Installing Unity ${version} (${changeset})...`);
