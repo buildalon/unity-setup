@@ -450,7 +450,7 @@ async function getChangeset(version: string): Promise<string> {
     const url = `https://unity.com/releases/editor/whats-new/${version}`;
     const response = await fetch(url);
     const data = await response.text();
-    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)\/?/g);
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return match.groups.changeset;
     }
