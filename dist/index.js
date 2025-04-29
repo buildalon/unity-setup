@@ -34634,14 +34634,14 @@ async function getLatestRelease(version, isSilicon) {
 }
 async function parseReleases(version, data) {
     const releases = JSON.parse(data);
-    core.debug(`Found ${releases.official.length} official releases...`);
+    core.info(`Found ${releases.official.length} official releases...`);
     releases.official.sort((a, b) => semver.compare(a.version, b.version, true));
     for (const release of releases.official) {
         const semVersion = semver.coerce(version);
         const semVerRelease = semver.coerce(release.version);
-        core.debug(`Checking ${semVersion} against ${semVerRelease}`);
+        core.info(`Checking ${semVersion} against ${semVerRelease}`);
         if (semver.satisfies(semVerRelease, `^${semVersion}`)) {
-            core.debug(`Found Unity ${release.version} release.`);
+            core.info(`Found Unity ${release.version} release.`);
             const match = release.downloadUrl.match(/download_unity\/(?<changeset>[a-zA-Z0-9]+)\//);
             if (match && match.groups && match.groups.changeset) {
                 const changeset = match.groups.changeset;
