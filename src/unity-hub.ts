@@ -286,14 +286,13 @@ async function getLatestRelease(version: string, isSilicon: boolean): Promise<[s
         const originalRelease = releases.find(r => r.includes(release.version));
         const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
         if (!(match && match.groups && match.groups.version)) { continue; }
-        if ((version.includes('a') && match.groups.version.includes('a')) ||
-            (version.includes('b') && match.groups.version.includes('b')) ||
-            match.groups.version.includes('f')) {
-            core.info(`Found Unity ${match.groups.version}`);
-            return [match.groups.version, undefined];
+        if ((version.includes('a') && match.groups.version.includes('a')) || (version.includes('b') && match.groups.version.includes('b')) || match.groups.version.includes('f')) {
+            core.debug(`Found Unity ${match.groups.version} from releases list.`);
+            version = match.groups.version;
+            break;
         }
     }
-    core.info(`Searching for Unity ${version} release...`);
+    core.info(`Searching for Unity ${version} release from online releases list...`);
     const baseUrl = `https://public-cdn.cloud.unity3d.com/hub/prod`;
     const url = isSilicon
         ? `${baseUrl}/releases-silicon.json`
