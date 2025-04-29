@@ -3,6 +3,11 @@ set -xe
 echo "::group::Installing Unity Hub..."
 baseUrl="https://public-cdn.cloud.unity3d.com/hub/prod"
 cpuArch=$(uname -m)
+if [ "$cpuArch" == "arm64" ]; then
+    cpuArch="arm64"
+else
+    cpuArch="x64"
+fi
 fileName="UnityHubSetup"
 url="$baseUrl/$fileName-$cpuArch.dmg"
 downloadPath="$RUNNER_TEMP/$fileName-$cpuArch.dmg"
