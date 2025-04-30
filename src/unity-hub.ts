@@ -226,13 +226,17 @@ async function execUnityHub(args: string[]): Promise<string> {
 
 export async function Unity(version: string, changeset: string, architecture: string, modules: string[]): Promise<string> {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
-        core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
+        core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
         architecture = 'x86_64';
     }
     if (!changeset) {
         const [latestVersion, latestChangeset] = await getLatestRelease(version, architecture === 'arm64');
         version = latestVersion;
         changeset = latestChangeset
+    }
+    if (!changeset) {
+        core.debug(`Fetching changeset for Unity ${version}...`);
+        changeset = await getChangeset(version);
     }
     let editorPath = await checkInstalledEditors(version, architecture, false);
     if (!editorPath) {
@@ -293,7 +297,7 @@ async function getLatestRelease(version: string, isSilicon: boolean): Promise<[s
             return [match.groups.version, undefined];
         }
     }
-    core.info(`Searching for Unity ${version} release...`);
+    core.debug(`Searching for Unity ${version} release from online releases list...`);
     const baseUrl = `https://public-cdn.cloud.unity3d.com/hub/prod`;
     const url = isSilicon
         ? `${baseUrl}/releases-silicon.json`
@@ -316,7 +320,7 @@ async function parseReleases(version: string, data: string): Promise<[string, st
             const match = release.downloadUrl.match(/download_unity\/(?<changeset>[a-zA-Z0-9]+)\//);
             if (match && match.groups && match.groups.changeset) {
                 const changeset = match.groups.changeset;
-                core.info(`Found Unity ${release.version} (${changeset})`);
+                core.debug(`Found Unity ${release.version} (${changeset})`);
                 return [release.version, changeset];
             }
         }
@@ -325,8 +329,7 @@ async function parseReleases(version: string, data: string): Promise<[string, st
 }
 
 async function installUnity(version: string, changeset: string, architecture: string, modules: string[]): Promise<void> {
-    const changesetStr = changeset ? ` (${changeset})` : '';
-    core.startGroup(`Installing Unity ${version}${changesetStr}...`);
+    core.startGroup(`Installing Unity ${version} (${changeset})...`);
     const args = ['install', '--version', version];
     if (changeset) {
         args.push('--changeset', changeset);
@@ -355,7 +358,7 @@ export async function ListInstalledEditors(): Promise<string> {
 function isArmCompatible(version: string): boolean {
     const semVersion = semver.coerce(version);
     if (semVersion.major < 2021) { return false; }
-    return semver.compare(semVersion, '2021.1.0f1', true) >= 0;
+    return semver.compare(semVersion, '2021.0.0', true) >= 0;
 }
 
 async function checkInstalledEditors(version: string, architecture: string, failOnEmpty = true): Promise<string> {
@@ -442,6 +445,22 @@ async function checkEditorModules(editorPath: string, version: string, architect
 async function getModulesContent(modulesPath: string): Promise<any> {
     const modulesContent = await ReadFileContents(modulesPath);
     return JSON.parse(modulesContent);
+}
+
+async function getChangeset(version: string): Promise<string | null> {
+    version = version.split(/[abf]/)[0];
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
+    }
+    const data = await response.text();
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    if (match && match.groups && match.groups.changeset) {
+        return match.groups.changeset;
+    }
+    core.error(`Failed to find changeset for Unity ${version}`);
+    return null;
 }
 
 async function removePath(targetPath: string): Promise<void> {

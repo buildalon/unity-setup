@@ -34553,13 +34553,17 @@ async function execUnityHub(args) {
 }
 async function Unity(version, changeset, architecture, modules) {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
-        core.info(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
+        core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
         architecture = 'x86_64';
     }
     if (!changeset) {
         const [latestVersion, latestChangeset] = await getLatestRelease(version, architecture === 'arm64');
         version = latestVersion;
         changeset = latestChangeset;
+    }
+    if (!changeset) {
+        core.debug(`Fetching changeset for Unity ${version}...`);
+        changeset = await getChangeset(version);
     }
     let editorPath = await checkInstalledEditors(version, architecture, false);
     if (!editorPath) {
@@ -34624,7 +34628,7 @@ async function getLatestRelease(version, isSilicon) {
             return [match.groups.version, undefined];
         }
     }
-    core.info(`Searching for Unity ${version} release...`);
+    core.debug(`Searching for Unity ${version} release from online releases list...`);
     const baseUrl = `https://public-cdn.cloud.unity3d.com/hub/prod`;
     const url = isSilicon
         ? `${baseUrl}/releases-silicon.json`
@@ -34646,7 +34650,7 @@ async function parseReleases(version, data) {
             const match = release.downloadUrl.match(/download_unity\/(?<changeset>[a-zA-Z0-9]+)\//);
             if (match && match.groups && match.groups.changeset) {
                 const changeset = match.groups.changeset;
-                core.info(`Found Unity ${release.version} (${changeset})`);
+                core.debug(`Found Unity ${release.version} (${changeset})`);
                 return [release.version, changeset];
             }
         }
@@ -34654,8 +34658,7 @@ async function parseReleases(version, data) {
     throw new Error(`Failed to find Unity ${version} release. Please provide a valid changeset.`);
 }
 async function installUnity(version, changeset, architecture, modules) {
-    const changesetStr = changeset ? ` (${changeset})` : '';
-    core.startGroup(`Installing Unity ${version}${changesetStr}...`);
+    core.startGroup(`Installing Unity ${version} (${changeset})...`);
     const args = ['install', '--version', version];
     if (changeset) {
         args.push('--changeset', changeset);
@@ -34685,7 +34688,7 @@ function isArmCompatible(version) {
     if (semVersion.major < 2021) {
         return false;
     }
-    return semver.compare(semVersion, '2021.1.0f1', true) >= 0;
+    return semver.compare(semVersion, '2021.0.0', true) >= 0;
 }
 async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
     const output = await ListInstalledEditors();
@@ -34768,6 +34771,21 @@ async function checkEditorModules(editorPath, version, architecture, modules) {
 async function getModulesContent(modulesPath) {
     const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
+}
+async function getChangeset(version) {
+    version = version.split(/[abf]/)[0];
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
+    }
+    const data = await response.text();
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    if (match && match.groups && match.groups.changeset) {
+        return match.groups.changeset;
+    }
+    core.error(`Failed to find changeset for Unity ${version}`);
+    return null;
 }
 async function removePath(targetPath) {
     core.startGroup(`deleting ${targetPath}...`);
