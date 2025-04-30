@@ -34562,7 +34562,7 @@ async function Unity(version, changeset, architecture, modules) {
         changeset = latestChangeset;
     }
     if (!changeset) {
-        core.info(`Fetching changeset for Unity ${version}...`);
+        core.debug(`Fetching changeset for Unity ${version}...`);
         changeset = await getChangeset(version);
     }
     let editorPath = await checkInstalledEditors(version, architecture, false);
@@ -34581,7 +34581,8 @@ async function Unity(version, changeset, architecture, modules) {
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     try {
-        core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
+        const changesetStr = changeset ? ` (${changeset})` : '';
+        core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
@@ -34779,12 +34780,12 @@ async function getChangeset(version) {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
     const data = await response.text();
-    core.info(`Unity ${version} release notes:\n${url}`);
     const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return match.groups.changeset;
     }
-    throw new Error(`Failed to find changeset for Unity ${version}`);
+    core.error(`Failed to find changeset for Unity ${version}`);
+    return null;
 }
 async function removePath(targetPath) {
     core.startGroup(`deleting ${targetPath}...`);

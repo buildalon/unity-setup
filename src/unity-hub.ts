@@ -235,7 +235,7 @@ export async function Unity(version: string, changeset: string, architecture: st
         changeset = latestChangeset
     }
     if (!changeset) {
-        core.info(`Fetching changeset for Unity ${version}...`);
+        core.debug(`Fetching changeset for Unity ${version}...`);
         changeset = await getChangeset(version);
     }
     let editorPath = await checkInstalledEditors(version, architecture, false);
@@ -253,7 +253,8 @@ export async function Unity(version: string, changeset: string, architecture: st
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
     try {
-        core.startGroup(`Checking installed modules for Unity ${version} (${changeset})...`);
+        const changesetStr = changeset ? ` (${changeset})` : '';
+        core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);
         const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
@@ -446,7 +447,7 @@ async function getModulesContent(modulesPath: string): Promise<any> {
     return JSON.parse(modulesContent);
 }
 
-async function getChangeset(version: string): Promise<string> {
+async function getChangeset(version: string): Promise<string | null> {
     version = version.split(/[abf]/)[0];
     const url = `https://unity.com/releases/editor/whats-new/${version}`;
     const response = await fetch(url);
@@ -454,12 +455,12 @@ async function getChangeset(version: string): Promise<string> {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
     const data = await response.text();
-    core.info(`Unity ${version} release notes:\n${url}`);
     const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return match.groups.changeset;
     }
-    throw new Error(`Failed to find changeset for Unity ${version}`);
+    core.error(`Failed to find changeset for Unity ${version}`);
+    return null;
 }
 
 async function removePath(targetPath: string): Promise<void> {
