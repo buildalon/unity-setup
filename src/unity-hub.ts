@@ -479,10 +479,6 @@ async function getChangeset(version: string): Promise<string | null> {
 async function removePath(targetPath: string): Promise<void> {
     core.startGroup(`deleting ${targetPath}...`);
     try {
-        // if linux or macOS, set permissions to 777 before deleting
-        if (process.platform === 'linux' || process.platform === 'darwin') {
-            await fs.promises.chmod(targetPath, 0o777);
-        }
         await fs.promises.rm(targetPath, { recursive: true, force: true });
     } finally {
         core.endGroup();

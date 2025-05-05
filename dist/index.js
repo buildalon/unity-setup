@@ -34804,9 +34804,6 @@ async function getChangeset(version) {
 async function removePath(targetPath) {
     core.startGroup(`deleting ${targetPath}...`);
     try {
-        if (process.platform === 'linux' || process.platform === 'darwin') {
-            await fs.promises.chmod(targetPath, 0o777);
-        }
         await fs.promises.rm(targetPath, { recursive: true, force: true });
     }
     finally {
