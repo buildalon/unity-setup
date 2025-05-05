@@ -34371,9 +34371,16 @@ async function Get() {
         hubPath = await installUnityHub();
     }
     const hubVersion = await getInstalledHubVersion();
+    if (!semver.valid(hubVersion)) {
+        throw new Error(`Failed to get installed Unity Hub version ${hubVersion}!`);
+    }
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
-    if (semver.compare(hubVersion, latestHubVersion, true) < 0) {
+    if (!semver.valid(latestHubVersion)) {
+        throw new Error(`Failed to get latest Unity Hub version ${latestHubVersion}!`);
+    }
+    core.info(`Latest Unity Hub Version:\n  > ${latestHubVersion}`);
+    if (semver.compare(hubVersion, latestHubVersion) < 0) {
         core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
         await removePath(hubPath);
         core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
@@ -34793,7 +34800,7 @@ async function removePath(targetPath) {
         if (process.platform === 'linux' || process.platform === 'darwin') {
             await fs.promises.chmod(targetPath, 0o777);
         }
-        await fs.promises.rm(targetPath, { recursive: true });
+        await fs.promises.rm(targetPath, { recursive: true, force: true });
     }
     finally {
         core.endGroup();
