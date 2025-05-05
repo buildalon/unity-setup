@@ -59,7 +59,7 @@ export async function Get(): Promise<string> {
             hubPath = await installUnityHub();
         } else {
             await exec.exec('apt-get', ['update']);
-            await exec.exec('apt-get', ['-y', '--no-install-recommends', 'unity-hub']);
+            await exec.exec('apt-get', ['install', '-y', '--no-install-recommends', '--only-upgrade', 'unity-hub']);
         }
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
