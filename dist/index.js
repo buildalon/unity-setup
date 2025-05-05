@@ -34380,11 +34380,18 @@ async function Get() {
         throw new Error(`Failed to get latest Unity Hub version ${latestHubVersion}!`);
     }
     core.info(`Latest Unity Hub Version:\n  > ${latestHubVersion}`);
+    core.info(`Comparing versions:\n  > ${hubVersion} < ${latestHubVersion} => ${semver.compare(hubVersion, latestHubVersion)}`);
     if (semver.compare(hubVersion, latestHubVersion) < 0) {
-        core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
-        await removePath(hubPath);
-        core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
-        hubPath = await installUnityHub();
+        if (process.platform !== 'linux') {
+            core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
+            await removePath(hubPath);
+            core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
+            hubPath = await installUnityHub();
+        }
+        else {
+            core.info(`Updating Unity Hub to latest version:\n  > ${latestHubVersion}`);
+            await exec.exec('apt-get', ['update', 'unity-hub']);
+        }
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
     core.exportVariable('UNITY_HUB_PATH', hubPath);
