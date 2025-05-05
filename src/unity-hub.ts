@@ -58,8 +58,11 @@ export async function Get(): Promise<string> {
             await removePath(hubPath);
             hubPath = await installUnityHub();
         } else {
-            await exec.exec('apt-get', ['update']);
-            await exec.exec('apt-get', ['install', '-y', '--no-install-recommends', '--only-upgrade', 'unity-hub']);
+            const scriptPath = path.join(__dirname, 'update-unityhub-linux.sh');
+            const exitCode = await exec.exec('sh', [scriptPath]);
+            if (exitCode !== 0) {
+                throw new Error(`Failed to install Unity Hub: ${exitCode}`);
+            }
         }
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
