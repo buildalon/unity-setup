@@ -41,13 +41,29 @@ export async function Get(): Promise<string> {
         hubPath = await installUnityHub();
     }
     const hubVersion = await getInstalledHubVersion();
+    if (!semver.valid(hubVersion)) {
+        throw new Error(`Failed to get installed Unity Hub version ${hubVersion}!`);
+    }
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
-    if (semver.lt(hubVersion, latestHubVersion)) {
-        core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
-        await removePath(hubPath);
+    if (!semver.valid(latestHubVersion)) {
+        throw new Error(`Failed to get latest Unity Hub version ${latestHubVersion}!`);
+    }
+    core.debug(`Latest Unity Hub Version:\n  > ${latestHubVersion}`);
+    core.debug(`Comparing versions:\n  > ${hubVersion} < ${latestHubVersion} => ${semver.compare(hubVersion, latestHubVersion)}`);
+    if (semver.compare(hubVersion, latestHubVersion) < 0) {
         core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
-        hubPath = await installUnityHub();
+        if (process.platform !== 'linux') {
+            core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
+            await removePath(hubPath);
+            hubPath = await installUnityHub();
+        } else {
+            const scriptPath = path.join(__dirname, 'update-unityhub-linux.sh');
+            const exitCode = await exec.exec('sh', [scriptPath]);
+            if (exitCode !== 0) {
+                throw new Error(`Failed to install Unity Hub: ${exitCode}`);
+            }
+        }
     }
     core.info(`Unity Hub Path:\n  > "${hubPath}"`);
     core.exportVariable('UNITY_HUB_PATH', hubPath);
@@ -466,7 +482,7 @@ async function getChangeset(version: string): Promise<string | null> {
 async function removePath(targetPath: string): Promise<void> {
     core.startGroup(`deleting ${targetPath}...`);
     try {
-        await fs.promises.rm(targetPath, { recursive: true });
+        await fs.promises.rm(targetPath, { recursive: true, force: true });
     } finally {
         core.endGroup();
     }
