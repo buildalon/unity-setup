@@ -43,7 +43,7 @@ export async function Get(): Promise<string> {
     const hubVersion = await getInstalledHubVersion();
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
-    if (semver.lt(hubVersion, latestHubVersion)) {
+    if (semver.compare(hubVersion, latestHubVersion, true) < 0) {
         core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
         await removePath(hubPath);
         core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
@@ -466,6 +466,10 @@ async function getChangeset(version: string): Promise<string | null> {
 async function removePath(targetPath: string): Promise<void> {
     core.startGroup(`deleting ${targetPath}...`);
     try {
+        // if linux or macOS, set permissions to 777 before deleting
+        if (process.platform === 'linux' || process.platform === 'darwin') {
+            await fs.promises.chmod(targetPath, 0o777);
+        }
         await fs.promises.rm(targetPath, { recursive: true });
     } finally {
         core.endGroup();
