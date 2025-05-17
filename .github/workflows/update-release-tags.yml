@@ -1,7 +1,7 @@
 name: Update Release Tags
 on:
   push:
-    tags: '*'
+    tags: ['*']
   workflow_dispatch:
 jobs:
   update-release-tags:
@@ -12,7 +12,5 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
       - uses: RageAgainstThePixel/update-action-release-tags@v1
-        with:
-          update-major: true
-          update-minor: true

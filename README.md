@@ -11,7 +11,7 @@ A GitHub Action for setting up the [Unity Game Engine](https://unity.com) for CI
 ```yaml
 strategy:
   matrix:
-    os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+    os: [ubuntu-latest, windows-latest, macos-latest]
     unity-versions:
       - None
       - 2019.4.40f1 (ffc62b691db5)
@@ -26,9 +26,6 @@ strategy:
       - os: windows-latest
         build-targets: StandaloneWindows64, Android, WSAPlayer
         modules: windows-server
-      - os: macos-13
-        build-targets: StandaloneOSX, Android, iOS
-        modules: mac-server
       - os: macos-latest
         build-targets: StandaloneOSX, Android, iOS, VisionOS
         modules: mac-server
