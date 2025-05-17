@@ -3,11 +3,9 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Run every Sunday at midnight
   push:
-    branches:
-      - 'main'
+    branches: ['main']
   pull_request:
-    branches:
-      - '*'
+    branches: ['*']
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 concurrency:
@@ -41,9 +39,6 @@ jobs:
           - os: windows-latest
             build-targets: StandaloneWindows64, Android, WSAPlayer
             modules: windows-server
-          - os: macos-13
-            build-targets: StandaloneOSX, Android, iOS
-            modules: mac-server
           - os: macos-latest
             build-targets: StandaloneOSX Android iOS VisionOS
             modules: mac-server

@@ -5,7 +5,7 @@ import path = require('path');
 import os = require('os');
 import fs = require('fs');
 
-async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined]> {
+export async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined]> {
     const modules = [];
     const architecture = core.getInput('architecture') || getInstallationArch();
     if (architecture) {
@@ -203,5 +203,3 @@ async function getUnityVersionFromFile(versionFilePath: string): Promise<[string
     }
     return [match.groups.version, match.groups.changeset];
 }
-
-export { ValidateInputs }

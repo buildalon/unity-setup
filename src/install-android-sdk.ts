@@ -5,7 +5,7 @@ import path = require('path');
 import os = require('os');
 import fs = require('fs');
 
-async function CheckAndroidSdkInstalled(editorPath: string, projectPath: string): Promise<void> {
+export async function CheckAndroidSdkInstalled(editorPath: string, projectPath: string): Promise<void> {
     let sdkPath = undefined;
     await createRepositoryCfg();
     const rootEditorPath = await GetEditorRootPath(editorPath);
@@ -116,5 +116,3 @@ async function execSdkManager(sdkManagerPath: string, javaSdk: string, args: str
         throw error;
     }
 }
-
-export { CheckAndroidSdkInstalled }
