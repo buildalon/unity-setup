@@ -76,6 +76,11 @@ export async function Get(): Promise<string> {
     return hubPath;
 }
 
+export async function SetInstallPath(installPath: string): Promise<void> {
+    await fs.promises.mkdir(installPath, { recursive: true });
+    await execUnityHub(["install-path", "--set", installPath]);
+}
+
 async function installUnityHub(): Promise<string> {
     let exitCode = undefined;
     switch (process.platform) {
@@ -240,6 +245,11 @@ async function execUnityHub(args: string[]): Promise<string> {
     return output;
 }
 
+const retryErrorMessages = [
+    'Editor already installed in this location',
+    'failed to download. Error given: Request timeout'
+];
+
 export async function Unity(version: string, changeset: string, architecture: string, modules: string[]): Promise<string> {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
         core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
@@ -259,8 +269,8 @@ export async function Unity(version: string, changeset: string, architecture: st
         try {
             await installUnity(version, changeset, architecture, modules);
         } catch (error) {
-            if (error.message.includes('Editor already installed in this location')) {
-                removePath(editorPath);
+            if (retryErrorMessages.some(msg => error.message.includes(msg))) {
+                await removePath(editorPath);
                 await installUnity(version, changeset, architecture, modules);
             }
         }
@@ -282,6 +292,17 @@ export async function Unity(version: string, changeset: string, architecture: st
             core.info(`Additional Modules:`);
             for (const module of additionalModules) {
                 core.info(`  > ${module}`);
+            }
+        }
+        if (process.platform === 'linux') {
+            const dataPath = path.join(path.dirname(editorPath), 'Data');
+            const beeBackend = path.join(dataPath, 'bee_backend');
+            const dotBeeBackend = path.join(dataPath, '.bee_backend');
+            if (fs.existsSync(beeBackend) && !fs.existsSync(dotBeeBackend)) {
+                await fs.promises.rename(beeBackend, dotBeeBackend);
+                const wrapperSource = path.join(__dirname, 'linux-bee-backend-wrapper.sh');
+                await fs.promises.copyFile(wrapperSource, beeBackend);
+                await fs.promises.chmod(beeBackend, 0o755);
             }
         }
     } catch (error) {

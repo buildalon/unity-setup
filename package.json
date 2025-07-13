@@ -1,6 +1,6 @@
 {
   "name": "unity-setup",
-  "version": "1.0.20",
+  "version": "1.1.0",
   "description": "A GitHub action for setting up the Unity Game Engine for CI/CD workflows.",
   "author": "Buildalon",
   "license": "MIT",
@@ -32,7 +32,7 @@
     "yaml": "^2.8.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.18",
+    "@types/node": "^22.16.3",
     "@types/semver": "^7.7.0",
     "@vercel/ncc": "^0.34.0",
     "shx": "^0.3.4",
