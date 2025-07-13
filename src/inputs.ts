@@ -5,7 +5,7 @@ import path = require('path');
 import os = require('os');
 import fs = require('fs');
 
-export async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined]> {
+export async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined, string | undefined]> {
     const modules = [];
     const architecture = core.getInput('architecture') || getInstallationArch();
     if (architecture) {
@@ -59,7 +59,19 @@ export async function ValidateInputs(): Promise<[string[][], string | undefined,
         const changesetStr = changeset ? ` (${changeset})` : '';
         core.info(`  > ${version}${changesetStr}`);
     }
-    return [versions, architecture, modules, unityProjectPath];
+    let installPath = core.getInput('install-path');
+    if (installPath) {
+        installPath = installPath.trim();
+        if (installPath.length === 0) {
+            installPath = undefined;
+        } else {
+            core.info(`Install Path:\n  > "${installPath}"`);
+        }
+    }
+    if (!installPath) {
+        core.debug('No install path specified, using default Unity Hub install path.');
+    }
+    return [versions, architecture, modules, unityProjectPath, installPath];
 }
 
 function getArrayInput(key: string): string[] {

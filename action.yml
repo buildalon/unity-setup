@@ -24,6 +24,9 @@ inputs:
     description: 'Specify the architecture to install. Either `x86_64` or `arm64`.'
     required: false
     default: ''
+  install-path:
+    description: 'Specify the path where Unity will be installed to.'
+    required: false
 runs:
   using: 'node20'
   main: 'dist/index.js'

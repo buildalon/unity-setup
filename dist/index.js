@@ -5754,7 +5754,7 @@ function expand(str, isTop) {
   var isOptions = m.body.indexOf(',') >= 0;
   if (!isSequence && !isOptions) {
     // {a},b}
-    if (m.post.match(/,.*\}/)) {
+    if (m.post.match(/,(?!,).*\}/)) {
       str = m.pre + '{' + m.body + escClose + m.post;
       return expand(str);
     }
@@ -34181,7 +34181,20 @@ async function ValidateInputs() {
         const changesetStr = changeset ? ` (${changeset})` : '';
         core.info(`  > ${version}${changesetStr}`);
     }
-    return [versions, architecture, modules, unityProjectPath];
+    let installPath = core.getInput('install-path');
+    if (installPath) {
+        installPath = installPath.trim();
+        if (installPath.length === 0) {
+            installPath = undefined;
+        }
+        else {
+            core.info(`Install Path:\n  > "${installPath}"`);
+        }
+    }
+    if (!installPath) {
+        core.debug('No install path specified, using default Unity Hub install path.');
+    }
+    return [versions, architecture, modules, unityProjectPath, installPath];
 }
 function getArrayInput(key) {
     let input = core.getInput(key);
@@ -34464,6 +34477,7 @@ async function execSdkManager(sdkManagerPath, javaSdk, args) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Get = Get;
+exports.SetInstallPath = SetInstallPath;
 exports.Unity = Unity;
 exports.ListInstalledEditors = ListInstalledEditors;
 const utility_1 = __nccwpck_require__(5418);
@@ -34542,6 +34556,10 @@ async function Get() {
         core.endGroup();
     }
     return hubPath;
+}
+async function SetInstallPath(installPath) {
+    await fs.promises.mkdir(installPath, { recursive: true });
+    await execUnityHub(["install-path", "--set", installPath]);
 }
 async function installUnityHub() {
     let exitCode = undefined;
@@ -34704,6 +34722,10 @@ async function execUnityHub(args) {
     }
     return output;
 }
+const retryErrorMessages = [
+    'Editor already installed in this location',
+    'failed to download. Error given: Request timeout'
+];
 async function Unity(version, changeset, architecture, modules) {
     if (os.arch() == 'arm64' && !isArmCompatible(version)) {
         core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
@@ -34724,8 +34746,8 @@ async function Unity(version, changeset, architecture, modules) {
             await installUnity(version, changeset, architecture, modules);
         }
         catch (error) {
-            if (error.message.includes('Editor already installed in this location')) {
-                removePath(editorPath);
+            if (retryErrorMessages.some(msg => error.message.includes(msg))) {
+                await removePath(editorPath);
                 await installUnity(version, changeset, architecture, modules);
             }
         }
@@ -34747,6 +34769,17 @@ async function Unity(version, changeset, architecture, modules) {
             core.info(`Additional Modules:`);
             for (const module of additionalModules) {
                 core.info(`  > ${module}`);
+            }
+        }
+        if (process.platform === 'linux') {
+            const dataPath = path.join(path.dirname(editorPath), 'Data');
+            const beeBackend = path.join(dataPath, 'bee_backend');
+            const dotBeeBackend = path.join(dataPath, '.bee_backend');
+            if (fs.existsSync(beeBackend) && !fs.existsSync(dotBeeBackend)) {
+                await fs.promises.rename(beeBackend, dotBeeBackend);
+                const wrapperSource = __nccwpck_require__.ab + "linux-bee-backend-wrapper.sh";
+                await fs.promises.copyFile(__nccwpck_require__.ab + "linux-bee-backend-wrapper.sh", beeBackend);
+                await fs.promises.chmod(beeBackend, 0o755);
             }
         }
     }
@@ -45558,13 +45591,16 @@ const unityHub = __nccwpck_require__(2754);
 const core = __nccwpck_require__(2186);
 const main = async () => {
     try {
-        const [versions, architecture, modules, unityProjectPath] = await (0, inputs_1.ValidateInputs)();
+        const [versions, architecture, modules, unityProjectPath, installPath] = await (0, inputs_1.ValidateInputs)();
         if (unityProjectPath) {
             core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
         }
         const unityHubPath = await unityHub.Get();
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
         const editors = [];
+        if (installPath.length > 0) {
+            await unityHub.SetInstallPath(installPath);
+        }
         for (const [version, changeset] of versions) {
             const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
