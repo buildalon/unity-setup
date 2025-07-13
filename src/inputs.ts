@@ -21,7 +21,7 @@ export async function ValidateInputs(): Promise<[string[][], string | undefined,
         }
     }
     for (const module of modulesInput) {
-        if (module.toLocaleLowerCase() == 'none') {
+        if (module.toLowerCase() == 'none') {
             continue;
         }
         if (!modules.includes(module)) {
