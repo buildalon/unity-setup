@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Run every Sunday at midnight
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
     branches: ['*']
   # Allows you to run this workflow manually from the Actions tab
@@ -25,13 +25,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        unity-versions:
+        unity-version:
           - None
-          - '5.6.7f1 (e80cc3114ac1)'
-          - 2019.4.40f1
+          - 5.6.7f1 (e80cc3114ac1)
           - 2020.3
           - 2021.3.x
           - 2022.x
+          - 6000.0.x
           - 6000
         include:
           - os: ubuntu-latest
@@ -43,17 +43,26 @@ jobs:
           - os: macos-latest
             build-targets: StandaloneOSX Android iOS VisionOS
             modules: mac-server
+          - os: ubuntu-latest
+            unity-version: 2019.4.40f1
+            modules: None
+          - os: ubuntu-latest
+            unity-version: 2018.4.36f1 (6cd387d23174)
+            modules: None
+          - os: ubuntu-latest
+            unity-version: 2017.4.40f1 (6e14067f8a9a)
+            modules: None
         exclude:
           # Exclude Unity 5.x for linux as it is not supported
           - os: ubuntu-latest
-            unity-versions: '5.6.7f1 (e80cc3114ac1)'
+            unity-version: '5.6.7f1 (e80cc3114ac1)'
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./ # buildalon/unity-setup
         with:
           version-file: 'None'
-          unity-version: ${{ matrix.unity-versions }}
+          unity-version: ${{ matrix.unity-version }}
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
 
