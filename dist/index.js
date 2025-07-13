@@ -34133,7 +34133,7 @@ async function ValidateInputs() {
     }
     const buildTargets = getArrayInput('build-targets');
     core.info(`modules:`);
-    const modulesInput = getArrayInput('modules') || [];
+    const modulesInput = getArrayInput('modules');
     if (buildTargets.length == 0 && modulesInput.length === 0) {
         modules.push(...getDefaultModules());
         for (const module of modules) {
