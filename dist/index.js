@@ -34972,7 +34972,7 @@ async function getChangeset(version) {
     return null;
 }
 async function removePath(targetPath) {
-    if (targetPath && fs.existsSync(targetPath)) {
+    if (targetPath && targetPath.length > 0) {
         core.startGroup(`deleting ${targetPath}...`);
         try {
             await fs.promises.rm(targetPath, { recursive: true, force: true });

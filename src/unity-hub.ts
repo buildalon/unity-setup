@@ -501,7 +501,7 @@ async function getChangeset(version: string): Promise<string | null> {
 }
 
 async function removePath(targetPath: string | undefined): Promise<void> {
-    if (targetPath && fs.existsSync(targetPath)) {
+    if (targetPath && targetPath.length > 0) {
         core.startGroup(`deleting ${targetPath}...`);
         try {
             await fs.promises.rm(targetPath, { recursive: true, force: true });
