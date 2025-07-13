@@ -500,11 +500,13 @@ async function getChangeset(version: string): Promise<string | null> {
     return null;
 }
 
-async function removePath(targetPath: string): Promise<void> {
-    core.startGroup(`deleting ${targetPath}...`);
-    try {
-        await fs.promises.rm(targetPath, { recursive: true, force: true });
-    } finally {
-        core.endGroup();
+async function removePath(targetPath: string | undefined): Promise<void> {
+    if (targetPath && fs.existsSync(targetPath)) {
+        core.startGroup(`deleting ${targetPath}...`);
+        try {
+            await fs.promises.rm(targetPath, { recursive: true, force: true });
+        } finally {
+            core.endGroup();
+        }
     }
 }

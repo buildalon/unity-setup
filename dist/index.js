@@ -34132,21 +34132,19 @@ async function ValidateInputs() {
         core.info(`architecture:\n  > ${architecture}`);
     }
     const buildTargets = getArrayInput('build-targets');
-    const modulesInput = getArrayInput('modules');
-    if (buildTargets.length == 0) {
-        if (modulesInput.length > 0) {
-            modules.push(...modulesInput);
-        }
-        else {
-            modules.push(...getDefaultModules());
-        }
-    }
-    else {
-        modules.push(...modulesInput);
+    const modulesInput = getArrayInput('modules') || [];
+    if (buildTargets.length == 0 && modulesInput.length === 0) {
+        modules.push(...getDefaultModules());
     }
     core.info(`modules:`);
     for (const module of modulesInput) {
-        core.info(`  > ${module}`);
+        if (module === undefined || module.toLocaleLowerCase() == 'none') {
+            continue;
+        }
+        if (!modules.includes(module)) {
+            modules.push(module);
+            core.info(`  > ${module}`);
+        }
     }
     core.info(`buildTargets:`);
     const moduleMap = getPlatformTargetModuleMap();
@@ -34158,11 +34156,8 @@ async function ValidateInputs() {
         }
         if (!modules.includes(module)) {
             modules.push(module);
+            core.info(`  > ${target} -> ${module}`);
         }
-        core.info(`  > ${target} -> ${module}`);
-    }
-    if (modules.length == 0) {
-        throw Error('No modules or build-targets provided!');
     }
     const versions = getUnityVersionsFromInput();
     const versionFilePath = await getVersionFilePath();
@@ -34261,11 +34256,11 @@ function getPlatformTargetModuleMap() {
 function getDefaultModules() {
     switch (process.platform) {
         case 'linux':
-            return ['linux-il2cpp', 'android', 'ios'];
+            return ['linux-il2cpp'];
         case 'darwin':
-            return ['mac-il2cpp', 'android', 'ios'];
+            return ['mac-il2cpp'];
         case 'win32':
-            return ['windows-il2cpp', 'android', 'universal-windows-platform'];
+            return ['windows-il2cpp'];
         default:
             throw Error(`${process.platform} not supported`);
     }
@@ -34974,12 +34969,14 @@ async function getChangeset(version) {
     return null;
 }
 async function removePath(targetPath) {
-    core.startGroup(`deleting ${targetPath}...`);
-    try {
-        await fs.promises.rm(targetPath, { recursive: true, force: true });
-    }
-    finally {
-        core.endGroup();
+    if (targetPath && fs.existsSync(targetPath)) {
+        core.startGroup(`deleting ${targetPath}...`);
+        try {
+            await fs.promises.rm(targetPath, { recursive: true, force: true });
+        }
+        finally {
+            core.endGroup();
+        }
     }
 }
 
@@ -45598,7 +45595,7 @@ const main = async () => {
         const unityHubPath = await unityHub.Get();
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
         const editors = [];
-        if (installPath.length > 0) {
+        if (installPath && installPath.length > 0) {
             await unityHub.SetInstallPath(installPath);
         }
         for (const [version, changeset] of versions) {

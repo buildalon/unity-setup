@@ -5,26 +5,26 @@ import path = require('path');
 import os = require('os');
 import fs = require('fs');
 
-export async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined, string | undefined]> {
-    const modules = [];
+export async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined, string]> {
+    const modules: string[] = [];
     const architecture = core.getInput('architecture') || getInstallationArch();
     if (architecture) {
         core.info(`architecture:\n  > ${architecture}`);
     }
     const buildTargets = getArrayInput('build-targets');
-    const modulesInput = getArrayInput('modules');
-    if (buildTargets.length == 0) {
-        if (modulesInput.length > 0) {
-            modules.push(...modulesInput);
-        } else {
-            modules.push(...getDefaultModules());
-        }
-    } else {
-        modules.push(...modulesInput);
+    const modulesInput: string[] = getArrayInput('modules') || [];
+    if (buildTargets.length == 0 && modulesInput.length === 0) {
+        modules.push(...getDefaultModules());
     }
     core.info(`modules:`);
     for (const module of modulesInput) {
-        core.info(`  > ${module}`);
+        if (module === undefined || module.toLocaleLowerCase() == 'none') {
+            continue;
+        }
+        if (!modules.includes(module)) {
+            modules.push(module);
+            core.info(`  > ${module}`);
+        }
     }
     core.info(`buildTargets:`);
     const moduleMap = getPlatformTargetModuleMap();
@@ -36,11 +36,8 @@ export async function ValidateInputs(): Promise<[string[][], string | undefined,
         }
         if (!modules.includes(module)) {
             modules.push(module);
+            core.info(`  > ${target} -> ${module}`);
         }
-        core.info(`  > ${target} -> ${module}`);
-    }
-    if (modules.length == 0) {
-        throw Error('No modules or build-targets provided!');
     }
     const versions = getUnityVersionsFromInput();
     const versionFilePath = await getVersionFilePath();
@@ -137,11 +134,11 @@ function getPlatformTargetModuleMap(): { [key: string]: string } {
 function getDefaultModules(): string[] {
     switch (process.platform) {
         case 'linux':
-            return ['linux-il2cpp', 'android', 'ios'];
+            return ['linux-il2cpp'];
         case 'darwin':
-            return ['mac-il2cpp', 'android', 'ios'];
+            return ['mac-il2cpp'];
         case 'win32':
-            return ['windows-il2cpp', 'android', 'universal-windows-platform'];
+            return ['windows-il2cpp'];
         default:
             throw Error(`${process.platform} not supported`);
     }
