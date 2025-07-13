@@ -34132,13 +34132,16 @@ async function ValidateInputs() {
         core.info(`architecture:\n  > ${architecture}`);
     }
     const buildTargets = getArrayInput('build-targets');
+    core.info(`modules:`);
     const modulesInput = getArrayInput('modules') || [];
     if (buildTargets.length == 0 && modulesInput.length === 0) {
         modules.push(...getDefaultModules());
+        for (const module of modules) {
+            core.info(`  > ${module}`);
+        }
     }
-    core.info(`modules:`);
     for (const module of modulesInput) {
-        if (module === undefined || module.toLocaleLowerCase() == 'none') {
+        if (module.toLocaleLowerCase() == 'none') {
             continue;
         }
         if (!modules.includes(module)) {
