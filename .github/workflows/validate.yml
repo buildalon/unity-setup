@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Run every Sunday at midnight
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
     branches: ['*']
   # Allows you to run this workflow manually from the Actions tab
