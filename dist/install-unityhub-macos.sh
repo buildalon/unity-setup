@@ -24,7 +24,8 @@ if [ -z "${volumes}" ]; then
 fi
 echo "Mounted volumes:"
 echo "${volumes}"
-volume=$(echo "${volumes}" | grep -o "/Volumes/Unity Hub*" | head -n1)
+# can be "/Volumes/Unity Hub 3.13.1-arm64" or "/Volumes/Unity Hub 3.13.1"
+volume=$(echo "${volumes}" | grep -o "/Volumes/Unity Hub.*" | head -n1)
 if [ -z "${volume}" ]; then
     hdiutil detach "${downloadPath}" -quiet
     echo "Failed to mount ${downloadPath}"
