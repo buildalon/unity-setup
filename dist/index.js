@@ -36115,7 +36115,8 @@ const retryErrorMessages = [
 ];
 async function UnityEditor(unityVersion, modules) {
     core.info(`Getting release info for Unity ${unityVersion.toString()}...`);
-    if (!unityVersion.isLegacy()) {
+    let editorPath = await checkInstalledEditors(unityVersion, false);
+    if (!unityVersion.isLegacy() && !editorPath) {
         try {
             const releases = await getLatestHubReleases();
             unityVersion = unityVersion.findMatch(releases);
@@ -36127,7 +36128,6 @@ async function UnityEditor(unityVersion, modules) {
             unityVersion = await fallbackVersionLookup(unityVersion);
         }
     }
-    let editorPath = await checkInstalledEditors(unityVersion, false);
     let installPath = null;
     if (!editorPath) {
         try {
@@ -36209,7 +36209,7 @@ async function installUnity(unityVersion, modules) {
         args.push('--changeset', unityVersion.changeset);
     }
     if (unityVersion.architecture) {
-        args.push('-a', unityVersion.architecture.toLocaleLowerCase());
+        args.push('-a', unityVersion.architecture.toLowerCase());
     }
     if (modules.length > 0) {
         for (const module of modules) {
@@ -36330,7 +36330,7 @@ async function checkInstalledEditors(unityVersion, failOnEmpty, installPath = un
 async function checkEditorModules(editorPath, unityVersion, modules) {
     let args = ['install-modules', '--version', unityVersion.version];
     if (unityVersion.architecture) {
-        args.push('-a', unityVersion.architecture);
+        args.push('-a', unityVersion.architecture.toLowerCase());
     }
     for (const module of modules) {
         args.push('-m', module);
@@ -36456,31 +36456,48 @@ class UnityVersion {
         return semver.compare(this.semVer, '2021.0.0', true) >= 0;
     }
     findMatch(versions) {
-        const validReleases = versions
-            .map(release => semver.coerce(release))
-            .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
-            .sort((a, b) => semver.compare(b, a));
-        core.debug(`Searching for ${this.version}:`);
-        validReleases.forEach(release => {
-            core.debug(`  > ${release}`);
+        const exactMatch = versions.find(r => {
+            const match = r.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)/);
+            return match && match.groups && match.groups.version === this.version;
         });
-        for (const release of validReleases) {
-            if (!release) {
-                continue;
-            }
-            const originalRelease = versions.find(r => r.includes(release.version));
-            if (!originalRelease) {
-                continue;
-            }
-            const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-            if (!(match && match.groups && match.groups.version)) {
-                continue;
-            }
-            if ((this.version.includes('a') && match.groups.version.includes('a')) ||
-                (this.version.includes('b') && match.groups.version.includes('b')) ||
-                match.groups.version.includes('f')) {
-                core.debug(`Found Unity ${match.groups.version}`);
-                return new UnityVersion(match.groups.version, null, this.architecture);
+        if (exactMatch) {
+            core.debug(`Exact match found for ${this.version}`);
+            return new UnityVersion(this.version, null, this.architecture);
+        }
+        const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
+        let minorIsZero = false, patchIsZero = false;
+        if (versionParts) {
+            const [, , minor, patch] = versionParts;
+            minorIsZero = minor === '0';
+            patchIsZero = patch === '0';
+        }
+        if (minorIsZero && patchIsZero) {
+            const validReleases = versions
+                .map(release => semver.coerce(release))
+                .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
+                .sort((a, b) => semver.compare(b, a));
+            core.debug(`Searching for fallback match for ${this.version}:`);
+            validReleases.forEach(release => {
+                core.debug(`  > ${release}`);
+            });
+            for (const release of validReleases) {
+                if (!release) {
+                    continue;
+                }
+                const originalRelease = versions.find(r => r.includes(release.version));
+                if (!originalRelease) {
+                    continue;
+                }
+                const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
+                if (!(match && match.groups && match.groups.version)) {
+                    continue;
+                }
+                if ((this.version.includes('a') && match.groups.version.includes('a')) ||
+                    (this.version.includes('b') && match.groups.version.includes('b')) ||
+                    match.groups.version.includes('f')) {
+                    core.debug(`Found fallback Unity ${match.groups.version}`);
+                    return new UnityVersion(match.groups.version, null, this.architecture);
+                }
             }
         }
         core.debug(`No matching Unity version found for ${this.version}`);
