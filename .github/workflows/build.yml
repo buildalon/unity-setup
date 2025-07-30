@@ -1,0 +1,37 @@
+name: build
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        required: true
+        type: string
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      matrix: ${{ fromJSON(inputs.matrix) }}
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      UNITY_EDITORS: '' # set by the unity-setup action
+      UNITY_HUB_PATH: '' # set by the unity-setup action
+      UNITY_EDITOR_PATH: '' # set by the unity-setup action
+      UNITY_PROJECT_PATH: '' # set by the unity-setup action
+      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./ # buildalon/unity-setup
+        with:
+          version-file: 'None'
+          unity-version: ${{ matrix.unity-version }}
+          build-targets: ${{ matrix.build-targets }}
+          modules: ${{ matrix.modules }}
+      - run: |
+          echo "UNITY_HUB_PATH: '${{ env.UNITY_HUB_PATH }}'"
+          echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
+          echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
+          echo "UNITY_PROJECT_PATH: '${{ env.UNITY_PROJECT_PATH }}'"

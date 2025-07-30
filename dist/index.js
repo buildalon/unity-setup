@@ -5570,6 +5570,1350 @@ exports["default"] = promisified;
 
 /***/ }),
 
+/***/ 601:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UnityReleasesClient = void 0;
+const services = __importStar(__nccwpck_require__(1028));
+class UnityReleasesClient {
+    api = services;
+    constructor() {
+        services.client.setConfig({ baseUrl: 'https://services.api.unity.com' });
+    }
+}
+exports.UnityReleasesClient = UnityReleasesClient;
+
+
+/***/ }),
+
+/***/ 7278:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__nccwpck_require__(601), exports);
+__exportStar(__nccwpck_require__(1028), exports);
+
+
+/***/ }),
+
+/***/ 1936:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.urlSearchParamsBodySerializer = exports.jsonBodySerializer = exports.formDataBodySerializer = exports.createConfig = exports.createClient = void 0;
+const utils_1 = __nccwpck_require__(6444);
+const createClient = (config = {}) => {
+    let _config = (0, utils_1.mergeConfigs)((0, utils_1.createConfig)(), config);
+    const getConfig = () => ({ ..._config });
+    const setConfig = (config) => {
+        _config = (0, utils_1.mergeConfigs)(_config, config);
+        return getConfig();
+    };
+    const interceptors = (0, utils_1.createInterceptors)();
+    // @ts-expect-error
+    const request = async (options) => {
+        // @ts-expect-error
+        const opts = {
+            ..._config,
+            ...options,
+            headers: (0, utils_1.mergeHeaders)(_config.headers, options.headers),
+        };
+        if (opts.body && opts.bodySerializer) {
+            opts.body = opts.bodySerializer(opts.body);
+        }
+        // remove Content-Type header if body is empty to avoid sending invalid requests
+        if (!opts.body) {
+            opts.headers.delete('Content-Type');
+        }
+        const url = (0, utils_1.getUrl)({
+            baseUrl: opts.baseUrl ?? '',
+            path: opts.path,
+            query: opts.query,
+            querySerializer: typeof opts.querySerializer === 'function'
+                ? opts.querySerializer
+                : (0, utils_1.createQuerySerializer)(opts.querySerializer),
+            url: opts.url,
+        });
+        const requestInit = {
+            redirect: 'follow',
+            ...opts,
+        };
+        let request = new Request(url, requestInit);
+        for (const fn of interceptors.request._fns) {
+            request = await fn(request, opts);
+        }
+        const _fetch = opts.fetch;
+        let response = await _fetch(request);
+        for (const fn of interceptors.response._fns) {
+            response = await fn(response, request, opts);
+        }
+        const result = {
+            request,
+            response,
+        };
+        if (response.ok) {
+            if (response.status === 204 ||
+                response.headers.get('Content-Length') === '0') {
+                return {
+                    data: {},
+                    ...result,
+                };
+            }
+            if (opts.parseAs === 'stream') {
+                return {
+                    data: response.body,
+                    ...result,
+                };
+            }
+            const parseAs = (opts.parseAs === 'auto'
+                ? (0, utils_1.getParseAs)(response.headers.get('Content-Type'))
+                : opts.parseAs) ?? 'json';
+            let data = await response[parseAs]();
+            if (parseAs === 'json' && opts.responseTransformer) {
+                data = await opts.responseTransformer(data);
+            }
+            return {
+                data,
+                ...result,
+            };
+        }
+        let error = await response.text();
+        try {
+            error = JSON.parse(error);
+        }
+        catch {
+            // noop
+        }
+        let finalError = error;
+        for (const fn of interceptors.error._fns) {
+            finalError = (await fn(error, response, request, opts));
+        }
+        finalError = finalError || {};
+        if (opts.throwOnError) {
+            throw finalError;
+        }
+        return {
+            error: finalError,
+            ...result,
+        };
+    };
+    return {
+        connect: (options) => request({ ...options, method: 'CONNECT' }),
+        delete: (options) => request({ ...options, method: 'DELETE' }),
+        get: (options) => request({ ...options, method: 'GET' }),
+        getConfig,
+        head: (options) => request({ ...options, method: 'HEAD' }),
+        interceptors,
+        options: (options) => request({ ...options, method: 'OPTIONS' }),
+        patch: (options) => request({ ...options, method: 'PATCH' }),
+        post: (options) => request({ ...options, method: 'POST' }),
+        put: (options) => request({ ...options, method: 'PUT' }),
+        request,
+        setConfig,
+        trace: (options) => request({ ...options, method: 'TRACE' }),
+    };
+};
+exports.createClient = createClient;
+var utils_2 = __nccwpck_require__(6444);
+Object.defineProperty(exports, "createConfig", ({ enumerable: true, get: function () { return utils_2.createConfig; } }));
+Object.defineProperty(exports, "formDataBodySerializer", ({ enumerable: true, get: function () { return utils_2.formDataBodySerializer; } }));
+Object.defineProperty(exports, "jsonBodySerializer", ({ enumerable: true, get: function () { return utils_2.jsonBodySerializer; } }));
+Object.defineProperty(exports, "urlSearchParamsBodySerializer", ({ enumerable: true, get: function () { return utils_2.urlSearchParamsBodySerializer; } }));
+
+
+/***/ }),
+
+/***/ 6444:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createConfig = exports.urlSearchParamsBodySerializer = exports.jsonBodySerializer = exports.formDataBodySerializer = exports.createInterceptors = exports.mergeHeaders = exports.mergeConfigs = exports.getUrl = exports.getParseAs = exports.createQuerySerializer = void 0;
+const PATH_PARAM_RE = /\{[^{}]+\}/g;
+const serializePrimitiveParam = ({ allowReserved, name, value, }) => {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value === 'object') {
+        throw new Error('Deeply-nested arrays/objects aren’t supported. Provide your own `querySerializer()` to handle these.');
+    }
+    return `${name}=${allowReserved ? value : encodeURIComponent(value)}`;
+};
+const separatorArrayExplode = (style) => {
+    switch (style) {
+        case 'label':
+            return '.';
+        case 'matrix':
+            return ';';
+        case 'simple':
+            return ',';
+        default:
+            return '&';
+    }
+};
+const separatorArrayNoExplode = (style) => {
+    switch (style) {
+        case 'form':
+            return ',';
+        case 'pipeDelimited':
+            return '|';
+        case 'spaceDelimited':
+            return '%20';
+        default:
+            return ',';
+    }
+};
+const separatorObjectExplode = (style) => {
+    switch (style) {
+        case 'label':
+            return '.';
+        case 'matrix':
+            return ';';
+        case 'simple':
+            return ',';
+        default:
+            return '&';
+    }
+};
+const serializeArrayParam = ({ allowReserved, explode, name, style, value, }) => {
+    if (!explode) {
+        const joinedValues = (allowReserved ? value : value.map((v) => encodeURIComponent(v))).join(separatorArrayNoExplode(style));
+        switch (style) {
+            case 'label':
+                return `.${joinedValues}`;
+            case 'matrix':
+                return `;${name}=${joinedValues}`;
+            case 'simple':
+                return joinedValues;
+            default:
+                return `${name}=${joinedValues}`;
+        }
+    }
+    const separator = separatorArrayExplode(style);
+    const joinedValues = value
+        .map((v) => {
+        if (style === 'label' || style === 'simple') {
+            return allowReserved ? v : encodeURIComponent(v);
+        }
+        return serializePrimitiveParam({
+            allowReserved,
+            name,
+            value: v,
+        });
+    })
+        .join(separator);
+    return style === 'label' || style === 'matrix'
+        ? separator + joinedValues
+        : joinedValues;
+};
+const serializeObjectParam = ({ allowReserved, explode, name, style, value, }) => {
+    if (value instanceof Date) {
+        return `${name}=${value.toISOString()}`;
+    }
+    if (style !== 'deepObject' && !explode) {
+        let values = [];
+        Object.entries(value).forEach(([key, v]) => {
+            values = [
+                ...values,
+                key,
+                allowReserved ? v : encodeURIComponent(v),
+            ];
+        });
+        const joinedValues = values.join(',');
+        switch (style) {
+            case 'form':
+                return `${name}=${joinedValues}`;
+            case 'label':
+                return `.${joinedValues}`;
+            case 'matrix':
+                return `;${name}=${joinedValues}`;
+            default:
+                return joinedValues;
+        }
+    }
+    const separator = separatorObjectExplode(style);
+    const joinedValues = Object.entries(value)
+        .map(([key, v]) => serializePrimitiveParam({
+        allowReserved,
+        name: style === 'deepObject' ? `${name}[${key}]` : key,
+        value: v,
+    }))
+        .join(separator);
+    return style === 'label' || style === 'matrix'
+        ? separator + joinedValues
+        : joinedValues;
+};
+const defaultPathSerializer = ({ path, url: _url }) => {
+    let url = _url;
+    const matches = _url.match(PATH_PARAM_RE);
+    if (matches) {
+        for (const match of matches) {
+            let explode = false;
+            let name = match.substring(1, match.length - 1);
+            let style = 'simple';
+            if (name.endsWith('*')) {
+                explode = true;
+                name = name.substring(0, name.length - 1);
+            }
+            if (name.startsWith('.')) {
+                name = name.substring(1);
+                style = 'label';
+            }
+            else if (name.startsWith(';')) {
+                name = name.substring(1);
+                style = 'matrix';
+            }
+            const value = path[name];
+            if (value === undefined || value === null) {
+                continue;
+            }
+            if (Array.isArray(value)) {
+                url = url.replace(match, serializeArrayParam({ explode, name, style, value }));
+                continue;
+            }
+            if (typeof value === 'object') {
+                url = url.replace(match, serializeObjectParam({
+                    explode,
+                    name,
+                    style,
+                    value: value,
+                }));
+                continue;
+            }
+            if (style === 'matrix') {
+                url = url.replace(match, `;${serializePrimitiveParam({
+                    name,
+                    value: value,
+                })}`);
+                continue;
+            }
+            const replaceValue = encodeURIComponent(style === 'label' ? `.${value}` : value);
+            url = url.replace(match, replaceValue);
+        }
+    }
+    return url;
+};
+const createQuerySerializer = ({ allowReserved, array, object, } = {}) => {
+    const querySerializer = (queryParams) => {
+        let search = [];
+        if (queryParams && typeof queryParams === 'object') {
+            for (const name in queryParams) {
+                const value = queryParams[name];
+                if (value === undefined || value === null) {
+                    continue;
+                }
+                if (Array.isArray(value)) {
+                    search = [
+                        ...search,
+                        serializeArrayParam({
+                            allowReserved,
+                            explode: true,
+                            name,
+                            style: 'form',
+                            value,
+                            ...array,
+                        }),
+                    ];
+                    continue;
+                }
+                if (typeof value === 'object') {
+                    search = [
+                        ...search,
+                        serializeObjectParam({
+                            allowReserved,
+                            explode: true,
+                            name,
+                            style: 'deepObject',
+                            value: value,
+                            ...object,
+                        }),
+                    ];
+                    continue;
+                }
+                search = [
+                    ...search,
+                    serializePrimitiveParam({
+                        allowReserved,
+                        name,
+                        value: value,
+                    }),
+                ];
+            }
+        }
+        return search.join('&');
+    };
+    return querySerializer;
+};
+exports.createQuerySerializer = createQuerySerializer;
+/**
+ * Infers parseAs value from provided Content-Type header.
+ */
+const getParseAs = (contentType) => {
+    if (!contentType) {
+        return;
+    }
+    const cleanContent = contentType.split(';')[0].trim();
+    if (cleanContent.startsWith('application/json') ||
+        cleanContent.endsWith('+json')) {
+        return 'json';
+    }
+    if (cleanContent === 'multipart/form-data') {
+        return 'formData';
+    }
+    if (['application/', 'audio/', 'image/', 'video/'].some((type) => cleanContent.startsWith(type))) {
+        return 'blob';
+    }
+    if (cleanContent.startsWith('text/')) {
+        return 'text';
+    }
+};
+exports.getParseAs = getParseAs;
+const getUrl = ({ baseUrl, path, query, querySerializer, url: _url, }) => {
+    const pathUrl = _url.startsWith('/') ? _url : `/${_url}`;
+    let url = baseUrl + pathUrl;
+    if (path) {
+        url = defaultPathSerializer({ path, url });
+    }
+    let search = query ? querySerializer(query) : '';
+    if (search.startsWith('?')) {
+        search = search.substring(1);
+    }
+    if (search) {
+        url += `?${search}`;
+    }
+    return url;
+};
+exports.getUrl = getUrl;
+const mergeConfigs = (a, b) => {
+    const config = { ...a, ...b };
+    if (config.baseUrl?.endsWith('/')) {
+        config.baseUrl = config.baseUrl.substring(0, config.baseUrl.length - 1);
+    }
+    config.headers = (0, exports.mergeHeaders)(a.headers, b.headers);
+    return config;
+};
+exports.mergeConfigs = mergeConfigs;
+const mergeHeaders = (...headers) => {
+    const mergedHeaders = new Headers();
+    for (const header of headers) {
+        if (!header || typeof header !== 'object') {
+            continue;
+        }
+        const iterator = header instanceof Headers ? header.entries() : Object.entries(header);
+        for (const [key, value] of iterator) {
+            if (value === null) {
+                mergedHeaders.delete(key);
+            }
+            else if (Array.isArray(value)) {
+                for (const v of value) {
+                    mergedHeaders.append(key, v);
+                }
+            }
+            else if (value !== undefined) {
+                // assume object headers are meant to be JSON stringified, i.e. their
+                // content value in OpenAPI specification is 'application/json'
+                mergedHeaders.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+            }
+        }
+    }
+    return mergedHeaders;
+};
+exports.mergeHeaders = mergeHeaders;
+class Interceptors {
+    _fns;
+    constructor() {
+        this._fns = [];
+    }
+    clear() {
+        this._fns = [];
+    }
+    exists(fn) {
+        return this._fns.indexOf(fn) !== -1;
+    }
+    eject(fn) {
+        const index = this._fns.indexOf(fn);
+        if (index !== -1) {
+            this._fns = [...this._fns.slice(0, index), ...this._fns.slice(index + 1)];
+        }
+    }
+    use(fn) {
+        this._fns = [...this._fns, fn];
+    }
+}
+// do not add `Middleware` as return type so we can use _fns internally
+const createInterceptors = () => ({
+    error: new Interceptors(),
+    request: new Interceptors(),
+    response: new Interceptors(),
+});
+exports.createInterceptors = createInterceptors;
+const serializeFormDataPair = (data, key, value) => {
+    if (typeof value === 'string' || value instanceof Blob) {
+        data.append(key, value);
+    }
+    else {
+        data.append(key, JSON.stringify(value));
+    }
+};
+exports.formDataBodySerializer = {
+    bodySerializer: (body) => {
+        const data = new FormData();
+        Object.entries(body).forEach(([key, value]) => {
+            if (value === undefined || value === null) {
+                return;
+            }
+            if (Array.isArray(value)) {
+                value.forEach((v) => serializeFormDataPair(data, key, v));
+            }
+            else {
+                serializeFormDataPair(data, key, value);
+            }
+        });
+        return data;
+    },
+};
+exports.jsonBodySerializer = {
+    bodySerializer: (body) => JSON.stringify(body),
+};
+const serializeUrlSearchParamsPair = (data, key, value) => {
+    if (typeof value === 'string') {
+        data.append(key, value);
+    }
+    else {
+        data.append(key, JSON.stringify(value));
+    }
+};
+exports.urlSearchParamsBodySerializer = {
+    bodySerializer: (body) => {
+        const data = new URLSearchParams();
+        Object.entries(body).forEach(([key, value]) => {
+            if (value === undefined || value === null) {
+                return;
+            }
+            if (Array.isArray(value)) {
+                value.forEach((v) => serializeUrlSearchParamsPair(data, key, v));
+            }
+            else {
+                serializeUrlSearchParamsPair(data, key, value);
+            }
+        });
+        return data;
+    },
+};
+const defaultQuerySerializer = (0, exports.createQuerySerializer)({
+    allowReserved: false,
+    array: {
+        explode: true,
+        style: 'form',
+    },
+    object: {
+        explode: true,
+        style: 'deepObject',
+    },
+});
+const defaultHeaders = {
+    'Content-Type': 'application/json',
+};
+const createConfig = (override = {}) => ({
+    ...exports.jsonBodySerializer,
+    baseUrl: '',
+    fetch: globalThis.fetch,
+    headers: defaultHeaders,
+    parseAs: 'auto',
+    querySerializer: defaultQuerySerializer,
+    ...override,
+});
+exports.createConfig = createConfig;
+
+
+/***/ }),
+
+/***/ 1028:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+// This file is auto-generated by @hey-api/openapi-ts
+__exportStar(__nccwpck_require__(1230), exports);
+__exportStar(__nccwpck_require__(7423), exports);
+__exportStar(__nccwpck_require__(7358), exports);
+
+
+/***/ }),
+
+/***/ 1230:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// This file is auto-generated by @hey-api/openapi-ts
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetUnityReleaseServiceUnavailableErrorSchema = exports.GetUnityReleaseInternalServerErrorSchema = exports.GetUnityReleaseValidationErrorSchema = exports.UnityReleaseOffsetConnectionSchema = exports.UnityReleaseSchema = exports.UnityReleaseDownloadSchema = exports.UnityReleaseModuleSchema = exports.UnityReleaseModuleExtractedPathRenameSchema = exports.UnityReleaseModuleEulaSchema = exports.UnityReleaseThirdPartyNoticeSchema = exports.UnityReleaseNotesSchema = exports.UnityReleaseDigitalValueSchema = void 0;
+exports.UnityReleaseDigitalValueSchema = {
+    description: 'A Unity Release Digital Value as defined on Release Live Platform.',
+    type: 'object',
+    properties: {
+        value: {
+            type: 'number',
+            description: 'The value of the Unity Release Digital Value.',
+            example: 1524000000
+        },
+        unit: {
+            type: 'string',
+            enum: ['BYTE', 'KILOBYTE', 'MEGABYTE', 'GIGABYTE'],
+            description: 'The unit of the Unity Release Digital Value.',
+            nullable: false,
+            example: 'BYTE'
+        }
+    },
+    required: ['value', 'unit']
+};
+exports.UnityReleaseNotesSchema = {
+    description: 'A Unity Release Notes File as defined on Release Live Platform.',
+    type: 'object',
+    properties: {
+        url: {
+            type: 'string',
+            description: 'The URL of the Unity Release notes.',
+            example: 'https://storage.googleapis.com/live-platform-resources-prd/templates/assets/2020_3_44f1_750922b691/2020_3_44f1_750922b691.md'
+        },
+        integrity: {
+            type: 'string',
+            description: 'The Subresource Integrity of the Unity Release notes as defined by the [W3C Recommendation Subresource Integrity](https://www.w3.org/TR/SRI/). For example, `sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo=`.',
+            example: 'sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo='
+        },
+        type: {
+            type: 'string',
+            enum: ['TEXT', 'TAR_GZ', 'TAR_XZ', 'ZIP', 'PKG', 'EXE', 'PO', 'DMG', 'LZMA', 'LZ4', 'MD', 'PDF'],
+            description: 'The file type of the Unity Release notes.',
+            nullable: false,
+            example: 'MD'
+        }
+    },
+    required: ['url', 'type']
+};
+exports.UnityReleaseThirdPartyNoticeSchema = {
+    description: 'A Unity Release Third Party Notice File as defined on Release Live Platform.',
+    type: 'object',
+    properties: {
+        originalFileName: {
+            type: 'string',
+            description: 'The original file name of the Unity Release Third Party Notice.',
+            example: '2020.3.26f1-WinPlayerNoDevelopment-release.pdf'
+        },
+        url: {
+            type: 'string',
+            description: 'The URL of the Unity Release Third Party Notice.',
+            example: 'https://storage.googleapis.com/live-platform-resources-prd/templates/assets/2020_3_26f1_Win_Player_No_Development_release_ff4b1c5e4a/2020_3_26f1_Win_Player_No_Development_release_ff4b1c5e4a.pdf'
+        },
+        integrity: {
+            type: 'string',
+            description: 'The Subresource Integrity of the Unity Release Third Party Notice as defined by the [W3C Recommendation Subresource Integrity](https://www.w3.org/TR/SRI/). For example, `sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo=`.',
+            example: 'sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo='
+        },
+        type: {
+            type: 'string',
+            enum: ['TEXT', 'TAR_GZ', 'TAR_XZ', 'ZIP', 'PKG', 'EXE', 'PO', 'DMG', 'LZMA', 'LZ4', 'MD', 'PDF'],
+            description: 'The file type of the Unity Release Third Party Notice.',
+            nullable: false,
+            example: 'PDF'
+        }
+    },
+    required: ['originalFileName', 'url', 'type']
+};
+exports.UnityReleaseModuleEulaSchema = {
+    description: 'A Unity Release module end-user license agreement.',
+    type: 'object',
+    properties: {
+        url: {
+            type: 'string',
+            description: 'The URL of the Unity Release module end-user license agreement.',
+            example: 'https://go.microsoft.com/fwlink/?linkid=2092535'
+        },
+        integrity: {
+            type: 'string',
+            description: 'The Subresource Integrity of the Unity Release module end-user license agreement as defined by the [W3C Recommendation Subresource Integrity](https://www.w3.org/TR/SRI/). For example, `sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo=`.',
+            example: 'sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo='
+        },
+        type: {
+            type: 'string',
+            enum: ['TEXT', 'TAR_GZ', 'TAR_XZ', 'ZIP', 'PKG', 'EXE', 'PO', 'DMG', 'LZMA', 'LZ4', 'MD', 'PDF'],
+            description: 'The file type of the Unity Release module end-user license agreement.',
+            nullable: false,
+            example: 'TEXT'
+        },
+        label: {
+            type: 'string',
+            description: 'The label of the Unity Release module end-user license agreement.',
+            example: 'Visual Studio for Mac License Terms'
+        },
+        message: {
+            type: 'string',
+            description: 'The message of the Unity Release module end-user license agreement.',
+            example: 'Please review and accept the license terms before downloading and installing Visual Studio for Mac and Mono.'
+        }
+    },
+    required: ['url', 'type', 'label', 'message']
+};
+exports.UnityReleaseModuleExtractedPathRenameSchema = {
+    description: 'A Unity Release Module Extracted Path Rename.',
+    type: 'object',
+    properties: {
+        from: {
+            type: 'string',
+            description: 'The location of the module when extracted.',
+            example: '{UNITY_PATH}/Editor/Data/PlaybackEngines/AndroidPlayer/NDK/android-ndk-r19'
+        },
+        to: {
+            type: 'string',
+            description: 'The location the module must be moved to.',
+            example: '{UNITY_PATH}/Editor/Data/PlaybackEngines/AndroidPlayer/NDK'
+        }
+    },
+    required: ['from', 'to']
+};
+exports.UnityReleaseModuleSchema = {
+    description: 'A Unity Release module.',
+    type: 'object',
+    properties: {
+        id: {
+            type: 'string',
+            description: 'The ID of the Unity Release module.',
+            example: 'android-ndk-r19'
+        },
+        slug: {
+            type: 'string',
+            description: 'The slug of the Unity Release module. This is unique across all Unity Release Modules.',
+            example: '2020.3.44f1-windows-x86_64-android-ndk-r19'
+        },
+        name: {
+            type: 'string',
+            description: 'The name of the Unity Release module.',
+            example: 'Android NDK'
+        },
+        description: {
+            type: 'string',
+            description: 'The description of the Unity Release module.',
+            example: 'Android NDK r19'
+        },
+        category: {
+            type: 'string',
+            enum: ['DOCUMENTATION', 'PLATFORM', 'LANGUAGE_PACK', 'DEV_TOOL', 'PLUGIN', 'COMPONENT'],
+            description: 'The category of the Unity Release module.',
+            nullable: false,
+            example: 'PLATFORM'
+        },
+        url: {
+            type: 'string',
+            description: 'The URL of the Unity Release module.',
+            example: 'https://dl.google.com/android/repository/android-ndk-r19-windows-x86_64.zip'
+        },
+        integrity: {
+            type: 'string',
+            description: 'The Subresource Integrity of the Unity Release module as defined by the [W3C Recommendation Subresource Integrity](https://www.w3.org/TR/SRI/). For example, `sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo=`.',
+            example: 'sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo='
+        },
+        type: {
+            type: 'string',
+            enum: ['TEXT', 'TAR_GZ', 'TAR_XZ', 'ZIP', 'PKG', 'EXE', 'PO', 'DMG', 'LZMA', 'LZ4', 'MD', 'PDF'],
+            description: 'The file type of the Unity Release module.',
+            nullable: false,
+            example: 'ZIP'
+        },
+        downloadSize: {
+            '$ref': '#/components/schemas/UnityReleaseDigitalValue',
+            description: 'The download size of the Unity Release module.'
+        },
+        installedSize: {
+            '$ref': '#/components/schemas/UnityReleaseDigitalValue',
+            description: 'The installed size of the Unity Release module.'
+        },
+        subModules: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/UnityReleaseModule'
+            },
+            nullable: true,
+            description: 'The optional sub-modules of the Unity Release module. The parent must be downloaded to download a sub-module.',
+            example: []
+        },
+        required: {
+            type: 'boolean',
+            description: 'The indicator for whether the Unity Release module needs to be downloaded if the parent is downloaded.',
+            example: true
+        },
+        hidden: {
+            type: 'boolean',
+            description: 'The indicator for whether the Unity Release module needs to be hidden when displaying modules in a UI.',
+            example: true
+        },
+        extractedPathRename: {
+            '$ref': '#/components/schemas/UnityReleaseModuleExtractedPathRename',
+            description: 'The location to move a Unity Release Module when extracted or unzipped.'
+        },
+        preSelected: {
+            type: 'boolean',
+            description: 'The indicator for whether the Unity Release module should be pre-selected.',
+            example: false
+        },
+        destination: {
+            type: 'string',
+            description: 'The file destination of the Unity Release module.',
+            example: '{UNITY_PATH}/Editor/Data/PlaybackEngines/AndroidPlayer/NDK'
+        },
+        eula: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/UnityReleaseModuleEula'
+            },
+            nullable: true,
+            description: 'The end-user license agreements of the Unity Release module.',
+            example: []
+        }
+    },
+    required: ['id', 'slug', 'name', 'description', 'category', 'url', 'type', 'downloadSize', 'installedSize', 'required', 'hidden', 'preSelected']
+};
+exports.UnityReleaseDownloadSchema = {
+    description: 'A Unity Release Hub download.',
+    type: 'object',
+    properties: {
+        url: {
+            type: 'string',
+            description: 'The URL of the Unity Release Hub download.',
+            example: 'https://download.unity3d.com/download_unity/7f159b6136da/Windows64EditorInstaller/UnitySetup64-2020.3.44f1.exe'
+        },
+        integrity: {
+            type: 'string',
+            description: 'The Subresource Integrity of the Unity Release Hub download as defined by the [W3C Recommendation Subresource Integrity](https://www.w3.org/TR/SRI/). For example, `sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo=`.',
+            example: 'sha1-OTVjZTI0ZTk5MDg0YTMyYTBmZTdiNTU1NTMwZGRhYjQ3OWMzYzc1MQo='
+        },
+        type: {
+            type: 'string',
+            enum: ['TEXT', 'TAR_GZ', 'TAR_XZ', 'ZIP', 'PKG', 'EXE', 'PO', 'DMG', 'LZMA', 'LZ4', 'MD', 'PDF'],
+            description: 'The file type of the Unity Release Hub download.',
+            nullable: false,
+            example: 'EXE'
+        },
+        platform: {
+            type: 'string',
+            enum: ['MAC_OS', 'LINUX', 'WINDOWS'],
+            description: 'The platform of the Unity Release Hub download.',
+            nullable: false,
+            example: 'WINDOWS'
+        },
+        architecture: {
+            type: 'string',
+            enum: ['X86_64', 'ARM64'],
+            description: 'The architecture of the Unity Release Hub download.',
+            nullable: false,
+            example: 'X86_64'
+        },
+        downloadSize: {
+            '$ref': '#/components/schemas/UnityReleaseDigitalValue',
+            description: 'The download size of the Unity Release Hub download.'
+        },
+        installedSize: {
+            '$ref': '#/components/schemas/UnityReleaseDigitalValue',
+            description: 'The installed size of the Unity Release Hub download.'
+        },
+        modules: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/UnityReleaseModule'
+            },
+            nullable: false,
+            description: 'The modules of the Unity Release Hub download.'
+        }
+    },
+    required: ['url', 'type', 'platform', 'architecture', 'downloadSize', 'installedSize', 'modules']
+};
+exports.UnityReleaseSchema = {
+    description: 'A Unity Release.',
+    type: 'object',
+    properties: {
+        version: {
+            type: 'string',
+            description: 'The version of the Unity Release.',
+            example: '2020.3.44f1'
+        },
+        releaseDate: {
+            type: 'string',
+            description: 'The release date of the Unity Release.',
+            example: '2023-01-18T17:25:53.109Z'
+        },
+        releaseNotes: {
+            '$ref': '#/components/schemas/UnityReleaseNotes',
+            description: 'The release notes of the Unity Release.'
+        },
+        stream: {
+            type: 'string',
+            enum: ['LTS', 'BETA', 'ALPHA', 'TECH'],
+            description: 'The release stream of the Unity Release.',
+            nullable: false,
+            example: 'LTS'
+        },
+        downloads: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/UnityReleaseDownload'
+            },
+            nullable: false,
+            description: 'The downloads of the Unity Release.'
+        },
+        skuFamily: {
+            type: 'string',
+            enum: ['DOTS', 'CLASSIC'],
+            description: 'The SKU family of the Unity Release.',
+            nullable: false,
+            example: 'CLASSIC'
+        },
+        recommended: {
+            type: 'boolean',
+            description: 'The indicator for whether the Unity Release is the recommended LTS version.',
+            example: false
+        },
+        unityHubDeepLink: {
+            type: 'string',
+            description: 'The Unity Hub deep link of the Unity Release.',
+            example: 'unityhub://2020.3.44f1/7f159b6136da'
+        },
+        shortRevision: {
+            type: 'string',
+            description: 'The Git Short Revision of the Unity Release.',
+            example: '7f159b6136da'
+        },
+        thirdPartyNotices: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/UnityReleaseThirdPartyNotice'
+            },
+            nullable: false,
+            description: 'The Third Party Notices of the Unity Release.',
+            example: []
+        }
+    },
+    required: ['version', 'releaseDate', 'releaseNotes', 'stream', 'downloads', 'skuFamily', 'recommended', 'unityHubDeepLink', 'shortRevision', 'thirdPartyNotices']
+};
+exports.UnityReleaseOffsetConnectionSchema = {
+    description: 'A relay style offset paginated Unity Release Connection.',
+    type: 'object',
+    properties: {
+        offset: {
+            type: 'integer',
+            description: 'The input offset of the Unity Release Offset Connection.',
+            example: 0
+        },
+        limit: {
+            type: 'integer',
+            description: 'The input limit of the Unity Release Offset Connection.',
+            example: 10
+        },
+        total: {
+            type: 'integer',
+            description: 'The total count of all available Unity Releases in the Unity Release Offset Connection.',
+            example: 1027
+        },
+        results: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/UnityRelease'
+            },
+            nullable: false,
+            description: 'The list of Unity Releases in the Unity Release Offset Connection.'
+        }
+    },
+    required: ['offset', 'limit', 'total', 'results']
+};
+exports.GetUnityReleaseValidationErrorSchema = {
+    description: 'The Unity Release Bad Request Error.',
+    type: 'object',
+    properties: {
+        title: {
+            type: 'string',
+            description: 'The title of the Validation Error.',
+            example: 'Bad Request'
+        },
+        status: {
+            type: 'integer',
+            description: 'The HTTP status code of the Validation Error.',
+            example: 400
+        },
+        detail: {
+            type: 'string',
+            description: 'The detail of the Validation Error.',
+            example: 'querystring.limit should be integer'
+        }
+    },
+    required: ['title', 'status', 'detail']
+};
+exports.GetUnityReleaseInternalServerErrorSchema = {
+    description: 'The Unity Release Internal Server Error.',
+    type: 'object',
+    properties: {
+        title: {
+            type: 'string',
+            description: 'The title of the Internal Server Error.',
+            example: 'Internal Server Error'
+        },
+        status: {
+            type: 'integer',
+            description: 'The HTTP status code of the Internal Server Error.',
+            example: 500
+        },
+        detail: {
+            type: 'string',
+            description: 'The detail of the Internal Server Error.',
+            example: 'An unknown error occurred'
+        }
+    },
+    required: ['title', 'status', 'detail']
+};
+exports.GetUnityReleaseServiceUnavailableErrorSchema = {
+    description: 'The Unity Release Service Unavailable Error.',
+    type: 'object',
+    properties: {
+        title: {
+            type: 'string',
+            description: 'The title of the Service Unavailable Error.',
+            example: 'Service Unavailable'
+        },
+        status: {
+            type: 'integer',
+            description: 'The HTTP status code of the Service Unavailable Error.',
+            example: 503
+        },
+        detail: {
+            type: 'string',
+            description: 'The detail of the Service Unavailable Error.',
+            example: 'Service health ping failed'
+        }
+    },
+    required: ['title', 'status', 'detail']
+};
+
+
+/***/ }),
+
+/***/ 7423:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// This file is auto-generated by @hey-api/openapi-ts
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReleaseService = exports.client = void 0;
+const client_1 = __nccwpck_require__(1936);
+exports.client = (0, client_1.createClient)((0, client_1.createConfig)());
+class ReleaseService {
+    /**
+     * Get Unity Releases
+     * Get Unity Releases.
+     * > **Note:** Any unpublished Unity Release will not appear in the queries.
+     *
+     * With this request, you can get all the Unity Editor Releases. For retrieving releases, we use offset-based pagination.
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?limit=10&offset=0'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 1025,
+     * "results": [
+     * {
+     * "version": "2023.1.0a22",
+     * "releaseDate": "2022-12-07T21:25:31.942Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * > **Info:** If an internal error occurs, an empty list will be returned.
+     * > **Note:** Do you need more examples on how to query for Unity Releases? Check out these examples!
+     * ### Order by release date
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?order=RELEASE_DATE_ASC'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 1025,
+     * "results": [
+     * {
+     * "version": "5.0.0f4",
+     * "releaseDate": "2015-02-25T15:49:05.835Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * ### Filter by Unity Release stream
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?stream=LTS'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 391,
+     * "results": [
+     * {
+     * "version": "2021.3.15f1",
+     * "releaseDate": "2022-12-01T17:20:58.301Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * ### Filter by Unity Release download platform
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?platform=WINDOWS'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 1013,
+     * "results": [
+     * {
+     * "version": "2023.1.0a22",
+     * "releaseDate": "2022-12-07T21:25:31.942Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * ### Filter by Unity Release download architecture
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?architecture=X86_64'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 1013,
+     * "results": [
+     * {
+     * "version": "2023.1.0a22",
+     * "releaseDate": "2022-12-07T21:25:31.942Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * ### Filter by a Unity Release version
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?version=2023.1.0a22'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 1,
+     * "results": [
+     * {
+     * "version": "2023.1.0a22",
+     * "releaseDate": "2022-12-07T21:25:31.942Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * ### Filter by a Unity Release major-minor version
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?version=2023.1'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 20,
+     * "results": [
+     * {
+     * "version": "2023.1.0a22",
+     * "releaseDate": "2022-12-07T21:25:31.942Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     * ### Filter by a Unity Release major version
+     *
+     * **Make request:**
+     *
+     * ```bash
+     * curl 'https://services.api.unity.com/unity/editor/release/v1/releases?version=2023'
+     * ```
+     *
+     * **Response:**
+     *
+     * ```jsonc
+     * {
+     * "offset": 0,
+     * "limit": 10,
+     * "total": 20,
+     * "results": [
+     * {
+     * "version": "2023.1.0a22",
+     * "releaseDate": "2022-12-07T21:25:31.942Z"
+     * // ...
+     * }
+     * // ...
+     * ]
+     * }
+     * ```
+     *
+     */
+    static getUnityReleases(options) {
+        return (options?.client ?? exports.client).get({
+            ...options,
+            url: '/unity/editor/release/v1/releases'
+        });
+    }
+}
+exports.ReleaseService = ReleaseService;
+
+
+/***/ }),
+
+/***/ 7358:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// This file is auto-generated by @hey-api/openapi-ts
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+
 /***/ 9417:
 /***/ ((module) => {
 
@@ -34119,17 +35463,27 @@ function wrappy (fn, cb) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ValidateInputs = ValidateInputs;
+const unity_version_1 = __nccwpck_require__(5988);
 const utility_1 = __nccwpck_require__(5418);
 const core = __nccwpck_require__(2186);
-const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(1017);
 const os = __nccwpck_require__(2037);
 const fs = __nccwpck_require__(7147);
 async function ValidateInputs() {
     const modules = [];
-    const architecture = core.getInput('architecture') || getInstallationArch();
+    const architectureInput = core.getInput('architecture') || getInstallationArch();
+    let architecture = null;
+    switch (architectureInput) {
+        case 'arm64':
+        case 'ARM64':
+            architecture = 'ARM64';
+            break;
+        default:
+            architecture = 'X86_64';
+            break;
+    }
     if (architecture) {
-        core.info(`architecture:\n  > ${architecture}`);
+        core.info(`architecture:\n  > ${architecture.toLowerCase()}`);
     }
     const buildTargets = getArrayInput('build-targets');
     core.info(`modules:`);
@@ -34162,26 +35516,27 @@ async function ValidateInputs() {
             core.info(`  > ${target} -> ${module}`);
         }
     }
-    const versions = getUnityVersionsFromInput();
+    const versions = getUnityVersionsFromInput(architecture);
     const versionFilePath = await getVersionFilePath();
     const unityProjectPath = versionFilePath !== undefined ? path.join(versionFilePath, '..', '..') : undefined;
     if (versionFilePath) {
         core.info(`versionFilePath:\n  > "${versionFilePath}"`);
         core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
-        const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
+        const unityVersion = await getUnityVersionFromFile(versionFilePath, architecture);
         if (versions.length === 0) {
-            versions.push([unityVersion, changeset]);
+            versions.push(unityVersion);
         }
     }
-    versions.sort(([a], [b]) => semver.compare(a, b, true));
+    if (versions.length > 1) {
+        versions.sort(unity_version_1.UnityVersion.compare);
+    }
     core.info(`Unity Versions:`);
-    for (const [version, changeset] of versions) {
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.info(`  > ${version}${changesetStr}`);
+    for (const unityVersion of versions) {
+        core.info(`  > ${unityVersion.toString()}`);
     }
     let installPath = core.getInput('install-path');
     if (installPath) {
-        installPath = installPath.trim();
+        installPath = path.normalize(installPath.trim());
         if (installPath.length === 0) {
             installPath = undefined;
         }
@@ -34192,7 +35547,7 @@ async function ValidateInputs() {
     if (!installPath) {
         core.debug('No install path specified, using default Unity Hub install path.');
     }
-    return [versions, architecture, modules, unityProjectPath, installPath];
+    return [versions, modules, unityProjectPath, installPath];
 }
 function getArrayInput(key) {
     let input = core.getInput(key);
@@ -34210,9 +35565,9 @@ function getArrayInput(key) {
 function getInstallationArch() {
     switch (os.arch()) {
         case 'arm64':
-            return 'arm64';
+            return 'ARM64';
         case 'x64':
-            return undefined;
+            return null;
         default:
             throw Error(`${os.arch()} not supported`);
     }
@@ -34303,28 +35658,53 @@ async function getVersionFilePath() {
     core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
     return undefined;
 }
-function getUnityVersionsFromInput() {
+function getUnityVersionsFromInput(architecture) {
     const versions = [];
     const inputVersions = core.getInput('unity-version');
     if (!inputVersions || inputVersions.length == 0) {
         return versions;
     }
-    const versionRegEx = new RegExp(/(?<version>(?:(?<major>\d+)\.?)(?:(?<minor>\d+)\.?)?(?:(?<patch>\d+[fab]\d+)?\b))\s?(?:\((?<changeset>\w+)\))?/g);
+    if (inputVersions.toLowerCase() === 'none') {
+        core.debug('No Unity Versions Specified...');
+        return versions;
+    }
+    const versionRegEx = /(?<version>\d+(?:\.(?:\d+|x|\*)){0,2}(?:[abcfpx]\d+)?)(?:\s*\((?<changeset>\w+)\))?/g;
     const matches = Array.from(inputVersions.matchAll(versionRegEx));
-    core.debug(`Unity Versions from input:`);
+    core.debug(`Regex version matches from input:`);
     for (const match of matches) {
-        const version = match.groups.version.replace(/\.$/, '');
+        if (!match.groups || !match.groups.version) {
+            continue;
+        }
+        let version = match.groups.version.replace(/\.$/, '');
+        version = version.replace(/(\.(x|\*))+$/, '');
+        const versionParts = version.split('.');
+        switch (versionParts.length) {
+            case 1:
+                version = version + '.0.0';
+                break;
+            case 2:
+                version = version + '.0';
+                break;
+        }
         const changeset = match.groups.changeset;
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.debug(`${version}${changesetStr}`);
-        versions.push([version, changeset]);
+        const unityVersion = new unity_version_1.UnityVersion(version, changeset, architecture);
+        core.debug(`  > ${unityVersion.toString()}`);
+        try {
+            versions.push(unityVersion);
+        }
+        catch (e) {
+            core.error(`Invalid Unity version: ${unityVersion.toString()}\nError: ${e.message}`);
+        }
+    }
+    if (versions.length === 0) {
+        throw Error('Failed to parse Unity versions from input!');
     }
     return versions;
 }
-async function getUnityVersionFromFile(versionFilePath) {
+async function getUnityVersionFromFile(versionFilePath, architecture) {
     const versionString = await fs.promises.readFile(versionFilePath, 'utf8');
     core.debug(`ProjectSettings.txt:\n${versionString}`);
-    const match = versionString.match(/m_EditorVersionWithRevision: (?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[fab]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/);
+    const match = versionString.match(/m_EditorVersionWithRevision: (?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[abcfpx]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/);
     if (!match) {
         throw Error(`No version match found!`);
     }
@@ -34334,7 +35714,7 @@ async function getUnityVersionFromFile(versionFilePath) {
     if (!match.groups.changeset) {
         throw Error(`No changeset group found!`);
     }
-    return [match.groups.version, match.groups.changeset];
+    return new unity_version_1.UnityVersion(match.groups.version, match.groups.changeset, architecture);
 }
 
 
@@ -34476,17 +35856,18 @@ async function execSdkManager(sdkManagerPath, javaSdk, args) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Get = Get;
 exports.SetInstallPath = SetInstallPath;
-exports.Unity = Unity;
+exports.UnityEditor = UnityEditor;
 exports.ListInstalledEditors = ListInstalledEditors;
-const utility_1 = __nccwpck_require__(5418);
 const asar = __nccwpck_require__(6561);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const semver = __nccwpck_require__(1383);
 const yaml = __nccwpck_require__(4083);
 const path = __nccwpck_require__(1017);
-const os = __nccwpck_require__(2037);
 const fs = __nccwpck_require__(7147);
+const utility_1 = __nccwpck_require__(5418);
+const unity_version_1 = __nccwpck_require__(5988);
+const unity_releases_api_1 = __nccwpck_require__(7278);
 const unityHub = init();
 let hubPath = unityHub.hubPath;
 function init() {
@@ -34525,7 +35906,7 @@ async function Get() {
     core.info(`Unity Hub Version:\n  > ${hubVersion}`);
     const latestHubVersion = await getLatestHubVersion();
     if (!semver.valid(latestHubVersion)) {
-        throw new Error(`Failed to get latest Unity Hub version ${latestHubVersion}!`);
+        throw new Error(`Failed to get latest Unity Hub version!`);
     }
     core.debug(`Latest Unity Hub Version:\n  > ${latestHubVersion}`);
     core.debug(`Comparing versions:\n  > ${hubVersion} < ${latestHubVersion} => ${semver.compare(hubVersion, latestHubVersion)}`);
@@ -34533,7 +35914,7 @@ async function Get() {
         core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
         if (process.platform !== 'linux') {
             core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
-            await removePath(hubPath);
+            await (0, utility_1.RemovePath)(hubPath);
             hubPath = await installUnityHub();
         }
         else {
@@ -34558,6 +35939,17 @@ async function Get() {
 async function SetInstallPath(installPath) {
     await fs.promises.mkdir(installPath, { recursive: true });
     await execUnityHub(["install-path", "--set", installPath]);
+}
+async function getInstallPath() {
+    const result = (await execUnityHub(["install-path", "--get"])).trim();
+    if (!result || result.length === 0) {
+        throw new Error(`Failed to get Unity Hub install path!`);
+    }
+    return result;
+}
+async function addEditorPathToHub(editorPath) {
+    await fs.promises.access(editorPath, fs.constants.R_OK);
+    await execUnityHub(["install-path", "--add", editorPath]);
 }
 async function installUnityHub() {
     let exitCode = undefined;
@@ -34656,7 +36048,10 @@ const ignoredLines = [
     `This error originated either by throwing inside of an async function without a catch block`,
     `Unexpected error attempting to determine if executable file exists`,
     `dri3 extension not supported`,
-    `Failed to connect to the bus:`
+    `Failed to connect to the bus:`,
+    `Checking for beta autoupdate feature for deb/rpm distributions`,
+    `Found package-type: deb`,
+    `XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid`
 ];
 async function execUnityHub(args) {
     if (!hubPath) {
@@ -34666,42 +36061,36 @@ async function execUnityHub(args) {
     switch (process.platform) {
         case 'win32':
         case 'darwin':
+            core.info(`[command]"${hubPath}" -- --headless ${args.join(' ')}`);
             await exec.exec(`"${hubPath}"`, ['--', '--headless', ...args], {
                 listeners: {
-                    stdout: (data) => {
-                        output += data.toString();
-                    },
-                    stderr: (data) => {
-                        output += data.toString();
-                    }
+                    stdout: (data) => { appendOutput(data.toString()); },
+                    stderr: (data) => { appendOutput(data.toString()); },
                 },
-                ignoreReturnCode: true
+                ignoreReturnCode: true,
+                silent: true
             });
             break;
         case 'linux':
             core.info(`[command]unity-hub --headless ${args.join(' ')}`);
             await exec.exec('unity-hub', ['--headless', ...args], {
                 listeners: {
-                    stdline: (data) => {
-                        const line = data.toString();
-                        if (line && line.trim().length > 0) {
-                            if (ignoredLines.some(ignored => line.includes(ignored))) {
-                                return;
-                            }
-                            core.info(data);
-                        }
-                    },
-                    stdout: (data) => {
-                        output += data.toString();
-                    },
-                    stderr: (data) => {
-                        output += data.toString();
-                    }
+                    stdout: (data) => { appendOutput(data.toString()); },
+                    stderr: (data) => { appendOutput(data.toString()); },
                 },
                 ignoreReturnCode: true,
                 silent: true
             });
             break;
+    }
+    function appendOutput(line) {
+        if (line && line.trim().length > 0) {
+            if (ignoredLines.some(ignored => line.includes(ignored))) {
+                return;
+            }
+            core.info(line);
+            output += `${line}\n`;
+        }
     }
     const match = output.match(/Assertion (?<assert>.+) failed/g);
     if (match ||
@@ -34724,39 +36113,51 @@ const retryErrorMessages = [
     'Editor already installed in this location',
     'failed to download. Error given: Request timeout'
 ];
-async function Unity(version, changeset, architecture, modules) {
-    if (os.arch() == 'arm64' && !isArmCompatible(version)) {
-        core.warning(`Unity ${version} does not support arm64 architecture, falling back to x86_64`);
-        architecture = 'x86_64';
+async function UnityEditor(unityVersion, modules) {
+    core.info(`Getting release info for Unity ${unityVersion.toString()}...`);
+    if (!unityVersion.isLegacy()) {
+        try {
+            const releases = await getLatestHubReleases();
+            unityVersion = unityVersion.findMatch(releases);
+            const unityReleaseInfo = await getEditorReleaseInfo(unityVersion);
+            unityVersion = new unity_version_1.UnityVersion(unityReleaseInfo.version, unityReleaseInfo.shortRevision, unityVersion.architecture);
+        }
+        catch (error) {
+            core.warning(`Failed to get Unity release info for ${unityVersion.toString()}! falling back to legacy search...\n${error}`);
+            unityVersion = await fallbackVersionLookup(unityVersion);
+        }
     }
-    if (!changeset) {
-        const [latestVersion, latestChangeset] = await getLatestRelease(version, architecture === 'arm64');
-        version = latestVersion;
-        changeset = latestChangeset;
-    }
-    if (!changeset) {
-        core.debug(`Fetching changeset for Unity ${version}...`);
-        changeset = await getChangeset(version);
-    }
-    let editorPath = await checkInstalledEditors(version, architecture, false);
+    let editorPath = await checkInstalledEditors(unityVersion, false);
+    let installPath = null;
     if (!editorPath) {
         try {
-            await installUnity(version, changeset, architecture, modules);
+            installPath = await installUnity(unityVersion, modules);
         }
         catch (error) {
             if (retryErrorMessages.some(msg => error.message.includes(msg))) {
-                await removePath(editorPath);
-                await installUnity(version, changeset, architecture, modules);
+                if (editorPath) {
+                    await (0, utility_1.RemovePath)(editorPath);
+                }
+                if (installPath) {
+                    await (0, utility_1.RemovePath)(installPath);
+                }
+                installPath = await installUnity(unityVersion, modules);
+            }
+            else {
+                throw error;
             }
         }
-        editorPath = await checkInstalledEditors(version, architecture);
+        editorPath = await checkInstalledEditors(unityVersion, true, installPath);
     }
     await fs.promises.access(editorPath, fs.constants.X_OK);
     core.info(`Unity Editor Path:\n  > "${editorPath}"`);
+    await patchBeeBackend(editorPath);
+    if (unityVersion.isLegacy() || modules.length === 0) {
+        return editorPath;
+    }
     try {
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.startGroup(`Checking installed modules for Unity ${version}${changesetStr}...`);
-        const [installedModules, additionalModules] = await checkEditorModules(editorPath, version, architecture, modules);
+        core.startGroup(`Checking installed modules for Unity ${unityVersion.toString()}...`);
+        const [installedModules, additionalModules] = await checkEditorModules(editorPath, unityVersion, modules);
         if (installedModules && installedModules.length > 0) {
             core.info(`Installed Modules:`);
             for (const module of installedModules) {
@@ -34769,22 +36170,11 @@ async function Unity(version, changeset, architecture, modules) {
                 core.info(`  > ${module}`);
             }
         }
-        if (process.platform === 'linux') {
-            const dataPath = path.join(path.dirname(editorPath), 'Data');
-            const beeBackend = path.join(dataPath, 'bee_backend');
-            const dotBeeBackend = path.join(dataPath, '.bee_backend');
-            if (fs.existsSync(beeBackend) && !fs.existsSync(dotBeeBackend)) {
-                await fs.promises.rename(beeBackend, dotBeeBackend);
-                const wrapperSource = __nccwpck_require__.ab + "linux-bee-backend-wrapper.sh";
-                await fs.promises.copyFile(__nccwpck_require__.ab + "linux-bee-backend-wrapper.sh", beeBackend);
-                await fs.promises.chmod(beeBackend, 0o755);
-            }
-        }
     }
     catch (error) {
         if (error.message.includes(`No modules found`)) {
-            removePath(editorPath);
-            await Unity(version, changeset, architecture, modules);
+            await (0, utility_1.RemovePath)(editorPath);
+            await UnityEditor(unityVersion, modules);
         }
     }
     finally {
@@ -34792,135 +36182,155 @@ async function Unity(version, changeset, architecture, modules) {
     }
     return editorPath;
 }
-async function getLatestRelease(version, isSilicon) {
-    const releases = (await execUnityHub([`editors`, `--releases`])).split('\n');
-    const semVersion = semver.coerce(version);
-    const validReleases = releases
-        .map(release => semver.coerce(release))
-        .filter(release => release && semver.satisfies(release, `^${semVersion}`))
-        .sort((a, b) => semver.compare(b, a));
-    for (const release of validReleases) {
-        const originalRelease = releases.find(r => r.includes(release.version));
-        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-        if (!(match && match.groups && match.groups.version)) {
-            continue;
-        }
-        if ((version.includes('a') && match.groups.version.includes('a')) ||
-            (version.includes('b') && match.groups.version.includes('b')) ||
-            match.groups.version.includes('f')) {
-            core.info(`Found Unity ${match.groups.version}`);
-            return [match.groups.version, undefined];
+async function patchBeeBackend(editorPath) {
+    if (process.platform === 'linux') {
+        const dataPath = path.join(path.dirname(editorPath), 'Data');
+        const beeBackend = path.join(dataPath, 'bee_backend');
+        const dotBeeBackend = path.join(dataPath, '.bee_backend');
+        if (fs.existsSync(beeBackend) && !fs.existsSync(dotBeeBackend)) {
+            core.debug(`Patching Unity Linux Editor for Bee Backend...`);
+            await fs.promises.rename(beeBackend, dotBeeBackend);
+            const wrapperSource = __nccwpck_require__.ab + "linux-bee-backend-wrapper.sh";
+            await fs.promises.copyFile(__nccwpck_require__.ab + "linux-bee-backend-wrapper.sh", beeBackend);
+            await fs.promises.chmod(beeBackend, 0o755);
         }
     }
-    core.debug(`Searching for Unity ${version} release from online releases list...`);
-    const baseUrl = `https://public-cdn.cloud.unity3d.com/hub/prod`;
-    const url = isSilicon
-        ? `${baseUrl}/releases-silicon.json`
-        : `${baseUrl}/releases-${process.platform}.json`;
-    const response = await fetch(url);
-    const data = await response.text();
-    return await parseReleases(version, data);
 }
-async function parseReleases(version, data) {
-    const releases = JSON.parse(data);
-    core.debug(`Found ${releases.official.length} official releases...`);
-    releases.official.sort((a, b) => semver.compare(a.version, b.version, true));
-    for (const release of releases.official) {
-        const semVersion = semver.coerce(version);
-        const semVerRelease = semver.coerce(release.version);
-        core.debug(`Checking ${semVersion} against ${semVerRelease}`);
-        if (semver.satisfies(semVerRelease, `^${semVersion}`)) {
-            core.debug(`Found Unity ${release.version} release.`);
-            const match = release.downloadUrl.match(/download_unity\/(?<changeset>[a-zA-Z0-9]+)\//);
-            if (match && match.groups && match.groups.changeset) {
-                const changeset = match.groups.changeset;
-                core.debug(`Found Unity ${release.version} (${changeset})`);
-                return [release.version, changeset];
-            }
-        }
-    }
-    throw new Error(`Failed to find Unity ${version} release. Please provide a valid changeset.`);
+async function getLatestHubReleases() {
+    return (await execUnityHub([`editors`, `--releases`])).split('\n').map(line => line.trim()).filter(line => line.length > 0);
 }
-async function installUnity(version, changeset, architecture, modules) {
-    core.startGroup(`Installing Unity ${version} (${changeset})...`);
-    const args = ['install', '--version', version];
-    if (changeset) {
-        args.push('--changeset', changeset);
+async function installUnity(unityVersion, modules) {
+    if (unityVersion.isLegacy()) {
+        return await installUnity4x(unityVersion);
     }
-    if (architecture) {
-        args.push('-a', architecture);
+    core.startGroup(`Installing Unity ${unityVersion.toString()}...`);
+    const args = ['install', '--version', unityVersion.version];
+    if (unityVersion.changeset) {
+        args.push('--changeset', unityVersion.changeset);
     }
-    for (const module of modules) {
-        core.info(`  > with module: ${module}`);
-        args.push('-m', module);
+    if (unityVersion.architecture) {
+        args.push('-a', unityVersion.architecture.toLocaleLowerCase());
+    }
+    if (modules.length > 0) {
+        for (const module of modules) {
+            core.info(`  > with module: ${module}`);
+            args.push('-m', module);
+        }
+        args.push('--cm');
     }
     try {
-        const output = await execUnityHub([...args, '--cm']);
+        const output = await execUnityHub(args);
         if (output.includes(`Error while installing an editor or a module from changeset`)) {
-            throw new Error(`Failed to install Unity ${version} (${changeset})`);
+            throw new Error(`Failed to install Unity ${unityVersion.toString()}`);
         }
     }
     finally {
         core.endGroup();
     }
 }
+async function installUnity4x(unityVersion) {
+    const installDir = await getInstallPath();
+    switch (process.platform) {
+        case 'linux':
+            throw new Error(`Unity ${unityVersion.toString()} is not supported on Linux!`);
+        case 'win32':
+            {
+                const installPath = path.join(installDir, `Unity ${unityVersion.version}`);
+                if (!fs.existsSync(installPath)) {
+                    const scriptPath = __nccwpck_require__.ab + "unity-editor-installer.ps1";
+                    const exitCode = await exec.exec('pwsh', [__nccwpck_require__.ab + "unity-editor-installer.ps1", unityVersion.version, installDir]);
+                    if (exitCode !== 0) {
+                        throw new Error(`Failed to install Unity ${unityVersion.toString()}: ${exitCode}`);
+                    }
+                }
+                await fs.promises.access(installPath, fs.constants.R_OK);
+                return installPath;
+            }
+        case 'darwin':
+            {
+                const installPath = path.join(installDir, `Unity ${unityVersion.version}`, 'Unity.app');
+                if (!fs.existsSync(installPath)) {
+                    const scriptPath = __nccwpck_require__.ab + "unity-editor-installer.sh";
+                    await fs.promises.chmod(__nccwpck_require__.ab + "unity-editor-installer.sh", 0o755);
+                    const exitCode = await exec.exec('sh', [__nccwpck_require__.ab + "unity-editor-installer.sh", unityVersion.version, installDir]);
+                    if (exitCode !== 0) {
+                        throw new Error(`Failed to install Unity ${unityVersion.toString()}: ${exitCode}`);
+                    }
+                }
+                await fs.promises.access(installPath, fs.constants.R_OK);
+                return installPath;
+            }
+    }
+}
 async function ListInstalledEditors() {
-    return await execUnityHub(['editors', '-i']);
+    return (await execUnityHub(['editors', '-i'])).split('\n').filter(line => line.trim().length > 0).map(line => line.trim());
 }
-function isArmCompatible(version) {
-    const semVersion = semver.coerce(version);
-    if (semVersion.major < 2021) {
-        return false;
-    }
-    return semver.compare(semVersion, '2021.0.0', true) >= 0;
-}
-async function checkInstalledEditors(version, architecture, failOnEmpty = true) {
-    const output = await ListInstalledEditors();
-    if (!output || output.trim().length === 0) {
-        if (failOnEmpty) {
-            throw new Error('No Unity Editors installed!');
-        }
-        return undefined;
-    }
-    const pattern = new RegExp(/(?<version>\d+\.\d+\.\d+[fab]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?, installed at (?<editorPath>.*)/, 'g');
-    const matches = [...output.matchAll(pattern)];
+const archMap = {
+    'ARM64': 'Apple silicon',
+    'X86_64': 'Intel',
+};
+async function checkInstalledEditors(unityVersion, failOnEmpty, installPath = undefined) {
     let editorPath = undefined;
-    const versionMatches = matches.filter(match => match.groups.version === version);
-    if (versionMatches.length === 0) {
-        if (failOnEmpty) {
-            throw new Error('No Unity Editors installed!');
+    if (!installPath) {
+        const paths = await ListInstalledEditors();
+        core.debug(`Paths: ${JSON.stringify(paths, null, 2)}`);
+        if (paths && paths.length > 0) {
+            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*, installed at (?<editorPath>.*)/;
+            const matches = paths.map(path => path.match(pattern)).filter(match => match && match.groups);
+            core.debug(`Matches: ${JSON.stringify(matches, null, 2)}`);
+            if (paths.length !== matches.length) {
+                throw new Error(`Failed to parse all installed Unity Editors!`);
+            }
+            const versionMatches = matches.filter(match => unityVersion.satisfies(match.groups.version));
+            core.debug(`Version Matches: ${JSON.stringify(versionMatches, null, 2)}`);
+            if (versionMatches.length === 0) {
+                return undefined;
+            }
+            for (const match of versionMatches) {
+                if (!unityVersion.architecture || !match.groups.arch) {
+                    editorPath = match.groups.editorPath;
+                }
+                else if (archMap[unityVersion.architecture] === match.groups.arch) {
+                    editorPath = match.groups.editorPath;
+                }
+                else if (unityVersion.architecture && match.groups.editorPath.toLowerCase().includes(`-${unityVersion.architecture.toLowerCase()}`)) {
+                    editorPath = match.groups.editorPath;
+                }
+            }
         }
-        return undefined;
     }
-    for (const match of versionMatches) {
-        if (!architecture) {
-            editorPath = match.groups.editorPath;
+    else {
+        if (process.platform == 'win32') {
+            editorPath = path.join(installPath, 'Unity.exe');
         }
-        if (archMap[architecture] === match.groups.arch) {
-            editorPath = match.groups.editorPath;
-        }
-        if (match.groups.editorPath.includes(`-${architecture}`)) {
-            editorPath = match.groups.editorPath;
+        else {
+            editorPath = installPath;
         }
     }
     if (!editorPath) {
-        throw new Error(`Failed to find installed Unity Editor: ${version} ${architecture !== null && architecture !== void 0 ? architecture : ''}`);
+        if (failOnEmpty) {
+            throw new Error(`Failed to find installed Unity Editor: ${unityVersion.toString()}`);
+        }
+        else {
+            return undefined;
+        }
     }
     if (process.platform === 'darwin') {
         editorPath = path.join(editorPath, '/Contents/MacOS/Unity');
     }
-    await fs.promises.access(editorPath, fs.constants.R_OK);
+    try {
+        await fs.promises.access(editorPath, fs.constants.R_OK);
+    }
+    catch (error) {
+        throw new Error(`Failed to find installed Unity Editor: ${unityVersion.toString()}\n  > ${error.message}`);
+    }
     core.debug(`Found installed Unity Editor: ${editorPath}`);
     return editorPath;
 }
-const archMap = {
-    'arm64': 'Apple silicon',
-    'x86_64': 'Intel',
-};
-async function checkEditorModules(editorPath, version, architecture, modules) {
-    let args = ['install-modules', '--version', version];
-    if (architecture) {
-        args.push('-a', architecture);
+async function checkEditorModules(editorPath, unityVersion, modules) {
+    let args = ['install-modules', '--version', unityVersion.version];
+    if (unityVersion.architecture) {
+        args.push('-a', unityVersion.architecture);
     }
     for (const module of modules) {
         args.push('-m', module);
@@ -34956,32 +36366,135 @@ async function getModulesContent(modulesPath) {
     const modulesContent = await (0, utility_1.ReadFileContents)(modulesPath);
     return JSON.parse(modulesContent);
 }
-async function getChangeset(version) {
-    version = version.split(/[abf]/)[0];
-    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+async function getEditorReleaseInfo(unityVersion) {
+    let version = unityVersion.version;
+    if (version.endsWith('.0')) {
+        version = version.slice(0, -2);
+    }
+    if (version.endsWith('.0')) {
+        version = version.slice(0, -2);
+    }
+    const releasesClient = new unity_releases_api_1.UnityReleasesClient();
+    const request = {
+        query: {
+            version: version,
+            architecture: [unityVersion.architecture],
+            platform: (0, utility_1.GetCurrentPlatform)(),
+            limit: 1,
+        }
+    };
+    core.debug(`Get Unity Release: ${JSON.stringify(request, null, 2)}`);
+    const { data, error } = await releasesClient.api.ReleaseService.getUnityReleases(request);
+    if (error) {
+        throw new Error(`Failed to get Unity releases: ${error}`);
+    }
+    if (!data || !data.results || data.results.length === 0) {
+        throw new Error(`No Unity releases found for version: ${version}`);
+    }
+    core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
+    return data.results[0];
+}
+async function fallbackVersionLookup(unityVersion) {
+    const splitVersion = unityVersion.version.split(/[fab]/)[0];
+    const url = `https://unity.com/releases/editor/whats-new/${splitVersion}`;
+    core.debug(`Fetching release page: "${url}"`);
     const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
     const data = await response.text();
+    core.debug(`Release page content:\n${data}`);
     const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
-        return match.groups.changeset;
+        return new unity_version_1.UnityVersion(match.groups.version, match.groups.changeset, unityVersion.architecture);
     }
-    core.error(`Failed to find changeset for Unity ${version}`);
-    return null;
+    core.error(`Failed to find changeset for Unity ${unityVersion.toString()}`);
+    return unityVersion;
 }
-async function removePath(targetPath) {
-    if (targetPath && targetPath.length > 0) {
-        core.startGroup(`deleting ${targetPath}...`);
-        try {
-            await fs.promises.rm(targetPath, { recursive: true, force: true });
+
+
+/***/ }),
+
+/***/ 5988:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UnityVersion = void 0;
+const semver = __nccwpck_require__(1383);
+const core = __nccwpck_require__(2186);
+class UnityVersion {
+    constructor(version, changeset, architecture) {
+        this.version = version;
+        this.changeset = changeset;
+        this.architecture = architecture;
+        const coercedVersion = semver.coerce(version);
+        if (!coercedVersion) {
+            throw new Error(`Invalid Unity version: ${version}`);
         }
-        finally {
-            core.endGroup();
+        this.semVer = coercedVersion;
+        if (architecture === 'ARM64' && !this.isArmCompatible()) {
+            this.architecture = 'X86_64';
         }
     }
+    static compare(a, b) {
+        const vA = a.version;
+        const vB = b.version;
+        return semver.compare(vA, vB, true);
+    }
+    toString() {
+        return this.changeset ? `${this.version} (${this.changeset})` : this.version;
+    }
+    isLegacy() {
+        return semver.major(this.version, { loose: true }) <= 4;
+    }
+    isArmCompatible() {
+        if (this.semVer.major < 2021) {
+            return false;
+        }
+        return semver.compare(this.semVer, '2021.0.0', true) >= 0;
+    }
+    findMatch(versions) {
+        const validReleases = versions
+            .map(release => semver.coerce(release))
+            .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
+            .sort((a, b) => semver.compare(b, a));
+        core.debug(`Searching for ${this.version}:`);
+        validReleases.forEach(release => {
+            core.debug(`  > ${release}`);
+        });
+        for (const release of validReleases) {
+            if (!release) {
+                continue;
+            }
+            const originalRelease = versions.find(r => r.includes(release.version));
+            if (!originalRelease) {
+                continue;
+            }
+            const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
+            if (!(match && match.groups && match.groups.version)) {
+                continue;
+            }
+            if ((this.version.includes('a') && match.groups.version.includes('a')) ||
+                (this.version.includes('b') && match.groups.version.includes('b')) ||
+                match.groups.version.includes('f')) {
+                core.debug(`Found Unity ${match.groups.version}`);
+                return new UnityVersion(match.groups.version, null, this.architecture);
+            }
+        }
+        core.debug(`No matching Unity version found for ${this.version}`);
+        return this;
+    }
+    satisfies(version) {
+        const coercedVersion = semver.coerce(version);
+        if (!coercedVersion) {
+            throw new Error(`Invalid version to check against: ${version}`);
+        }
+        return semver.satisfies(coercedVersion, `^${this.semVer}`);
+    }
 }
+exports.UnityVersion = UnityVersion;
 
 
 /***/ }),
@@ -34996,6 +36509,8 @@ exports.GetHubRootPath = GetHubRootPath;
 exports.GetEditorRootPath = GetEditorRootPath;
 exports.ReadFileContents = ReadFileContents;
 exports.FindGlobPattern = FindGlobPattern;
+exports.RemovePath = RemovePath;
+exports.GetCurrentPlatform = GetCurrentPlatform;
 const core = __nccwpck_require__(2186);
 const glob = __nccwpck_require__(8090);
 const path = __nccwpck_require__(1017);
@@ -35050,6 +36565,29 @@ async function FindGlobPattern(pattern) {
     for await (const file of globber.globGenerator()) {
         core.debug(`found glob: ${file}`);
         return file;
+    }
+}
+async function RemovePath(targetPath) {
+    if (targetPath && targetPath.length > 0) {
+        core.startGroup(`deleting ${targetPath}...`);
+        try {
+            await fs.promises.rm(targetPath, { recursive: true, force: true });
+        }
+        finally {
+            core.endGroup();
+        }
+    }
+}
+function GetCurrentPlatform() {
+    switch (process.platform) {
+        case 'darwin':
+            return ['MAC_OS'];
+        case 'linux':
+            return ['LINUX'];
+        case 'win32':
+            return ['WINDOWS'];
+        default:
+            throw new Error(`Unsupported platform: ${process.platform}`);
     }
 }
 
@@ -45591,26 +47129,29 @@ const unityHub = __nccwpck_require__(2754);
 const core = __nccwpck_require__(2186);
 const main = async () => {
     try {
-        const [versions, architecture, modules, unityProjectPath, installPath] = await (0, inputs_1.ValidateInputs)();
+        const [versions, modules, unityProjectPath, installPath] = await (0, inputs_1.ValidateInputs)();
         if (unityProjectPath) {
             core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
         }
         const unityHubPath = await unityHub.Get();
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
-        const editors = [];
         if (installPath && installPath.length > 0) {
             await unityHub.SetInstallPath(installPath);
         }
-        for (const [version, changeset] of versions) {
-            const unityEditorPath = await unityHub.Unity(version, changeset, architecture, modules);
+        const editors = [];
+        for (const unityVersion of versions) {
+            const unityEditorPath = await unityHub.UnityEditor(unityVersion, modules);
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
             if (modules.includes('android') && unityProjectPath !== undefined) {
                 await (0, install_android_sdk_1.CheckAndroidSdkInstalled)(unityEditorPath, unityProjectPath);
             }
-            editors.push([version, unityEditorPath]);
+            core.info(`Installed Unity Editor: ${unityVersion.toString()} at ${unityEditorPath}`);
+            editors.push([unityVersion.version, unityEditorPath]);
         }
-        const installedEditors = editors.map(([version, path]) => `\"${version}\":\"${path}\"`).join(',');
-        core.exportVariable('UNITY_EDITORS', `[${installedEditors}]`);
+        if (editors.length !== versions.length) {
+            throw new Error(`Expected to install ${versions.length} Unity versions, but installed ${editors.length}.`);
+        }
+        core.exportVariable('UNITY_EDITORS', JSON.stringify(Object.fromEntries(editors)));
         core.info('Unity Setup Complete!');
         process.exit(0);
     }
