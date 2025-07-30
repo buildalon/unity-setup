@@ -9,7 +9,7 @@ inputs:
     required: false
     default: ''
   unity-version:
-    description: 'Specify the Unity version(s) to install. You must include the changeset! i.e `2019.4.13f1 (518737b1de84)`. ***This will override any version specified in the `version-file`!***'
+    description: 'Specify the Unity version(s) to install. example: `2019.4.13f1 (518737b1de84)`. ***This will override any version specified in the `version-file`!***'
     required: false
     default: ''
   build-targets:

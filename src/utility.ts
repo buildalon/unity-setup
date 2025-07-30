@@ -57,3 +57,27 @@ export async function FindGlobPattern(pattern: string): Promise<string | undefin
         return file;
     }
 }
+
+export async function RemovePath(targetPath: string | undefined): Promise<void> {
+    if (targetPath && targetPath.length > 0) {
+        core.startGroup(`deleting ${targetPath}...`);
+        try {
+            await fs.promises.rm(targetPath, { recursive: true, force: true });
+        } finally {
+            core.endGroup();
+        }
+    }
+}
+
+export function GetCurrentPlatform(): Array<('MAC_OS' | 'LINUX' | 'WINDOWS')> {
+    switch (process.platform) {
+        case 'darwin':
+            return ['MAC_OS'];
+        case 'linux':
+            return ['LINUX'];
+        case 'win32':
+            return ['WINDOWS'];
+        default:
+            throw new Error(`Unsupported platform: ${process.platform}`);
+    }
+}

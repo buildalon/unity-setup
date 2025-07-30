@@ -1,15 +1,25 @@
+import { UnityVersion } from './unity-version';
 import { FindGlobPattern } from './utility';
 import core = require('@actions/core');
-import semver = require('semver');
 import path = require('path');
 import os = require('os');
 import fs = require('fs');
 
-export async function ValidateInputs(): Promise<[string[][], string | undefined, string[], string | undefined, string]> {
+export async function ValidateInputs(): Promise<[UnityVersion[], string[], string | null, string]> {
     const modules: string[] = [];
-    const architecture = core.getInput('architecture') || getInstallationArch();
+    const architectureInput = core.getInput('architecture') || getInstallationArch();
+    let architecture: 'X86_64' | 'ARM64' | null = null;
+    switch (architectureInput) {
+        case 'arm64':
+        case 'ARM64':
+            architecture = 'ARM64';
+            break;
+        default:
+            architecture = 'X86_64';
+            break;
+    }
     if (architecture) {
-        core.info(`architecture:\n  > ${architecture}`);
+        core.info(`architecture:\n  > ${architecture.toLocaleLowerCase()}`);
     }
     const buildTargets = getArrayInput('build-targets');
     core.info(`modules:`);
@@ -42,26 +52,27 @@ export async function ValidateInputs(): Promise<[string[][], string | undefined,
             core.info(`  > ${target} -> ${module}`);
         }
     }
-    const versions = getUnityVersionsFromInput();
+    const versions = getUnityVersionsFromInput(architecture);
     const versionFilePath = await getVersionFilePath();
     const unityProjectPath = versionFilePath !== undefined ? path.join(versionFilePath, '..', '..') : undefined;
     if (versionFilePath) {
         core.info(`versionFilePath:\n  > "${versionFilePath}"`);
         core.info(`Unity Project Path:\n  > "${unityProjectPath}"`);
-        const [unityVersion, changeset] = await getUnityVersionFromFile(versionFilePath);
+        const unityVersion = await getUnityVersionFromFile(versionFilePath, architecture);
         if (versions.length === 0) {
-            versions.push([unityVersion, changeset]);
+            versions.push(unityVersion);
         }
     }
-    versions.sort(([a], [b]) => semver.compare(a, b, true));
+    if (versions.length > 1) {
+        versions.sort(UnityVersion.compare);
+    }
     core.info(`Unity Versions:`);
-    for (const [version, changeset] of versions) {
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.info(`  > ${version}${changesetStr}`);
+    for (const unityVersion of versions) {
+        core.info(`  > ${unityVersion.toString()}`);
     }
     let installPath = core.getInput('install-path');
     if (installPath) {
-        installPath = installPath.trim();
+        installPath = path.normalize(installPath.trim());
         if (installPath.length === 0) {
             installPath = undefined;
         } else {
@@ -71,7 +82,7 @@ export async function ValidateInputs(): Promise<[string[][], string | undefined,
     if (!installPath) {
         core.debug('No install path specified, using default Unity Hub install path.');
     }
-    return [versions, architecture, modules, unityProjectPath, installPath];
+    return [versions, modules, unityProjectPath, installPath];
 }
 
 function getArrayInput(key: string): string[] {
@@ -86,12 +97,12 @@ function getArrayInput(key: string): string[] {
     return array;
 }
 
-function getInstallationArch(): string | undefined {
+function getInstallationArch(): 'ARM64' | null {
     switch (os.arch()) {
         case 'arm64':
-            return 'arm64';
+            return 'ARM64';
         case 'x64':
-            return undefined;
+            return null;
         default:
             throw Error(`${os.arch()} not supported`);
     }
@@ -181,29 +192,53 @@ async function getVersionFilePath(): Promise<string | undefined> {
     return undefined;
 }
 
-function getUnityVersionsFromInput(): string[][] {
-    const versions = [];
+function getUnityVersionsFromInput(architecture: 'X86_64' | 'ARM64' | null): UnityVersion[] {
+    const versions: UnityVersion[] = [];
     const inputVersions = core.getInput('unity-version');
     if (!inputVersions || inputVersions.length == 0) {
         return versions;
     }
-    const versionRegEx = new RegExp(/(?<version>(?:(?<major>\d+)\.?)(?:(?<minor>\d+)\.?)?(?:(?<patch>\d+[fab]\d+)?\b))\s?(?:\((?<changeset>\w+)\))?/g);
+    if (inputVersions.toLowerCase() === 'none') {
+        core.debug('No Unity Versions Specified...')
+        return versions;
+    }
+    // Accepts versions like 2020, 2020.x, 2020.*, 2020.3, 2020.3.0, 2020.3.x, 2020.3.*, 2020.3.0f1, 2020.3.0f1 (c7b5465681fb)
+    const versionRegEx = /(?<version>\d+(?:\.(?:\d+|x|\*)){0,2}(?:[abcfpx]\d+)?)(?:\s*\((?<changeset>\w+)\))?/g;
     const matches = Array.from(inputVersions.matchAll(versionRegEx));
-    core.debug(`Unity Versions from input:`);
+    core.debug(`Regex version matches from input:`);
     for (const match of matches) {
-        const version = match.groups.version.replace(/\.$/, '');
+        if (!match.groups || !match.groups.version) { continue; }
+        let version = match.groups.version.replace(/\.$/, '');
+        version = version.replace(/(\.(x|\*))+$/, '');
+        // Normalize version to semver (e.g., 2021 -> 2021.0.0, 2021.3 -> 2021.3.0)
+        const versionParts = version.split('.');
+        switch (versionParts.length) {
+            case 1:
+                version = version + '.0.0';
+                break;
+            case 2:
+                version = version + '.0';
+                break;
+        }
         const changeset = match.groups.changeset;
-        const changesetStr = changeset ? ` (${changeset})` : '';
-        core.debug(`${version}${changesetStr}`);
-        versions.push([version, changeset]);
+        const unityVersion = new UnityVersion(version, changeset, architecture);
+        core.debug(`  > ${unityVersion.toString()}`);
+        try {
+            versions.push(unityVersion);
+        } catch (e) {
+            core.error(`Invalid Unity version: ${unityVersion.toString()}\nError: ${e.message}`);
+        }
+    }
+    if (versions.length === 0) {
+        throw Error('Failed to parse Unity versions from input!');
     }
     return versions;
 }
 
-async function getUnityVersionFromFile(versionFilePath: string): Promise<[string, string]> {
+async function getUnityVersionFromFile(versionFilePath: string, architecture: 'X86_64' | 'ARM64' | null): Promise<UnityVersion> {
     const versionString = await fs.promises.readFile(versionFilePath, 'utf8');
     core.debug(`ProjectSettings.txt:\n${versionString}`);
-    const match = versionString.match(/m_EditorVersionWithRevision: (?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[fab]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/);
+    const match = versionString.match(/m_EditorVersionWithRevision: (?<version>(?:(?<major>\d+)\.)?(?:(?<minor>\d+)\.)?(?:(?<patch>\d+[abcfpx]\d+)\b))\s?(?:\((?<changeset>\w+)\))?/);
     if (!match) {
         throw Error(`No version match found!`);
     }
@@ -213,5 +248,5 @@ async function getUnityVersionFromFile(versionFilePath: string): Promise<[string
     if (!match.groups.changeset) {
         throw Error(`No changeset group found!`);
     }
-    return [match.groups.version, match.groups.changeset];
+    return new UnityVersion(match.groups.version, match.groups.changeset, architecture);
 }

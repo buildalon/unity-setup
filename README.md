@@ -49,7 +49,7 @@ steps:
 | name | description | required |
 | ----------- | ----------- | ----------- |
 | `version-file` | Specify a path to search for the unity project version text file. Useful if there are multiple projects in a single repo. Pass `None` if creating a new project to skip file search. | false |
-| `unity-version` | Specify the Unity version(s) to install. You must include the changeset! i.e `2019.4.13f1 (518737b1de84)`. ***This will override any version specified in the `version-file`!*** | false |
+| `unity-version` | Specify the Unity version(s) to install. example: `2019.4.13f1 (518737b1de84)`. ***This will override any version specified in the `version-file`!*** | false |
 | `build-targets` | Specify the build targets to install for. Remaps to corresponding module. One or more of `StandaloneWindows64` `WSAPlayer` `StandaloneOSX` `iOS` `StandaloneLinux64` `Android` `Lumin` `WebGL` `VisionOS`. | false |
 | `modules` | Modules to install with the editor. This list can be different per editor version. | false |
 | `architecture` | Specify the architecture to install. Either `x86_64` or `arm64`. | false |
@@ -60,4 +60,4 @@ steps:
 - `UNITY_HUB_PATH`: The path to the installed unity hub.
 - `UNITY_PROJECT_PATH`: The path to the Unity project.
 - `UNITY_EDITOR_PATH`: The path to the last installed version of Unity.
-- `UNITY_EDITORS`: A json object of each editor installation `{"version":"path"}`.
+- `UNITY_EDITORS`: A json object array of each editor installation `[{"version":"path"},...]`.

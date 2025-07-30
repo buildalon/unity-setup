@@ -1,0 +1,59 @@
+{
+  "os": [
+    "ubuntu-latest",
+    "windows-latest",
+    "macos-latest"
+  ],
+  "unity-version": [
+    "None",
+    "4.7.2",
+    "5.6.7f1 (e80cc3114ac1)",
+    "2020.3",
+    "2021.3.x",
+    "2022.x",
+    "6000.0.x",
+    "6000"
+  ],
+  "include": [
+    {
+      "os": "ubuntu-latest",
+      "build-targets": "StandaloneLinux64, Android, iOS",
+      "modules": "linux-server"
+    },
+    {
+      "os": "windows-latest",
+      "build-targets": "StandaloneWindows64, Android, WSAPlayer",
+      "modules": "windows-server"
+    },
+    {
+      "os": "macos-latest",
+      "build-targets": "StandaloneOSX Android iOS VisionOS",
+      "modules": "mac-server"
+    },
+    {
+      "os": "ubuntu-latest",
+      "unity-version": "2019.4.40f1",
+      "modules": "None"
+    },
+    {
+      "os": "ubuntu-latest",
+      "unity-version": "2018.4.36f1 (6cd387d23174)",
+      "modules": "None"
+    },
+    {
+      "os": "ubuntu-latest",
+      "unity-version": "2017.4.40f1 (6e14067f8a9a)",
+      "modules": "None"
+    }
+  ],
+  "exclude": [
+    {
+      "os": "ubuntu-latest",
+      "unity-version": "5.6.7f1 (e80cc3114ac1)"
+    },
+    {
+      "os": "ubuntu-latest",
+      "unity-version": "4.7.2"
+    }
+  ]
+}
