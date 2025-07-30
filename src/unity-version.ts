@@ -48,9 +48,15 @@ export class UnityVersion {
       return new UnityVersion(this.version, null, this.architecture);
     }
 
-    // Only fall back to caret range if both minor and patch are 0
-    const [major, minor, patch] = this.version.split('.').map(v => v.replace(/[^0-9]/g, ''));
-    if (minor === '0' && patch === '0') {
+    // Only fall back to caret range if both minor and patch are 0 (ignoring suffixes)
+    const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
+    let minorIsZero = false, patchIsZero = false;
+    if (versionParts) {
+      const [, , minor, patch] = versionParts;
+      minorIsZero = minor === '0';
+      patchIsZero = patch === '0';
+    }
+    if (minorIsZero && patchIsZero) {
       const validReleases = versions
         .map(release => semver.coerce(release))
         .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
