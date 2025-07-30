@@ -24,9 +24,11 @@ if [ -z "${volumes}" ]; then
 fi
 echo "Mounted volumes:"
 echo "${volumes}"
-volume=$(echo "${volumes}" | grep -o "/Volumes/Unity Hub.*-${cpuArch}" | head -n1)
+# can be "/Volumes/Unity Hub 3.13.1-arm64" or "/Volumes/Unity Hub 3.13.1"
+volume=$(echo "${volumes}" | grep -o "/Volumes/Unity Hub.*" | head -n1)
 if [ -z "${volume}" ]; then
-    echo "Failed to mount ${downloadPath}"
+    hdiutil unmount "${volumes}" -quiet
+    echo "Failed to find Unity Hub volume in ${volumes}"
     exit 1
 fi
 appPath=$(find "${volume}" -name "*.app" | head -n1)
