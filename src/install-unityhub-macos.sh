@@ -24,8 +24,9 @@ if [ -z "${volumes}" ]; then
 fi
 echo "Mounted volumes:"
 echo "${volumes}"
-volume=$(echo "${volumes}" | grep -o "/Volumes/Unity Hub.*-${cpuArch}" | head -n1)
+volume=$(echo "${volumes}" | grep -o "/Volumes/Unity Hub*" | head -n1)
 if [ -z "${volume}" ]; then
+    hdiutil detach "${downloadPath}" -quiet
     echo "Failed to mount ${downloadPath}"
     exit 1
 fi
@@ -34,10 +35,12 @@ echo "moving ${appPath} to /Applications..."
 if [ -z "${appPath}" ]; then
     echo "Failed to find Unity Hub app in ${volume}"
     hdiutil unmount "${volume}" -quiet
+    hdiutil detach "${downloadPath}" -quiet
     exit 1
 fi
 cp -vrf "${appPath}" /Applications
 hdiutil unmount "${volume}" -quiet
+hdiutil detach "${downloadPath}" -quiet
 sudo chmod -R 777 /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub
 sudo mkdir -p /Library/Application\ Support/Unity
 sudo chmod -R 777 /Library/Application\ Support/Unity
