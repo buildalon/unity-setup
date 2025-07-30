@@ -276,7 +276,7 @@ const retryErrorMessages = [
 
 export async function UnityEditor(unityVersion: UnityVersion, modules: string[]): Promise<string> {
     core.info(`Getting release info for Unity ${unityVersion.toString()}...`);
-    let editorPath: string | undefined = await checkInstalledEditors(unityVersion, false);
+    let editorPath = await checkInstalledEditors(unityVersion, false);
     if (!unityVersion.isLegacy() && !editorPath) {
         try {
             const releases = await getLatestHubReleases();
