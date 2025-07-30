@@ -276,7 +276,8 @@ const retryErrorMessages = [
 
 export async function UnityEditor(unityVersion: UnityVersion, modules: string[]): Promise<string> {
     core.info(`Getting release info for Unity ${unityVersion.toString()}...`);
-    if (!unityVersion.isLegacy()) {
+    let editorPath: string | undefined = await checkInstalledEditors(unityVersion, false);
+    if (!unityVersion.isLegacy() && !editorPath) {
         try {
             const releases = await getLatestHubReleases();
             unityVersion = unityVersion.findMatch(releases);
@@ -287,7 +288,6 @@ export async function UnityEditor(unityVersion: UnityVersion, modules: string[])
             unityVersion = await fallbackVersionLookup(unityVersion);
         }
     }
-    let editorPath: string = await checkInstalledEditors(unityVersion, false);
     let installPath: string | null = null;
     if (!editorPath) {
         try {
@@ -373,7 +373,7 @@ async function installUnity(unityVersion: UnityVersion, modules: string[]): Prom
         args.push('--changeset', unityVersion.changeset);
     }
     if (unityVersion.architecture) {
-        args.push('-a', unityVersion.architecture.toLocaleLowerCase());
+        args.push('-a', unityVersion.architecture.toLowerCase());
     }
     if (modules.length > 0) {
         for (const module of modules) {
