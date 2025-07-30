@@ -19,7 +19,7 @@ export async function ValidateInputs(): Promise<[UnityVersion[], string[], strin
             break;
     }
     if (architecture) {
-        core.info(`architecture:\n  > ${architecture.toLocaleLowerCase()}`);
+        core.info(`architecture:\n  > ${architecture.toLowerCase()}`);
     }
     const buildTargets = getArrayInput('build-targets');
     core.info(`modules:`);
