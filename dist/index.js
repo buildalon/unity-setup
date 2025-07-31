@@ -36281,20 +36281,26 @@ async function checkInstalledEditors(unityVersion, failOnEmpty, installPath = un
             if (paths.length !== matches.length) {
                 throw new Error(`Failed to parse all installed Unity Editors!`);
             }
-            const versionMatches = matches.filter(match => unityVersion.satisfies(match.groups.version));
-            core.debug(`Version Matches: ${JSON.stringify(versionMatches, null, 2)}`);
-            if (versionMatches.length === 0) {
-                return undefined;
+            const exactMatch = matches.find(match => match.groups.version === unityVersion.version);
+            if (exactMatch) {
+                editorPath = exactMatch.groups.editorPath;
             }
-            for (const match of versionMatches) {
-                if (!unityVersion.architecture || !match.groups.arch) {
-                    editorPath = match.groups.editorPath;
+            else {
+                const versionMatches = matches.filter(match => unityVersion.satisfies(match.groups.version));
+                core.debug(`Version Matches: ${JSON.stringify(versionMatches, null, 2)}`);
+                if (versionMatches.length === 0) {
+                    return undefined;
                 }
-                else if (archMap[unityVersion.architecture] === match.groups.arch) {
-                    editorPath = match.groups.editorPath;
-                }
-                else if (unityVersion.architecture && match.groups.editorPath.toLowerCase().includes(`-${unityVersion.architecture.toLowerCase()}`)) {
-                    editorPath = match.groups.editorPath;
+                for (const match of versionMatches) {
+                    if (!unityVersion.architecture || !match.groups.arch) {
+                        editorPath = match.groups.editorPath;
+                    }
+                    else if (archMap[unityVersion.architecture] === match.groups.arch) {
+                        editorPath = match.groups.editorPath;
+                    }
+                    else if (unityVersion.architecture && match.groups.editorPath.toLowerCase().includes(`-${unityVersion.architecture.toLowerCase()}`)) {
+                        editorPath = match.groups.editorPath;
+                    }
                 }
             }
         }
