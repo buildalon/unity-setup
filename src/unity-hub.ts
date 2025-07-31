@@ -449,23 +449,30 @@ async function checkInstalledEditors(unityVersion: UnityVersion, failOnEmpty: bo
             if (paths.length !== matches.length) {
                 throw new Error(`Failed to parse all installed Unity Editors!`);
             }
-            const versionMatches = matches.filter(match => unityVersion.satisfies(match.groups.version));
-            core.debug(`Version Matches: ${JSON.stringify(versionMatches, null, 2)}`);
-            if (versionMatches.length === 0) {
-                return undefined;
-            }
-            for (const match of versionMatches) {
-                // If no architecture is set, or no arch in match, accept the version match
-                if (!unityVersion.architecture || !match.groups.arch) {
-                    editorPath = match.groups.editorPath;
+            // Prefer exact version match first
+            const exactMatch = matches.find(match => match.groups.version === unityVersion.version);
+            if (exactMatch) {
+                editorPath = exactMatch.groups.editorPath;
+            } else {
+                // Fallback: semver satisfies
+                const versionMatches = matches.filter(match => unityVersion.satisfies(match.groups.version));
+                core.debug(`Version Matches: ${JSON.stringify(versionMatches, null, 2)}`);
+                if (versionMatches.length === 0) {
+                    return undefined;
                 }
-                // If architecture is set and present in match, check for match
-                else if (archMap[unityVersion.architecture] === match.groups.arch) {
-                    editorPath = match.groups.editorPath;
-                }
-                // Fallback: check if editorPath includes architecture string (case-insensitive)
-                else if (unityVersion.architecture && match.groups.editorPath.toLowerCase().includes(`-${unityVersion.architecture.toLowerCase()}`)) {
-                    editorPath = match.groups.editorPath;
+                for (const match of versionMatches) {
+                    // If no architecture is set, or no arch in match, accept the version match
+                    if (!unityVersion.architecture || !match.groups.arch) {
+                        editorPath = match.groups.editorPath;
+                    }
+                    // If architecture is set and present in match, check for match
+                    else if (archMap[unityVersion.architecture] === match.groups.arch) {
+                        editorPath = match.groups.editorPath;
+                    }
+                    // Fallback: check if editorPath includes architecture string (case-insensitive)
+                    else if (unityVersion.architecture && match.groups.editorPath.toLowerCase().includes(`-${unityVersion.architecture.toLowerCase()}`)) {
+                        editorPath = match.groups.editorPath;
+                    }
                 }
             }
         }
