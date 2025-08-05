@@ -60,7 +60,7 @@ export class UnityVersion {
       const validReleases = versions
         .map(release => semver.coerce(release))
         .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
-        .sort((a, b) => semver.compare(b, a));
+        .sort((a, b) => semver.compare(a, b)); // sort ascending (lowest first)
       core.debug(`Searching for fallback match for ${this.version}:`);
       validReleases.forEach(release => {
         core.debug(`  > ${release}`);
