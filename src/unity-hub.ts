@@ -556,10 +556,7 @@ async function getModulesContent(modulesPath: string): Promise<any> {
 
 async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
     let version: string = unityVersion.version;
-    // trim trailing .0 from version minor and patch if present
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
-    }
+    // trim trailing .0 from version minor if present
     if (version.endsWith('.0')) {
         version = version.slice(0, -2);
     }

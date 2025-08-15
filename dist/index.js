@@ -36387,9 +36387,6 @@ async function getEditorReleaseInfo(unityVersion) {
     if (version.endsWith('.0')) {
         version = version.slice(0, -2);
     }
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
-    }
     const releasesClient = new unity_releases_api_1.UnityReleasesClient();
     const request = {
         query: {
