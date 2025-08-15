@@ -359,8 +359,18 @@ async function patchBeeBackend(editorPath: string): Promise<void> {
     }
 }
 
-async function getLatestHubReleases(): Promise<string[]> {
-    return (await execUnityHub([`editors`, `--releases`])).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+export async function getLatestHubReleases(): Promise<string[]> {
+    return (await execUnityHub([`editors`, `--releases`]))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+            // If the line contains a comma, only take the part before the comma
+            if (line.includes(',')) {
+                return line.split(',')[0].trim();
+            }
+            return line;
+        });
 }
 
 async function installUnity(unityVersion: UnityVersion, modules: string[]): Promise<string | undefined> {

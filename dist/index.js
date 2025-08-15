@@ -35857,6 +35857,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Get = Get;
 exports.SetInstallPath = SetInstallPath;
 exports.UnityEditor = UnityEditor;
+exports.getLatestHubReleases = getLatestHubReleases;
 exports.ListInstalledEditors = ListInstalledEditors;
 const asar = __nccwpck_require__(6561);
 const core = __nccwpck_require__(2186);
@@ -36197,7 +36198,16 @@ async function patchBeeBackend(editorPath) {
     }
 }
 async function getLatestHubReleases() {
-    return (await execUnityHub([`editors`, `--releases`])).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    return (await execUnityHub([`editors`, `--releases`]))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+        if (line.includes(',')) {
+            return line.split(',')[0].trim();
+        }
+        return line;
+    });
 }
 async function installUnity(unityVersion, modules) {
     if (unityVersion.isLegacy()) {
@@ -36431,6 +36441,10 @@ exports.UnityVersion = void 0;
 const semver = __nccwpck_require__(1383);
 const core = __nccwpck_require__(2186);
 class UnityVersion {
+    version;
+    changeset;
+    architecture;
+    semVer;
     constructor(version, changeset, architecture) {
         this.version = version;
         this.changeset = changeset;
@@ -36462,8 +36476,8 @@ class UnityVersion {
         return semver.compare(this.semVer, '2021.0.0', true) >= 0;
     }
     findMatch(versions) {
-        const exactMatch = versions.find(r => {
-            const match = r.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)/);
+        const exactMatch = versions.find(release => {
+            const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
             return match && match.groups && match.groups.version === this.version;
         });
         if (exactMatch) {
@@ -36478,32 +36492,35 @@ class UnityVersion {
             patchIsZero = patch === '0';
         }
         if (minorIsZero && patchIsZero) {
-            const validReleases = versions
-                .map(release => semver.coerce(release))
-                .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
-                .sort((a, b) => semver.compare(b, a));
-            core.debug(`Searching for fallback match for ${this.version}:`);
-            validReleases.forEach(release => {
-                core.debug(`  > ${release}`);
+            const releases = versions
+                .map(release => {
+                const match = release.match(/(?<version>\d{4}\.\d+\.\d+f\d+)/);
+                return match && match.groups ? match.groups.version : null;
+            })
+                .filter(Boolean)
+                .filter(version => semver.satisfies(semver.coerce(version), `^${this.semVer}`));
+            releases.sort((a, b) => {
+                const parse = (v) => {
+                    const match = v.match(/(\d{4})\.(\d+)\.(\d+)f(\d+)/);
+                    return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])] : [0, 0, 0, 0];
+                };
+                const [ay, am, ap, af] = parse(a);
+                const [by, bm, bp, bf] = parse(b);
+                if (ay !== by)
+                    return by - ay;
+                if (am !== bm)
+                    return bm - am;
+                if (ap !== bp)
+                    return bp - ap;
+                return bf - af;
             });
-            for (const release of validReleases) {
-                if (!release) {
-                    continue;
-                }
-                const originalRelease = versions.find(r => r.includes(release.version));
-                if (!originalRelease) {
-                    continue;
-                }
-                const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-                if (!(match && match.groups && match.groups.version)) {
-                    continue;
-                }
-                if ((this.version.includes('a') && match.groups.version.includes('a')) ||
-                    (this.version.includes('b') && match.groups.version.includes('b')) ||
-                    match.groups.version.includes('f')) {
-                    core.debug(`Found fallback Unity ${match.groups.version}`);
-                    return new UnityVersion(match.groups.version, null, this.architecture);
-                }
+            core.debug(`Searching for fallback match for ${this.version}:`);
+            releases.forEach(version => {
+                core.debug(`  > ${version}`);
+            });
+            if (releases.length > 0) {
+                core.debug(`Found fallback Unity ${releases[0]}`);
+                return new UnityVersion(releases[0], null, this.architecture);
             }
         }
         core.debug(`No matching Unity version found for ${this.version}`);
