@@ -35,6 +35,16 @@ jobs:
           echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
           echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
           echo "UNITY_PROJECT_PATH: '${{ env.UNITY_PROJECT_PATH }}'"
+          # If build-target is None, UNITY_EDITOR_PATH must be empty
+          if [[ "${{ matrix.build-target }}" == "None" ]]; then
+            if [[ -n "${{ env.UNITY_EDITOR_PATH }}" ]]; then
+              echo "Error: UNITY_EDITOR_PATH should be empty when build-target is None, but got '${{ env.UNITY_EDITOR_PATH }}'"
+              exit 1
+            else
+              echo "UNITY_EDITOR_PATH is correctly empty for build-target=None."
+              exit 0
+            fi
+          fi
           # Extract Unity version from UNITY_EDITOR_PATH using regex
           if [[ "${{ env.UNITY_EDITOR_PATH }}" =~ ([0-9]+\.[0-9]+\.[0-9]+[abcfpx]?[0-9]*) ]]; then
             UNITY_EDITOR_VERSION="${BASH_REMATCH[1]}"

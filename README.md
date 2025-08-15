@@ -18,6 +18,8 @@ strategy:
       - 2020.x
       - 2021.3.x
       - 2022.3
+      - 6000.0.x
+      - 6000.1
       - 6000
     include:
       - os: ubuntu-latest
