@@ -35,3 +35,18 @@ jobs:
           echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
           echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
           echo "UNITY_PROJECT_PATH: '${{ env.UNITY_PROJECT_PATH }}'"
+          # Extract Unity version from UNITY_EDITOR_PATH using regex
+          if [[ "${{ env.UNITY_EDITOR_PATH }}" =~ ([0-9]+\.[0-9]+\.[0-9]+[abcfpx]?[0-9]*) ]]; then
+            UNITY_EDITOR_VERSION="${BASH_REMATCH[1]}"
+            echo "Detected Unity Editor version: $UNITY_EDITOR_VERSION"
+          else
+            echo "Could not extract Unity version from UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
+            exit 1
+          fi
+          # Check if UNITY_EDITOR_VERSION satisfies matrix.unity-version (exact match or prefix match)
+          if [[ "$UNITY_EDITOR_VERSION" == "${{ matrix.unity-version }}"* ]]; then
+            echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+          else
+            echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+            exit 1
+          fi
