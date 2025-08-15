@@ -60,3 +60,4 @@ jobs:
             echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
             exit 1
           fi
+        shell: bash
