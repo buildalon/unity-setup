@@ -58,8 +58,16 @@ jobs:
           if [[ "$MATRIX_UNITY_VERSION_PREFIX" =~ ^([0-9]+\.[0-9]+\.[0-9]+[abcfpx]?[0-9]*) ]]; then
             MATRIX_UNITY_VERSION_PREFIX="${BASH_REMATCH[1]}"
           fi
-          # Check if UNITY_EDITOR_VERSION matches the prefix of matrix.unity-version
-          if [[ "$UNITY_EDITOR_VERSION" == "$MATRIX_UNITY_VERSION_PREFIX" ]]; then
+          # Support matrix.unity-version patterns ending with .x (e.g., 2021.3.x)
+          if [[ "${{ matrix.unity-version }}" =~ ^([0-9]+\.[0-9]+)\.x$ ]]; then
+            UNITY_MAJOR_MINOR="${BASH_REMATCH[1]}"
+            if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR_MINOR"* ]]; then
+              echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+            else
+              echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+              exit 1
+            fi
+          elif [[ "$UNITY_EDITOR_VERSION" == "$MATRIX_UNITY_VERSION_PREFIX" ]]; then
             echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
           else
             echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
