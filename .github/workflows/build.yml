@@ -76,6 +76,15 @@ jobs:
               echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
               exit 1
             fi
+          # Support matrix.unity-version patterns with only major (e.g., 6000)
+          elif [[ "${{ matrix.unity-version }}" =~ ^([0-9]+)$ ]]; then
+            UNITY_MAJOR="${BASH_REMATCH[1]}"
+            if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR"* ]]; then
+              echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+            else
+              echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+              exit 1
+            fi
           elif [[ "$UNITY_EDITOR_VERSION" == "$MATRIX_UNITY_VERSION_PREFIX" ]]; then
             echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
           else
