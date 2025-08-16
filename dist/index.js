@@ -36489,13 +36489,19 @@ class UnityVersion {
             patchIsZero = patch === '0';
         }
         if (minorIsZero && patchIsZero) {
+            const [major, minor] = this.version.split('.');
             const releases = versions
                 .map(release => {
                 const match = release.match(/(?<version>\d{4}\.\d+\.\d+f\d+)/);
                 return match && match.groups ? match.groups.version : null;
             })
                 .filter(Boolean)
-                .filter(version => semver.satisfies(semver.coerce(version), `^${this.semVer}`));
+                .filter(version => {
+                if (!version)
+                    return false;
+                const parts = version.split('.');
+                return parts[0] === major && parts[1] === minor;
+            });
             releases.sort((a, b) => {
                 const parse = (v) => {
                     const match = v.match(/(\d{4})\.(\d+)\.(\d+)f(\d+)/);

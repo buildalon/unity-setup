@@ -34,9 +34,24 @@ describe('UnityVersion.findMatch', () => {
 
     it('should fallback to a compatible version if minor and patch are 0', () => {
         // should match with the latest 6000.x.xfx release from releases
-        const latest = releases.find(release => release.startsWith('6000.2') && release.includes('f'));
-        const uv = new UnityVersion('6000.0.0', null, 'X86_64');
-        const match = uv.findMatch(releases);
-        expect(match.version).toBe(latest);
+            // This test expects the fallback to be the latest 6000.0.xfx release
+            const latest6000_0 = releases
+                .filter(release => release.startsWith('6000.0') && release.includes('f'))
+                .sort()
+                .reverse()[0];
+            const uv = new UnityVersion('6000.0.0', null, 'X86_64');
+            const match = uv.findMatch(releases);
+            expect(match.version).toBe(latest6000_0);
+        });
+
+        it('should NOT fallback to 6000.2.x when searching for 6000.0.0, but to the latest 6000.0.xfx', () => {
+            // This test ensures the fallback logic does not incorrectly match 6000.2.x
+            const latest6000_0 = releases
+                .filter(release => release.startsWith('6000.0') && release.includes('f'))
+                .sort()
+                .reverse()[0];
+            const uv = new UnityVersion('6000.0.0', null, 'X86_64');
+            const match = uv.findMatch(releases);
+            expect(match.version).toBe(latest6000_0);
     });
 });
