@@ -38,56 +38,74 @@ export class UnityVersion {
   }
 
   findMatch(versions: string[]): UnityVersion {
-    // Try exact match first
-    const exactMatch = versions.find(r => {
-      const match = r.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)/);
+    const exactMatch = versions.find(release => {
+      // Only match fully formed Unity versions (e.g., 2021.3.5f1, 2022.1.0b12)
+      const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
       return match && match.groups && match.groups.version === this.version;
     });
+
     if (exactMatch) {
       core.debug(`Exact match found for ${this.version}`);
       return new UnityVersion(this.version, null, this.architecture);
     }
 
-    // Only fall back to caret range if both minor and patch are 0 (ignoring suffixes)
+    // if the input version contains `.x` or `.0` then we need to do a fallback match
     const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
     let minorIsZero = false, patchIsZero = false;
+
     if (versionParts) {
       const [, , minor, patch] = versionParts;
       minorIsZero = minor === '0';
       patchIsZero = patch === '0';
     }
+
     if (minorIsZero && patchIsZero) {
-      const validReleases = versions
-        .map(release => semver.coerce(release))
-        .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
-        .sort((a, b) => semver.compare(a, b)); // sort ascending (lowest first)
-      core.debug(`Searching for fallback match for ${this.version}:`);
-      validReleases.forEach(release => {
-        core.debug(`  > ${release}`);
+      // Only consider fully formed Unity versions with 'f' suffix
+      const releases = versions
+        .map(release => {
+          const match = release.match(/(?<version>\d{4}\.\d+\.\d+f\d+)/);
+          return match && match.groups ? match.groups.version : null;
+        })
+        .filter(Boolean)
+        .filter(version => semver.satisfies(semver.coerce(version)!, `^${this.semVer}`));
+
+      // Sort by full Unity version string (descending)
+      releases.sort((a, b) => {
+        // Compare by year, minor, patch, then f number
+        const parse = (v: string) => {
+          const match = v.match(/(\d{4})\.(\d+)\.(\d+)f(\d+)/);
+          return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])] : [0, 0, 0, 0];
+        };
+        const [ay, am, ap, af] = parse(a);
+        const [by, bm, bp, bf] = parse(b);
+        if (ay !== by) return by - ay;
+        if (am !== bm) return bm - am;
+        if (ap !== bp) return bp - ap;
+        return bf - af;
       });
-      for (const release of validReleases) {
-        if (!release) { continue; }
-        const originalRelease = versions.find(r => r.includes(release.version));
-        if (!originalRelease) { continue; }
-        const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-        if (!(match && match.groups && match.groups.version)) { continue; }
-        if ((this.version.includes('a') && match.groups.version.includes('a')) ||
-          (this.version.includes('b') && match.groups.version.includes('b')) ||
-          match.groups.version.includes('f')) {
-          core.debug(`Found fallback Unity ${match.groups.version}`);
-          return new UnityVersion(match.groups.version, null, this.architecture);
-        }
+
+      core.debug(`Searching for fallback match for ${this.version}:`);
+      releases.forEach(version => {
+        core.debug(`  > ${version}`);
+      });
+
+      if (releases.length > 0) {
+        core.debug(`Found fallback Unity ${releases[0]}`);
+        return new UnityVersion(releases[0], null, this.architecture);
       }
     }
+
     core.debug(`No matching Unity version found for ${this.version}`);
     return this;
   }
 
   satisfies(version: string): boolean {
     const coercedVersion = semver.coerce(version);
+
     if (!coercedVersion) {
       throw new Error(`Invalid version to check against: ${version}`);
     }
+
     return semver.satisfies(coercedVersion, `^${this.semVer}`);
   }
 }

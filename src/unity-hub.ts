@@ -359,8 +359,18 @@ async function patchBeeBackend(editorPath: string): Promise<void> {
     }
 }
 
-async function getLatestHubReleases(): Promise<string[]> {
-    return (await execUnityHub([`editors`, `--releases`])).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+export async function getLatestHubReleases(): Promise<string[]> {
+    return (await execUnityHub([`editors`, `--releases`]))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+            // If the line contains a comma, only take the part before the comma
+            if (line.includes(',')) {
+                return line.split(',')[0].trim();
+            }
+            return line;
+        });
 }
 
 async function installUnity(unityVersion: UnityVersion, modules: string[]): Promise<string | undefined> {
@@ -546,10 +556,7 @@ async function getModulesContent(modulesPath: string): Promise<any> {
 
 async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
     let version: string = unityVersion.version;
-    // trim trailing .0 from version minor and patch if present
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
-    }
+    // trim trailing .0 from version minor if present
     if (version.endsWith('.0')) {
         version = version.slice(0, -2);
     }
