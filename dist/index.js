@@ -36383,9 +36383,9 @@ async function getModulesContent(modulesPath) {
     return JSON.parse(modulesContent);
 }
 async function getEditorReleaseInfo(unityVersion) {
-    let version = unityVersion.version;
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
+    let version = unityVersion.version.split('.')[0];
+    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
+        version = unityVersion.version.split('.')[0];
     }
     const releasesClient = new unity_releases_api_1.UnityReleasesClient();
     const request = {
@@ -36408,16 +36408,26 @@ async function getEditorReleaseInfo(unityVersion) {
     return data.results[0];
 }
 async function fallbackVersionLookup(unityVersion) {
-    const splitVersion = unityVersion.version.split(/[fab]/)[0];
-    const url = `https://unity.com/releases/editor/whats-new/${splitVersion}`;
+    let version = unityVersion.version.split('.')[0];
+    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
+        version = unityVersion.version.split('.')[0];
+    }
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
     core.debug(`Fetching release page: "${url}"`);
-    const response = await fetch(url);
+    let response;
+    try {
+        response = await fetch(url);
+    }
+    catch (error) {
+        core.warning(`Failed to fetch changeset for Unity ${unityVersion.toString()} [network error]: ${error}`);
+        return unityVersion;
+    }
     if (!response.ok) {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
     const data = await response.text();
     core.debug(`Release page content:\n${data}`);
-    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return new unity_version_1.UnityVersion(match.groups.version, match.groups.changeset, unityVersion.architecture);
     }

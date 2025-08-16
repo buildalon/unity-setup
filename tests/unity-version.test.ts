@@ -18,12 +18,18 @@ describe('UnityVersion.findMatch', () => {
         releases = await getLatestHubReleases();
     }, 30000); // Increase timeout to 30 seconds
 
-    it('should find an exact match for a version in the list', () => {
-        // get the first release in the list of releases to use as our version to search for
-        const versionToSearch = releases[0];
-        const uv = new UnityVersion(versionToSearch, null, 'X86_64');
-        const match = uv.findMatch(releases);
-        expect(match.version).toBe(versionToSearch);
+    it('should find an exact match for each version in build-options.json if present in releases', () => {
+        const versions = buildOptions.versions || [];
+        for (const version of versions) {
+            const uv = new UnityVersion(version, null, 'X86_64');
+            const match = uv.findMatch(releases);
+            if (releases.includes(version)) {
+                expect(match.version).toBe(version);
+            } else {
+                // If not found, should return itself
+                expect(match.version).toBe(version);
+            }
+        }
     });
 
     it('should return itself if no match is found', () => {

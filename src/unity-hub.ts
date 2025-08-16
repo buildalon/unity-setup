@@ -555,11 +555,12 @@ async function getModulesContent(modulesPath: string): Promise<any> {
 }
 
 async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
-    let version: string = unityVersion.version;
-    // trim trailing .0 from version minor if present
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
+    let version = unityVersion.version.split('.')[0];
+
+    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
+        version = unityVersion.version.split('.')[0];
     }
+
     const releasesClient = new UnityReleasesClient();
     const request: GetUnityReleasesData = {
         query: {
@@ -569,32 +570,52 @@ async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRe
             limit: 1,
         }
     };
+
     core.debug(`Get Unity Release: ${JSON.stringify(request, null, 2)}`);
     const { data, error } = await releasesClient.api.ReleaseService.getUnityReleases(request);
+
     if (error) {
         throw new Error(`Failed to get Unity releases: ${error}`);
     }
+
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
+
     core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
     return data.results[0];
 }
 
 async function fallbackVersionLookup(unityVersion: UnityVersion): Promise<UnityVersion> {
-    const splitVersion = unityVersion.version.split(/[fab]/)[0];
-    const url = `https://unity.com/releases/editor/whats-new/${splitVersion}`;
-    core.debug(`Fetching release page: "${url}"`)
-    const response = await fetch(url);
+    let version = unityVersion.version.split('.')[0];
+
+    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
+        version = unityVersion.version.split('.')[0];
+    }
+
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    core.debug(`Fetching release page: "${url}"`);
+    let response: Response;
+
+    try {
+        response = await fetch(url);
+    } catch (error) {
+        core.warning(`Failed to fetch changeset for Unity ${unityVersion.toString()} [network error]: ${error}`);
+        return unityVersion;
+    }
+
     if (!response.ok) {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
+
     const data = await response.text();
     core.debug(`Release page content:\n${data}`);
-    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+
     if (match && match.groups && match.groups.changeset) {
         return new UnityVersion(match.groups.version, match.groups.changeset, unityVersion.architecture);
     }
+
     core.error(`Failed to find changeset for Unity ${unityVersion.toString()}`);
     return unityVersion;
 }
