@@ -54,49 +54,57 @@ export class UnityVersion {
     // Check for .x or .* in this.version (e.g., 6000.0.x, 6000.0.*)
     if (/\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version)) {
       triggerFallback = true;
-    }
+    } else {
+      // Also trigger fallback if both minor and patch are zero (e.g., 6000.0.0)
+      const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
 
-    // Also trigger fallback if both minor and patch are zero
-    const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
-    let minorIsZero = false, patchIsZero = false;
-
-    if (versionParts) {
-      const [, , minor, patch] = versionParts;
-      minorIsZero = minor === '0';
-      patchIsZero = patch === '0';
-    }
-
-    if (minorIsZero && patchIsZero) {
-      triggerFallback = true;
+      if (versionParts) {
+        const [, , minor, patch] = versionParts;
+        if (minor === '0' && patch === '0') {
+          triggerFallback = true;
+        }
+      }
     }
 
     if (triggerFallback) {
-      // Only consider fully formed Unity versions with 'f' suffix and same major.minor
-      const [major, minor] = this.version.split('.');
+      // Determine major/minor for fallback, supporting wildcards
+      let major: string | undefined, minor: string | undefined;
+      const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))(?:\.(\d+|x|\*))?/);
+
+      if (xMatch) {
+        major = xMatch[1];
+        minor = xMatch[2];
+      }
+
       const releases = versions
         .map(release => {
-          const match = release.match(/(?<version>\d{4}\.\d+\.\d+f\d+)/);
+          const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
           return match && match.groups ? match.groups.version : null;
         })
         .filter(Boolean)
         .filter(version => {
-          if (!version) return false;
-          const parts = version.split('.');
-          return parts[0] === major && parts[1] === minor;
+          if (!version) { return false; }
+          const parts = version.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+          if (!parts || parts[4] !== 'f') { return false; }
+          // major must match
+          if (major && parts[1] !== major) { return false; }
+          // minor: if 'x' or '*', allow any, else must match
+          if (minor && minor !== 'x' && minor !== '*' && parts[2] !== minor) { return false; }
+          return true;
         });
 
-      // Sort by full Unity version string (descending)
+      // Sort by minor, patch, and f number descending
       releases.sort((a, b) => {
-        // Compare by year, minor, patch, then f number
         const parse = (v: string) => {
-          const match = v.match(/(\d{4})\.(\d+)\.(\d+)f(\d+)/);
-          return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])] : [0, 0, 0, 0];
+          const match = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+          return match ? [parseInt(match[2]), parseInt(match[3]), parseInt(match[5])] : [0, 0, 0];
         };
-        const [ay, am, ap, af] = parse(a);
-        const [by, bm, bp, bf] = parse(b);
-        if (ay !== by) return by - ay;
-        if (am !== bm) return bm - am;
-        if (ap !== bp) return bp - ap;
+
+        const [aminor, apatch, af] = parse(a);
+        const [bminor, bpatch, bf] = parse(b);
+
+        if (aminor !== bminor) { return bminor - aminor; }
+        if (apatch !== bpatch) { return bpatch - apatch; }
         return bf - af;
       });
 

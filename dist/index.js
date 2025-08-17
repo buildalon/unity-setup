@@ -36495,43 +36495,57 @@ class UnityVersion {
         if (/\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version)) {
             triggerFallback = true;
         }
-        const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
-        let minorIsZero = false, patchIsZero = false;
-        if (versionParts) {
-            const [, , minor, patch] = versionParts;
-            minorIsZero = minor === '0';
-            patchIsZero = patch === '0';
-        }
-        if (minorIsZero && patchIsZero) {
-            triggerFallback = true;
+        else {
+            const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
+            if (versionParts) {
+                const [, , minor, patch] = versionParts;
+                if (minor === '0' && patch === '0') {
+                    triggerFallback = true;
+                }
+            }
         }
         if (triggerFallback) {
-            const [major, minor] = this.version.split('.');
+            let major, minor;
+            const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))(?:\.(\d+|x|\*))?/);
+            if (xMatch) {
+                major = xMatch[1];
+                minor = xMatch[2];
+            }
             const releases = versions
                 .map(release => {
-                const match = release.match(/(?<version>\d{4}\.\d+\.\d+f\d+)/);
+                const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
                 return match && match.groups ? match.groups.version : null;
             })
                 .filter(Boolean)
                 .filter(version => {
-                if (!version)
+                if (!version) {
                     return false;
-                const parts = version.split('.');
-                return parts[0] === major && parts[1] === minor;
+                }
+                const parts = version.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                if (!parts || parts[4] !== 'f') {
+                    return false;
+                }
+                if (major && parts[1] !== major) {
+                    return false;
+                }
+                if (minor && minor !== 'x' && minor !== '*' && parts[2] !== minor) {
+                    return false;
+                }
+                return true;
             });
             releases.sort((a, b) => {
                 const parse = (v) => {
-                    const match = v.match(/(\d{4})\.(\d+)\.(\d+)f(\d+)/);
-                    return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])] : [0, 0, 0, 0];
+                    const match = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    return match ? [parseInt(match[2]), parseInt(match[3]), parseInt(match[5])] : [0, 0, 0];
                 };
-                const [ay, am, ap, af] = parse(a);
-                const [by, bm, bp, bf] = parse(b);
-                if (ay !== by)
-                    return by - ay;
-                if (am !== bm)
-                    return bm - am;
-                if (ap !== bp)
-                    return bp - ap;
+                const [aminor, apatch, af] = parse(a);
+                const [bminor, bpatch, bf] = parse(b);
+                if (aminor !== bminor) {
+                    return bminor - aminor;
+                }
+                if (apatch !== bpatch) {
+                    return bpatch - apatch;
+                }
                 return bf - af;
             });
             core.debug(`Searching for fallback match for ${this.version}:`);
