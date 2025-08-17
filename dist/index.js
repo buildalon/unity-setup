@@ -36491,6 +36491,10 @@ class UnityVersion {
             core.debug(`Exact match found for ${this.version}`);
             return new UnityVersion(this.version, null, this.architecture);
         }
+        let triggerFallback = false;
+        if (/\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version)) {
+            triggerFallback = true;
+        }
         const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
         let minorIsZero = false, patchIsZero = false;
         if (versionParts) {
@@ -36499,6 +36503,9 @@ class UnityVersion {
             patchIsZero = patch === '0';
         }
         if (minorIsZero && patchIsZero) {
+            triggerFallback = true;
+        }
+        if (triggerFallback) {
             const [major, minor] = this.version.split('.');
             const releases = versions
                 .map(release => {

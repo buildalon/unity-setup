@@ -49,7 +49,14 @@ export class UnityVersion {
       return new UnityVersion(this.version, null, this.architecture);
     }
 
-    // if the input version contains `.x` or `.0` then we need to do a fallback match
+    // Fallback logic: trigger if minor/patch are zero OR if this.version contains .x or .*
+    let triggerFallback = false;
+    // Check for .x or .* in this.version (e.g., 6000.0.x, 6000.0.*)
+    if (/\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version)) {
+      triggerFallback = true;
+    }
+
+    // Also trigger fallback if both minor and patch are zero
     const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
     let minorIsZero = false, patchIsZero = false;
 
@@ -60,6 +67,10 @@ export class UnityVersion {
     }
 
     if (minorIsZero && patchIsZero) {
+      triggerFallback = true;
+    }
+
+    if (triggerFallback) {
       // Only consider fully formed Unity versions with 'f' suffix and same major.minor
       const [major, minor] = this.version.split('.');
       const releases = versions
