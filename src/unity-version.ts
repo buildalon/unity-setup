@@ -19,8 +19,8 @@ export class UnityVersion {
   }
 
   static compare(a: UnityVersion, b: UnityVersion): number {
-  // Compare using coerced SemVer objects to handle partial inputs (e.g., "2022") safely
-  return semver.compare(a.semVer, b.semVer, true);
+    // Compare using coerced SemVer objects to handle partial inputs (e.g., "2022") safely
+    return semver.compare(a.semVer, b.semVer, true);
   }
 
   toString(): string {
@@ -28,9 +28,9 @@ export class UnityVersion {
   }
 
   isLegacy(): boolean {
-    // Consider all pre-2017 versions (e.g., 5.x, 4.x) as legacy editors
+    // Consider all pre-5 versions (e.g. 4.x) as legacy editors
     // Use coerced SemVer to avoid errors on partial inputs like "2022"
-    return this.semVer.major < 2017;
+    return this.semVer.major < 5;
   }
 
   isArmCompatible(): boolean {
