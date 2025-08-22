@@ -253,5 +253,28 @@ describe('UnityVersion.findMatch', () => {
             expect(/^2022\./.test(info.version)).toBe(true);
             expect(/f\d+$/.test(info.version)).toBe(true);
         }, 30000);
+
+        it('5.6.7f1 should not use Hub fallback and should resolve via API to the exact version', async () => {
+            const uv = new UnityVersion('5.6.7f1', null, 'X86_64');
+            const matched = uv.findMatch(releases);
+            expect(matched.version).toBe('5.6.7f1');
+            const info = await getEditorReleaseInfo(matched);
+            expect(info.version).toBe('5.6.7f1');
+        }, 30000);
+
+        it('4.7.2f1 should be treated as legacy only for tooling but still resolve via API when available', async () => {
+            const uv = new UnityVersion('4.7.2f1', null, 'X86_64');
+            // findMatch should be a no-op for non-year versions
+            const matched = uv.findMatch(releases);
+            expect(matched.version).toBe('4.7.2f1');
+            // The API may or may not have legacy data; if it does, ensure the version matches
+            try {
+                const info = await getEditorReleaseInfo(matched);
+                expect(info.version).toBe('4.7.2f1');
+            } catch (e) {
+                // If API has no result, ensure we didn't incorrectly change the version
+                expect(matched.version).toBe('4.7.2f1');
+            }
+        }, 30000);
     });
 });

@@ -366,7 +366,7 @@ export async function getLatestHubReleases(): Promise<string[]> {
     //  - "2022.3.62f1 installed at C:\\..."
     //  - "2022.3.62f1, installed at ..." (older format)
     // We extract the first version token and discard the rest.
-    const versionRegex = /(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
+    const versionRegex = /(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
     return (await execUnityHub([`editors`, `--releases`]))
         .split('\n')
         .map(line => line.trim())
@@ -564,12 +564,12 @@ export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<
     // If we don't have a fully-qualified version, use the most specific prefix available:
     //  - "YYYY.M" when provided (e.g., 6000.1)
     //  - otherwise "YYYY"
-    const fullUnityVersionPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
+    const fullUnityVersionPattern = /^\d+\.\d+\.\d+[abcfpx]\d+$/;
     let version: string;
     if (fullUnityVersionPattern.test(unityVersion.version)) {
         version = unityVersion.version;
     } else {
-        const mm = unityVersion.version.match(/^(\d{4})(?:\.(\d+))?/);
+        const mm = unityVersion.version.match(/^(\d{1,4})(?:\.(\d+))?/);
         if (mm) {
             version = mm[2] ? `${mm[1]}.${mm[2]}` : mm[1];
         } else {
@@ -597,6 +597,7 @@ export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
+    core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
     // Filter to stable 'f' releases only unless the user explicitly asked for a pre-release
     const isExplicitPrerelease = /[abcpx]$/.test(unityVersion.version) || /[abcpx]/.test(unityVersion.version);
     const results = (data.results || [])
@@ -604,7 +605,7 @@ export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<
         // Sort descending by minor, patch, f-number where possible; fallback to semver coercion
         .sort((a, b) => {
             const parse = (v: string) => {
-                const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                const m = v.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
                 return m ? [parseInt(m[2]), parseInt(m[3]), m[4], parseInt(m[5])] as [number, number, string, number] : [0, 0, 'f', 0] as [number, number, string, number];
             };
             const [aMinor, aPatch, aTag, aNum] = parse(a.version);
@@ -630,7 +631,7 @@ export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<
 async function fallbackVersionLookup(unityVersion: UnityVersion): Promise<UnityVersion> {
     let version = unityVersion.version.split('.')[0];
 
-    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
+    if (/^\d+\.0(\.0)?$/.test(unityVersion.version)) {
         version = unityVersion.version.split('.')[0];
     }
 

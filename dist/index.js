@@ -36198,7 +36198,7 @@ async function patchBeeBackend(editorPath) {
     }
 }
 async function getLatestHubReleases() {
-    const versionRegex = /(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
+    const versionRegex = /(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
     return (await execUnityHub([`editors`, `--releases`]))
         .split('\n')
         .map(line => line.trim())
@@ -36383,13 +36383,13 @@ async function getModulesContent(modulesPath) {
     return JSON.parse(modulesContent);
 }
 async function getEditorReleaseInfo(unityVersion) {
-    const fullUnityVersionPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
+    const fullUnityVersionPattern = /^\d+\.\d+\.\d+[abcfpx]\d+$/;
     let version;
     if (fullUnityVersionPattern.test(unityVersion.version)) {
         version = unityVersion.version;
     }
     else {
-        const mm = unityVersion.version.match(/^(\d{4})(?:\.(\d+))?/);
+        const mm = unityVersion.version.match(/^(\d{1,4})(?:\.(\d+))?/);
         if (mm) {
             version = mm[2] ? `${mm[1]}.${mm[2]}` : mm[1];
         }
@@ -36414,12 +36414,13 @@ async function getEditorReleaseInfo(unityVersion) {
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
+    core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
     const isExplicitPrerelease = /[abcpx]$/.test(unityVersion.version) || /[abcpx]/.test(unityVersion.version);
     const results = (data.results || [])
         .filter(r => isExplicitPrerelease ? true : /f\d+$/.test(r.version))
         .sort((a, b) => {
         const parse = (v) => {
-            const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+            const m = v.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
             return m ? [parseInt(m[2]), parseInt(m[3]), m[4], parseInt(m[5])] : [0, 0, 'f', 0];
         };
         const [aMinor, aPatch, aTag, aNum] = parse(a.version);
@@ -36441,7 +36442,7 @@ async function getEditorReleaseInfo(unityVersion) {
 }
 async function fallbackVersionLookup(unityVersion) {
     let version = unityVersion.version.split('.')[0];
-    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
+    if (/^\d+\.0(\.0)?$/.test(unityVersion.version)) {
         version = unityVersion.version.split('.')[0];
     }
     const url = `https://unity.com/releases/editor/whats-new/${version}`;
@@ -36504,7 +36505,7 @@ class UnityVersion {
         return this.changeset ? `${this.version} (${this.changeset})` : this.version;
     }
     isLegacy() {
-        return this.semVer.major < 5;
+        return semver.major(this.version, { loose: true }) <= 4;
     }
     isArmCompatible() {
         if (this.semVer.major < 2021) {
@@ -36513,9 +36514,9 @@ class UnityVersion {
         return semver.compare(this.semVer, '2021.0.0', true) >= 0;
     }
     findMatch(versions) {
-        const fullPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
+        const fullPattern = /^\d{1,4}\.\d+\.\d+[abcfpx]\d+$/;
         const exactMatch = versions.find(release => {
-            const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
+            const match = release.match(/(?<version>\d{1,4}\.\d+\.\d+[abcfpx]\d+)/);
             return match && match.groups && match.groups.version === this.version;
         });
         if (exactMatch) {
@@ -36526,14 +36527,14 @@ class UnityVersion {
         const triggerFallback = hasWildcard || !fullPattern.test(this.version);
         if (triggerFallback) {
             let major, minor;
-            const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?/);
+            const xMatch = this.version.match(/^(\d{1,4})(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?/);
             if (xMatch) {
                 major = xMatch[1];
                 minor = xMatch[2];
             }
             let releases = versions
                 .map(release => {
-                const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
+                const match = release.match(/(?<version>\d{1,4}\.\d+\.\d+[abcfpx]\d+)/);
                 return match && match.groups ? match.groups.version : null;
             })
                 .filter(Boolean)
@@ -36541,7 +36542,7 @@ class UnityVersion {
                 if (!version) {
                     return false;
                 }
-                const parts = version.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                const parts = version.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
                 if (!parts || parts[4] !== 'f') {
                     return false;
                 }
@@ -36556,7 +36557,7 @@ class UnityVersion {
             if (releases.length === 0 && minor === '0') {
                 releases = versions
                     .map(release => {
-                    const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
+                    const match = release.match(/(?<version>\d{1,4}\.\d+\.\d+[abcfpx]\d+)/);
                     return match && match.groups ? match.groups.version : null;
                 })
                     .filter(Boolean)
@@ -36564,7 +36565,7 @@ class UnityVersion {
                     if (!version) {
                         return false;
                     }
-                    const parts = version.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    const parts = version.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
                     if (!parts || parts[4] !== 'f') {
                         return false;
                     }
@@ -36576,7 +36577,7 @@ class UnityVersion {
             }
             releases.sort((a, b) => {
                 const parse = (v) => {
-                    const match = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    const match = v.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
                     return match ? [parseInt(match[2]), parseInt(match[3]), parseInt(match[5])] : [0, 0, 0];
                 };
                 const [aMinor, aPatch, af] = parse(a);
