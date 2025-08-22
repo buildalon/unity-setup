@@ -35680,7 +35680,6 @@ function getUnityVersionsFromInput(architecture) {
         const versionParts = version.split('.');
         switch (versionParts.length) {
             case 1:
-                version = version + '.0.0';
                 break;
             case 2:
                 version = version + '.0';
