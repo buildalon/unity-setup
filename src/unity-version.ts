@@ -19,9 +19,8 @@ export class UnityVersion {
   }
 
   static compare(a: UnityVersion, b: UnityVersion): number {
-    const vA = a.version;
-    const vB = b.version;
-    return semver.compare(vA, vB, true);
+  // Compare using coerced SemVer objects to handle partial inputs (e.g., "2022") safely
+  return semver.compare(a.semVer, b.semVer, true);
   }
 
   toString(): string {
@@ -29,7 +28,8 @@ export class UnityVersion {
   }
 
   isLegacy(): boolean {
-    return semver.major(this.version, { loose: true }) <= 4;
+  // Use coerced SemVer to avoid errors on major-only strings like "2022"
+  return this.semVer.major <= 4;
   }
 
   isArmCompatible(): boolean {

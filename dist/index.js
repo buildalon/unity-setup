@@ -36498,15 +36498,13 @@ class UnityVersion {
         }
     }
     static compare(a, b) {
-        const vA = a.version;
-        const vB = b.version;
-        return semver.compare(vA, vB, true);
+        return semver.compare(a.semVer, b.semVer, true);
     }
     toString() {
         return this.changeset ? `${this.version} (${this.changeset})` : this.version;
     }
     isLegacy() {
-        return semver.major(this.version, { loose: true }) <= 4;
+        return this.semVer.major <= 4;
     }
     isArmCompatible() {
         if (this.semVer.major < 2021) {
