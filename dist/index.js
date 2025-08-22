@@ -36504,7 +36504,7 @@ class UnityVersion {
         return this.changeset ? `${this.version} (${this.changeset})` : this.version;
     }
     isLegacy() {
-        return this.semVer.major <= 4;
+        return this.semVer.major < 2017;
     }
     isArmCompatible() {
         if (this.semVer.major < 2021) {

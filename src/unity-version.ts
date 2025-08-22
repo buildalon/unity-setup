@@ -28,8 +28,9 @@ export class UnityVersion {
   }
 
   isLegacy(): boolean {
-  // Use coerced SemVer to avoid errors on major-only strings like "2022"
-  return this.semVer.major <= 4;
+    // Consider all pre-2017 versions (e.g., 5.x, 4.x) as legacy editors
+    // Use coerced SemVer to avoid errors on partial inputs like "2022"
+    return this.semVer.major < 2017;
   }
 
   isArmCompatible(): boolean {
