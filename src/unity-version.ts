@@ -38,6 +38,7 @@ export class UnityVersion {
   }
 
   findMatch(versions: string[]): UnityVersion {
+    const fullPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
     const exactMatch = versions.find(release => {
       // Only match fully formed Unity versions (e.g., 2021.3.5f1, 2022.1.0b12)
       const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
@@ -49,27 +50,15 @@ export class UnityVersion {
       return new UnityVersion(this.version, null, this.architecture);
     }
 
-    // Fallback logic: trigger if minor/patch are zero OR if this.version contains .x or .*
-    let triggerFallback = false;
-    // Check for .x or .* in this.version (e.g., 6000.0.x, 6000.0.*)
-    if (/\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version)) {
-      triggerFallback = true;
-    } else {
-      // Also trigger fallback if both minor and patch are zero (e.g., 6000.0.0)
-      const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
-
-      if (versionParts) {
-        const [, , minor, patch] = versionParts;
-        if (minor === '0' && patch === '0') {
-          triggerFallback = true;
-        }
-      }
-    }
+    // Trigger fallback for any non fully-qualified version or wildcard patterns
+    // e.g., "6000", "6000.1", "6000.0.0", "2022.x", "6000.*"
+    const hasWildcard = /\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version);
+    const triggerFallback = hasWildcard || !fullPattern.test(this.version);
 
     if (triggerFallback) {
-      // Determine major/minor for fallback, supporting wildcards
+      // Determine major/minor for fallback, supporting wildcards and partials
       let major: string | undefined, minor: string | undefined;
-      const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))(?:\.(\d+|x|\*))?/);
+      const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?/);
 
       if (xMatch) {
         major = xMatch[1];

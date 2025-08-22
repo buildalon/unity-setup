@@ -36384,9 +36384,19 @@ async function getModulesContent(modulesPath) {
 }
 async function getEditorReleaseInfo(unityVersion) {
     const fullUnityVersionPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
-    let version = fullUnityVersionPattern.test(unityVersion.version)
-        ? unityVersion.version
-        : unityVersion.version.split('.')[0];
+    let version;
+    if (fullUnityVersionPattern.test(unityVersion.version)) {
+        version = unityVersion.version;
+    }
+    else {
+        const mm = unityVersion.version.match(/^(\d{4})(?:\.(\d+))?/);
+        if (mm) {
+            version = mm[2] ? `${mm[1]}.${mm[2]}` : mm[1];
+        }
+        else {
+            version = unityVersion.version.split('.')[0];
+        }
+    }
     const releasesClient = new unity_releases_api_1.UnityReleasesClient();
     const request = {
         query: {
@@ -36404,8 +36414,30 @@ async function getEditorReleaseInfo(unityVersion) {
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
-    core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
-    return data.results[0];
+    const isExplicitPrerelease = /[abcp]$/.test(unityVersion.version) || /[abcp]/.test(unityVersion.version);
+    const results = (data.results || [])
+        .filter(r => isExplicitPrerelease ? true : /f\d+$/.test(r.version))
+        .sort((a, b) => {
+        const parse = (v) => {
+            const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+            return m ? [parseInt(m[2]), parseInt(m[3]), m[4], parseInt(m[5])] : [0, 0, 'f', 0];
+        };
+        const [aMinor, aPatch, aTag, aNum] = parse(a.version);
+        const [bMinor, bPatch, bTag, bNum] = parse(b.version);
+        if (aMinor !== bMinor)
+            return bMinor - aMinor;
+        if (aPatch !== bPatch)
+            return bPatch - aPatch;
+        const order = { f: 5, p: 4, c: 3, b: 2, a: 1, x: 0 };
+        if (order[aTag] !== order[bTag])
+            return (order[bTag] || 0) - (order[aTag] || 0);
+        return bNum - aNum;
+    });
+    if (results.length === 0) {
+        throw new Error(`No suitable Unity releases (stable) found for version: ${version}`);
+    }
+    core.debug(`Found Unity Release: ${JSON.stringify({ query: version, picked: results[0] }, null, 2)}`);
+    return results[0];
 }
 async function fallbackVersionLookup(unityVersion) {
     let version = unityVersion.version.split('.')[0];
@@ -36483,6 +36515,7 @@ class UnityVersion {
         return semver.compare(this.semVer, '2021.0.0', true) >= 0;
     }
     findMatch(versions) {
+        const fullPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
         const exactMatch = versions.find(release => {
             const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
             return match && match.groups && match.groups.version === this.version;
@@ -36491,22 +36524,11 @@ class UnityVersion {
             core.debug(`Exact match found for ${this.version}`);
             return new UnityVersion(this.version, null, this.architecture);
         }
-        let triggerFallback = false;
-        if (/\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version)) {
-            triggerFallback = true;
-        }
-        else {
-            const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
-            if (versionParts) {
-                const [, , minor, patch] = versionParts;
-                if (minor === '0' && patch === '0') {
-                    triggerFallback = true;
-                }
-            }
-        }
+        const hasWildcard = /\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version);
+        const triggerFallback = hasWildcard || !fullPattern.test(this.version);
         if (triggerFallback) {
             let major, minor;
-            const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))(?:\.(\d+|x|\*))?/);
+            const xMatch = this.version.match(/^(\d{4})(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?/);
             if (xMatch) {
                 major = xMatch[1];
                 minor = xMatch[2];
