@@ -36383,7 +36383,7 @@ async function getModulesContent(modulesPath) {
     return JSON.parse(modulesContent);
 }
 async function getEditorReleaseInfo(unityVersion) {
-    const fullUnityVersionPattern = /^\d+\.\d+\.\d+[abcfpx]\d+$/;
+    const fullUnityVersionPattern = /^\d{1,4}\.\d+\.\d+[abcfpx]\d+$/;
     let version;
     if (fullUnityVersionPattern.test(unityVersion.version)) {
         version = unityVersion.version;
@@ -36505,7 +36505,7 @@ class UnityVersion {
         return this.changeset ? `${this.version} (${this.changeset})` : this.version;
     }
     isLegacy() {
-        return semver.major(this.version, { loose: true }) <= 4;
+        return this.semVer.major <= 4;
     }
     isArmCompatible() {
         if (this.semVer.major < 2021) {

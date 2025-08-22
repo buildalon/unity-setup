@@ -28,7 +28,7 @@ export class UnityVersion {
   }
 
   isLegacy(): boolean {
-    return semver.major(this.version, { loose: true }) <= 4;
+    return this.semVer.major <= 4;
   }
 
   isArmCompatible(): boolean {

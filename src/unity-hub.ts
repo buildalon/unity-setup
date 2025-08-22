@@ -564,7 +564,7 @@ export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<
     // If we don't have a fully-qualified version, use the most specific prefix available:
     //  - "YYYY.M" when provided (e.g., 6000.1)
     //  - otherwise "YYYY"
-    const fullUnityVersionPattern = /^\d+\.\d+\.\d+[abcfpx]\d+$/;
+    const fullUnityVersionPattern = /^\d{1,4}\.\d+\.\d+[abcfpx]\d+$/;
     let version: string;
     if (fullUnityVersionPattern.test(unityVersion.version)) {
         version = unityVersion.version;
