@@ -35680,7 +35680,6 @@ function getUnityVersionsFromInput(architecture) {
         const versionParts = version.split('.');
         switch (versionParts.length) {
             case 1:
-                version = version + '.0.0';
                 break;
             case 2:
                 version = version + '.0';
@@ -35857,7 +35856,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Get = Get;
 exports.SetInstallPath = SetInstallPath;
 exports.UnityEditor = UnityEditor;
+exports.getLatestHubReleases = getLatestHubReleases;
 exports.ListInstalledEditors = ListInstalledEditors;
+exports.getEditorReleaseInfo = getEditorReleaseInfo;
 const asar = __nccwpck_require__(6561);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
@@ -36197,7 +36198,16 @@ async function patchBeeBackend(editorPath) {
     }
 }
 async function getLatestHubReleases() {
-    return (await execUnityHub([`editors`, `--releases`])).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    const versionRegex = /(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
+    return (await execUnityHub([`editors`, `--releases`]))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+        const match = line.match(versionRegex);
+        return match ? match[0] : '';
+    })
+        .filter(v => v.length > 0);
 }
 async function installUnity(unityVersion, modules) {
     if (unityVersion.isLegacy()) {
@@ -36275,7 +36285,7 @@ async function checkInstalledEditors(unityVersion, failOnEmpty, installPath = un
         const paths = await ListInstalledEditors();
         core.debug(`Paths: ${JSON.stringify(paths, null, 2)}`);
         if (paths && paths.length > 0) {
-            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*, installed at (?<editorPath>.*)/;
+            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*,? installed at (?<editorPath>.*)/;
             const matches = paths.map(path => path.match(pattern)).filter(match => match && match.groups);
             core.debug(`Matches: ${JSON.stringify(matches, null, 2)}`);
             if (paths.length !== matches.length) {
@@ -36373,12 +36383,19 @@ async function getModulesContent(modulesPath) {
     return JSON.parse(modulesContent);
 }
 async function getEditorReleaseInfo(unityVersion) {
-    let version = unityVersion.version;
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
+    const fullUnityVersionPattern = /^\d{1,4}\.\d+\.\d+[abcfpx]\d+$/;
+    let version;
+    if (fullUnityVersionPattern.test(unityVersion.version)) {
+        version = unityVersion.version;
     }
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
+    else {
+        const mm = unityVersion.version.match(/^(\d{1,4})(?:\.(\d+))?/);
+        if (mm) {
+            version = mm[2] ? `${mm[1]}.${mm[2]}` : mm[1];
+        }
+        else {
+            version = unityVersion.version.split('.')[0];
+        }
     }
     const releasesClient = new unity_releases_api_1.UnityReleasesClient();
     const request = {
@@ -36398,19 +36415,52 @@ async function getEditorReleaseInfo(unityVersion) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
     core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
-    return data.results[0];
+    const isExplicitPrerelease = /[abcpx]$/.test(unityVersion.version) || /[abcpx]/.test(unityVersion.version);
+    const results = (data.results || [])
+        .filter(r => isExplicitPrerelease ? true : /f\d+$/.test(r.version))
+        .sort((a, b) => {
+        const parse = (v) => {
+            const m = v.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+            return m ? [parseInt(m[2]), parseInt(m[3]), m[4], parseInt(m[5])] : [0, 0, 'f', 0];
+        };
+        const [aMinor, aPatch, aTag, aNum] = parse(a.version);
+        const [bMinor, bPatch, bTag, bNum] = parse(b.version);
+        if (aMinor !== bMinor)
+            return bMinor - aMinor;
+        if (aPatch !== bPatch)
+            return bPatch - aPatch;
+        const order = { f: 5, p: 4, c: 3, b: 2, a: 1, x: 0 };
+        if (order[aTag] !== order[bTag])
+            return (order[bTag] || 0) - (order[aTag] || 0);
+        return bNum - aNum;
+    });
+    if (results.length === 0) {
+        throw new Error(`No suitable Unity releases (stable) found for version: ${version}`);
+    }
+    core.debug(`Found Unity Release: ${JSON.stringify({ query: version, picked: results[0] }, null, 2)}`);
+    return results[0];
 }
 async function fallbackVersionLookup(unityVersion) {
-    const splitVersion = unityVersion.version.split(/[fab]/)[0];
-    const url = `https://unity.com/releases/editor/whats-new/${splitVersion}`;
+    let version = unityVersion.version.split('.')[0];
+    if (/^\d{1,4}\.0(\.0)?$/.test(unityVersion.version)) {
+        version = unityVersion.version.split('.')[0];
+    }
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
     core.debug(`Fetching release page: "${url}"`);
-    const response = await fetch(url);
+    let response;
+    try {
+        response = await fetch(url);
+    }
+    catch (error) {
+        core.warning(`Failed to fetch changeset for Unity ${unityVersion.toString()} [network error]: ${error}`);
+        return unityVersion;
+    }
     if (!response.ok) {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
     const data = await response.text();
     core.debug(`Release page content:\n${data}`);
-    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return new unity_version_1.UnityVersion(match.groups.version, match.groups.changeset, unityVersion.architecture);
     }
@@ -36431,6 +36481,10 @@ exports.UnityVersion = void 0;
 const semver = __nccwpck_require__(1383);
 const core = __nccwpck_require__(2186);
 class UnityVersion {
+    version;
+    changeset;
+    architecture;
+    semVer;
     constructor(version, changeset, architecture) {
         this.version = version;
         this.changeset = changeset;
@@ -36445,15 +36499,13 @@ class UnityVersion {
         }
     }
     static compare(a, b) {
-        const vA = a.version;
-        const vB = b.version;
-        return semver.compare(vA, vB, true);
+        return semver.compare(a.semVer, b.semVer, true);
     }
     toString() {
         return this.changeset ? `${this.version} (${this.changeset})` : this.version;
     }
     isLegacy() {
-        return semver.major(this.version, { loose: true }) <= 4;
+        return this.semVer.major <= 4;
     }
     isArmCompatible() {
         if (this.semVer.major < 2021) {
@@ -36462,48 +36514,89 @@ class UnityVersion {
         return semver.compare(this.semVer, '2021.0.0', true) >= 0;
     }
     findMatch(versions) {
-        const exactMatch = versions.find(r => {
-            const match = r.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)/);
+        const fullPattern = /^\d{1,4}\.\d+\.\d+[abcfpx]\d+$/;
+        const exactMatch = versions.find(release => {
+            const match = release.match(/(?<version>\d{1,4}\.\d+\.\d+[abcfpx]\d+)/);
             return match && match.groups && match.groups.version === this.version;
         });
         if (exactMatch) {
             core.debug(`Exact match found for ${this.version}`);
             return new UnityVersion(this.version, null, this.architecture);
         }
-        const versionParts = this.version.match(/^(\d+)\.(\d+)\.(\d+)/);
-        let minorIsZero = false, patchIsZero = false;
-        if (versionParts) {
-            const [, , minor, patch] = versionParts;
-            minorIsZero = minor === '0';
-            patchIsZero = patch === '0';
-        }
-        if (minorIsZero && patchIsZero) {
-            const validReleases = versions
-                .map(release => semver.coerce(release))
-                .filter(release => release && semver.satisfies(release, `^${this.semVer}`))
-                .sort((a, b) => semver.compare(a, b));
-            core.debug(`Searching for fallback match for ${this.version}:`);
-            validReleases.forEach(release => {
-                core.debug(`  > ${release}`);
+        const hasWildcard = /\.x($|[^\w])/.test(this.version) || /\.\*($|[^\w])/.test(this.version);
+        const triggerFallback = hasWildcard || !fullPattern.test(this.version);
+        if (triggerFallback) {
+            let major, minor;
+            const xMatch = this.version.match(/^(\d{1,4})(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?/);
+            if (xMatch) {
+                major = xMatch[1];
+                minor = xMatch[2];
+            }
+            let releases = versions
+                .map(release => {
+                const match = release.match(/(?<version>\d{1,4}\.\d+\.\d+[abcfpx]\d+)/);
+                return match && match.groups ? match.groups.version : null;
+            })
+                .filter(Boolean)
+                .filter(version => {
+                if (!version) {
+                    return false;
+                }
+                const parts = version.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                if (!parts || parts[4] !== 'f') {
+                    return false;
+                }
+                if (major && parts[1] !== major) {
+                    return false;
+                }
+                if (minor && minor !== 'x' && minor !== '*' && parts[2] !== minor) {
+                    return false;
+                }
+                return true;
             });
-            for (const release of validReleases) {
-                if (!release) {
-                    continue;
+            if (releases.length === 0 && minor === '0') {
+                releases = versions
+                    .map(release => {
+                    const match = release.match(/(?<version>\d{1,4}\.\d+\.\d+[abcfpx]\d+)/);
+                    return match && match.groups ? match.groups.version : null;
+                })
+                    .filter(Boolean)
+                    .filter(version => {
+                    if (!version) {
+                        return false;
+                    }
+                    const parts = version.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    if (!parts || parts[4] !== 'f') {
+                        return false;
+                    }
+                    if (major && parts[1] !== major) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            releases.sort((a, b) => {
+                const parse = (v) => {
+                    const match = v.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    return match ? [parseInt(match[2]), parseInt(match[3]), parseInt(match[5])] : [0, 0, 0];
+                };
+                const [aMinor, aPatch, af] = parse(a);
+                const [bMinor, bPatch, bf] = parse(b);
+                if (aMinor !== bMinor) {
+                    return bMinor - aMinor;
                 }
-                const originalRelease = versions.find(r => r.includes(release.version));
-                if (!originalRelease) {
-                    continue;
+                if (aPatch !== bPatch) {
+                    return bPatch - aPatch;
                 }
-                const match = originalRelease.match(/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?/);
-                if (!(match && match.groups && match.groups.version)) {
-                    continue;
-                }
-                if ((this.version.includes('a') && match.groups.version.includes('a')) ||
-                    (this.version.includes('b') && match.groups.version.includes('b')) ||
-                    match.groups.version.includes('f')) {
-                    core.debug(`Found fallback Unity ${match.groups.version}`);
-                    return new UnityVersion(match.groups.version, null, this.architecture);
-                }
+                return bf - af;
+            });
+            core.debug(`Searching for fallback match for ${this.version}:`);
+            releases.forEach(version => {
+                core.debug(`  > ${version}`);
+            });
+            if (releases.length > 0) {
+                core.debug(`Found fallback Unity ${releases[0]}`);
+                return new UnityVersion(releases[0], null, this.architecture);
             }
         }
         core.debug(`No matching Unity version found for ${this.version}`);
@@ -46678,7 +46771,7 @@ function blockString({ comment, type, value }, ctx, onComment, onChompKeep) {
     const { blockQuote, commentString, lineWidth } = ctx.options;
     // 1. Block can't end in whitespace unless the last line is non-empty.
     // 2. Strings consisting of only whitespace are best rendered explicitly.
-    if (!blockQuote || /\n[\t ]+$/.test(value) || /^\s*$/.test(value)) {
+    if (!blockQuote || /\n[\t ]+$/.test(value)) {
         return quotedString(value, ctx);
     }
     const indent = ctx.indent ||

@@ -35,3 +35,69 @@ jobs:
           echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
           echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
           echo "UNITY_PROJECT_PATH: '${{ env.UNITY_PROJECT_PATH }}'"
+          # If unity-version is None, UNITY_EDITOR_PATH must be empty
+          if [[ "${{ matrix.unity-version }}" == "None" ]]; then
+            if [[ -n "${{ env.UNITY_EDITOR_PATH }}" ]]; then
+              echo "Error: UNITY_EDITOR_PATH should be empty when unity-version is None, but got '${{ env.UNITY_EDITOR_PATH }}'"
+              exit 1
+            else
+              echo "UNITY_EDITOR_PATH is correctly empty for unity-version=None."
+              exit 0
+            fi
+          fi
+          # Extract Unity version from UNITY_EDITOR_PATH using regex
+          if [[ "${{ env.UNITY_EDITOR_PATH }}" =~ ([0-9]+\.[0-9]+\.[0-9]+[abcfpx]?[0-9]*) ]]; then
+            UNITY_EDITOR_VERSION="${BASH_REMATCH[1]}"
+            echo "Detected Unity Editor version: $UNITY_EDITOR_VERSION"
+          else
+            echo "Could not extract Unity version from UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
+            exit 1
+          fi
+          # Strip revision/hash from matrix.unity-version (e.g., '5.6.7f1 (e80cc3114ac1)' -> '5.6.7f1')
+          MATRIX_UNITY_VERSION_PREFIX="${{ matrix.unity-version }}"
+          if [[ "$MATRIX_UNITY_VERSION_PREFIX" =~ ^([0-9]+\.[0-9]+\.[0-9]+[abcfpx]?[0-9]*) ]]; then
+            MATRIX_UNITY_VERSION_PREFIX="${BASH_REMATCH[1]}"
+          fi
+          # Support matrix.unity-version patterns ending with .x after major.minor (e.g., 2021.3.x)
+          if [[ "${{ matrix.unity-version }}" =~ ^([0-9]+\.[0-9]+)\.x$ ]]; then
+            UNITY_MAJOR_MINOR="${BASH_REMATCH[1]}"
+            if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR_MINOR"* ]]; then
+              echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+            else
+              echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+              exit 1
+            fi
+          # Support matrix.unity-version patterns ending with .x after major (e.g., 2022.x)
+          elif [[ "${{ matrix.unity-version }}" =~ ^([0-9]+)\.x$ ]]; then
+            UNITY_MAJOR="${BASH_REMATCH[1]}"
+            if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR"* ]]; then
+              echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+            else
+              echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+              exit 1
+            fi
+          # Support matrix.unity-version patterns with only major.minor (e.g., 2020.3)
+          elif [[ "${{ matrix.unity-version }}" =~ ^([0-9]+\.[0-9]+)$ ]]; then
+            UNITY_MAJOR_MINOR="${BASH_REMATCH[1]}"
+            if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR_MINOR"* ]]; then
+              echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+            else
+              echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+              exit 1
+            fi
+          # Support matrix.unity-version patterns with only major (e.g., 6000)
+          elif [[ "${{ matrix.unity-version }}" =~ ^([0-9]+)$ ]]; then
+            UNITY_MAJOR="${BASH_REMATCH[1]}"
+            if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR"* ]]; then
+              echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+            else
+              echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+              exit 1
+            fi
+          elif [[ "$UNITY_EDITOR_VERSION" == "$MATRIX_UNITY_VERSION_PREFIX" ]]; then
+            echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
+          else
+            echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
+            exit 1
+          fi
+        shell: bash

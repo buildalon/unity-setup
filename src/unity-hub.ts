@@ -359,8 +359,23 @@ async function patchBeeBackend(editorPath: string): Promise<void> {
     }
 }
 
-async function getLatestHubReleases(): Promise<string[]> {
-    return (await execUnityHub([`editors`, `--releases`])).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+export async function getLatestHubReleases(): Promise<string[]> {
+    // Normalize output to bare version strings (e.g., 2022.3.62f1)
+    // Unity Hub can return lines like:
+    //  - "6000.0.56f1 (Apple silicon)"
+    //  - "2022.3.62f1 installed at C:\\..."
+    //  - "2022.3.62f1, installed at ..." (older format)
+    // We extract the first version token and discard the rest.
+    const versionRegex = /(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
+    return (await execUnityHub([`editors`, `--releases`]))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+            const match = line.match(versionRegex);
+            return match ? match[0] : '';
+        })
+        .filter(v => v.length > 0);
 }
 
 async function installUnity(unityVersion: UnityVersion, modules: string[]): Promise<string | undefined> {
@@ -443,7 +458,7 @@ async function checkInstalledEditors(unityVersion: UnityVersion, failOnEmpty: bo
         const paths: string[] = await ListInstalledEditors();
         core.debug(`Paths: ${JSON.stringify(paths, null, 2)}`);
         if (paths && paths.length > 0) {
-            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*, installed at (?<editorPath>.*)/;
+            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*,? installed at (?<editorPath>.*)/;
             const matches = paths.map(path => path.match(pattern)).filter(match => match && match.groups);
             core.debug(`Matches: ${JSON.stringify(matches, null, 2)}`);
             if (paths.length !== matches.length) {
@@ -544,15 +559,24 @@ async function getModulesContent(modulesPath: string): Promise<any> {
     return JSON.parse(modulesContent);
 }
 
-async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
-    let version: string = unityVersion.version;
-    // trim trailing .0 from version minor and patch if present
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
+export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
+    // Prefer querying the releases API with the exact fully-qualified Unity version (e.g., 2022.3.10f1).
+    // If we don't have a fully-qualified version, use the most specific prefix available:
+    //  - "YYYY.M" when provided (e.g., 6000.1)
+    //  - otherwise "YYYY"
+    const fullUnityVersionPattern = /^\d{1,4}\.\d+\.\d+[abcfpx]\d+$/;
+    let version: string;
+    if (fullUnityVersionPattern.test(unityVersion.version)) {
+        version = unityVersion.version;
+    } else {
+        const mm = unityVersion.version.match(/^(\d{1,4})(?:\.(\d+))?/);
+        if (mm) {
+            version = mm[2] ? `${mm[1]}.${mm[2]}` : mm[1];
+        } else {
+            version = unityVersion.version.split('.')[0];
+        }
     }
-    if (version.endsWith('.0')) {
-        version = version.slice(0, -2);
-    }
+
     const releasesClient = new UnityReleasesClient();
     const request: GetUnityReleasesData = {
         query: {
@@ -562,32 +586,78 @@ async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRe
             limit: 1,
         }
     };
+
     core.debug(`Get Unity Release: ${JSON.stringify(request, null, 2)}`);
     const { data, error } = await releasesClient.api.ReleaseService.getUnityReleases(request);
+
     if (error) {
         throw new Error(`Failed to get Unity releases: ${error}`);
     }
+
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
     core.debug(`Found Unity Release: ${JSON.stringify(data, null, 2)}`);
-    return data.results[0];
+    // Filter to stable 'f' releases only unless the user explicitly asked for a pre-release
+    const isExplicitPrerelease = /[abcpx]$/.test(unityVersion.version) || /[abcpx]/.test(unityVersion.version);
+    const results = (data.results || [])
+        .filter(r => isExplicitPrerelease ? true : /f\d+$/.test(r.version))
+        // Sort descending by minor, patch, f-number where possible; fallback to semver coercion
+        .sort((a, b) => {
+            const parse = (v: string) => {
+                const m = v.match(/(\d{1,4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                return m ? [parseInt(m[2]), parseInt(m[3]), m[4], parseInt(m[5])] as [number, number, string, number] : [0, 0, 'f', 0] as [number, number, string, number];
+            };
+            const [aMinor, aPatch, aTag, aNum] = parse(a.version);
+            const [bMinor, bPatch, bTag, bNum] = parse(b.version);
+            // Prefer higher minor
+            if (aMinor !== bMinor) return bMinor - aMinor;
+            // Then higher patch
+            if (aPatch !== bPatch) return bPatch - aPatch;
+            // Tag order: f > p > c > b > a > x
+            const order = { f: 5, p: 4, c: 3, b: 2, a: 1, x: 0 } as Record<string, number>;
+            if (order[aTag] !== order[bTag]) return (order[bTag] || 0) - (order[aTag] || 0);
+            return bNum - aNum;
+        });
+
+    if (results.length === 0) {
+        throw new Error(`No suitable Unity releases (stable) found for version: ${version}`);
+    }
+
+    core.debug(`Found Unity Release: ${JSON.stringify({ query: version, picked: results[0] }, null, 2)}`);
+    return results[0];
 }
 
 async function fallbackVersionLookup(unityVersion: UnityVersion): Promise<UnityVersion> {
-    const splitVersion = unityVersion.version.split(/[fab]/)[0];
-    const url = `https://unity.com/releases/editor/whats-new/${splitVersion}`;
-    core.debug(`Fetching release page: "${url}"`)
-    const response = await fetch(url);
+    let version = unityVersion.version.split('.')[0];
+
+    if (/^\d{1,4}\.0(\.0)?$/.test(unityVersion.version)) {
+        version = unityVersion.version.split('.')[0];
+    }
+
+    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    core.debug(`Fetching release page: "${url}"`);
+    let response: Response;
+
+    try {
+        response = await fetch(url);
+    } catch (error) {
+        core.warning(`Failed to fetch changeset for Unity ${unityVersion.toString()} [network error]: ${error}`);
+        return unityVersion;
+    }
+
     if (!response.ok) {
         throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
     }
+
     const data = await response.text();
     core.debug(`Release page content:\n${data}`);
-    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[fab]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+
     if (match && match.groups && match.groups.changeset) {
         return new UnityVersion(match.groups.version, match.groups.changeset, unityVersion.architecture);
     }
+
     core.error(`Failed to find changeset for Unity ${unityVersion.toString()}`);
     return unityVersion;
 }

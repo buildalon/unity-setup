@@ -210,11 +210,15 @@ function getUnityVersionsFromInput(architecture: 'X86_64' | 'ARM64' | null): Uni
         if (!match.groups || !match.groups.version) { continue; }
         let version = match.groups.version.replace(/\.$/, '');
         version = version.replace(/(\.(x|\*))+$/, '');
-        // Normalize version to semver (e.g., 2021 -> 2021.0.0, 2021.3 -> 2021.3.0)
+        // Normalize version to semver when appropriate (e.g., 2021.3 -> 2021.3.0)
+        // IMPORTANT: Preserve major-only inputs (e.g., "6000") to allow
+        // major-series resolution to the latest stable (e.g., 6000.2.1f1).
         const versionParts = version.split('.');
         switch (versionParts.length) {
             case 1:
-                version = version + '.0.0';
+                // Do not coerce major-only to .0.0 – this would incorrectly
+                // restrict fallback to minor 0 (e.g., 6000.0.x) instead of
+                // the latest within the major series.
                 break;
             case 2:
                 version = version + '.0';
