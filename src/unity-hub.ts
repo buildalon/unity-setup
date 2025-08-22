@@ -631,7 +631,7 @@ export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<
 async function fallbackVersionLookup(unityVersion: UnityVersion): Promise<UnityVersion> {
     let version = unityVersion.version.split('.')[0];
 
-    if (/^\d+\.0(\.0)?$/.test(unityVersion.version)) {
+    if (/^\d{1,4}\.0(\.0)?$/.test(unityVersion.version)) {
         version = unityVersion.version.split('.')[0];
     }
 

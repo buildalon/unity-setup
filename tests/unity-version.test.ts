@@ -57,7 +57,7 @@ describe('UnityVersion.findMatch', () => {
             .filter(release => release.startsWith('6000.0') && release.includes('f'))
             .sort()
             .reverse()[0];
-        const uv = new UnityVersion('6000.0.0', null, 'X86_64');
+        const uv = new UnityVersion('6000.0.x', null, 'X86_64');
         const match = uv.findMatch(releases);
         expect(match.version).toBe(latest6000_0);
     });
@@ -77,27 +77,6 @@ describe('UnityVersion.findMatch', () => {
         const uv = new UnityVersion('6000', null, 'X86_64');
         const match = uv.findMatch(releases);
         expect(match.version).toBe(stable6000);
-    });
-
-    it('minor-only 6000.2 should fallback to latest stable 6000.2.xfx, or keep 6000.2 if not listed by Hub', () => {
-        const uv = new UnityVersion('6000.2', null, 'X86_64');
-        const match = uv.findMatch(releases);
-        const has6000_2 = releases.some(r => r.startsWith('6000.2') && /f\d+$/.test(r));
-        if (!has6000_2) {
-            expect(match.version).toBe('6000.2');
-        } else {
-            const stable6000_2 = releases
-                .filter(r => r.startsWith('6000.2') && /f\d+$/.test(r))
-                .map(v => {
-                    const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
-                    return m ? { v, minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, minor: 0, patch: 0, f: 0 };
-                })
-                .sort((a, b) => {
-                    if (a.patch !== b.patch) return b.patch - a.patch;
-                    return b.f - a.f;
-                })[0]?.v;
-            expect(match.version).toBe(stable6000_2);
-        }
     });
 
     it('minor-only 6000.1 should not fallback to other minors if not present (keeps 6000.1)', () => {
@@ -122,8 +101,29 @@ describe('UnityVersion.findMatch', () => {
         }
     });
 
-    it('2022.0.0 should fallback to latest stable 2022.x if 2022.0.x is not present', () => {
-        const uv = new UnityVersion('2022.0.0', null, 'X86_64');
+    it('minor-only 6000.2 should fallback to latest stable 6000.2.xfx, or keep 6000.2 if not listed by Hub', () => {
+        const uv = new UnityVersion('6000.2', null, 'X86_64');
+        const match = uv.findMatch(releases);
+        const has6000_2 = releases.some(r => r.startsWith('6000.2') && /f\d+$/.test(r));
+        if (!has6000_2) {
+            expect(match.version).toBe('6000.2');
+        } else {
+            const stable6000_2 = releases
+                .filter(r => r.startsWith('6000.2') && /f\d+$/.test(r))
+                .map(v => {
+                    const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    return m ? { v, minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, minor: 0, patch: 0, f: 0 };
+                })
+                .sort((a, b) => {
+                    if (a.patch !== b.patch) return b.patch - a.patch;
+                    return b.f - a.f;
+                })[0]?.v;
+            expect(match.version).toBe(stable6000_2);
+        }
+    });
+
+    it('2022.x should fallback to latest stable 2022.x if 2022.0.x is not present', () => {
+        const uv = new UnityVersion('2022.x', null, 'X86_64');
         const match = uv.findMatch(releases);
         const has2022_0 = releases.some(r => r.startsWith('2022.0') && /f\d+$/.test(r));
         if (!has2022_0) {

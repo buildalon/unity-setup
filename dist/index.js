@@ -36442,7 +36442,7 @@ async function getEditorReleaseInfo(unityVersion) {
 }
 async function fallbackVersionLookup(unityVersion) {
     let version = unityVersion.version.split('.')[0];
-    if (/^\d+\.0(\.0)?$/.test(unityVersion.version)) {
+    if (/^\d{1,4}\.0(\.0)?$/.test(unityVersion.version)) {
         version = unityVersion.version.split('.')[0];
     }
     const url = `https://unity.com/releases/editor/whats-new/${version}`;
