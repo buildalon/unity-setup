@@ -65,7 +65,7 @@ export class UnityVersion {
         minor = xMatch[2];
       }
 
-      const releases = versions
+      let releases = versions
         .map(release => {
           const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
           return match && match.groups ? match.groups.version : null;
@@ -81,6 +81,23 @@ export class UnityVersion {
           if (minor && minor !== 'x' && minor !== '*' && parts[2] !== minor) { return false; }
           return true;
         });
+
+      // If no matches and requested minor was explicitly '0', broaden to any minor for that major
+      if (releases.length === 0 && minor === '0') {
+        releases = versions
+          .map(release => {
+            const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
+            return match && match.groups ? match.groups.version : null;
+          })
+          .filter(Boolean)
+          .filter(version => {
+            if (!version) { return false; }
+            const parts = version.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+            if (!parts || parts[4] !== 'f') { return false; }
+            if (major && parts[1] !== major) { return false; }
+            return true; // ignore minor
+          });
+      }
 
       // Sort by minor, patch, and f number descending
       releases.sort((a, b) => {

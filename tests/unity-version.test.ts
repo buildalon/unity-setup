@@ -2,7 +2,8 @@ import {
     UnityVersion
 } from '../src/unity-version';
 import {
-    getLatestHubReleases
+    getLatestHubReleases,
+    getEditorReleaseInfo
 } from '../src/unity-hub';
 
 const fs = require('fs');
@@ -78,20 +79,25 @@ describe('UnityVersion.findMatch', () => {
         expect(match.version).toBe(stable6000);
     });
 
-    it('minor-only 6000.2 should fallback to the latest stable 6000.2.xfx', () => {
-        const stable6000_2 = releases
-            .filter(r => r.startsWith('6000.2') && /f\d+$/.test(r))
-            .map(v => {
-                const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
-                return m ? { v, minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, minor: 0, patch: 0, f: 0 };
-            })
-            .sort((a, b) => {
-                if (a.patch !== b.patch) return b.patch - a.patch;
-                return b.f - a.f;
-            })[0]?.v;
+    it('minor-only 6000.2 should fallback to latest stable 6000.2.xfx, or keep 6000.2 if not listed by Hub', () => {
         const uv = new UnityVersion('6000.2', null, 'X86_64');
         const match = uv.findMatch(releases);
-        expect(match.version).toBe(stable6000_2);
+        const has6000_2 = releases.some(r => r.startsWith('6000.2') && /f\d+$/.test(r));
+        if (!has6000_2) {
+            expect(match.version).toBe('6000.2');
+        } else {
+            const stable6000_2 = releases
+                .filter(r => r.startsWith('6000.2') && /f\d+$/.test(r))
+                .map(v => {
+                    const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    return m ? { v, minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, minor: 0, patch: 0, f: 0 };
+                })
+                .sort((a, b) => {
+                    if (a.patch !== b.patch) return b.patch - a.patch;
+                    return b.f - a.f;
+                })[0]?.v;
+            expect(match.version).toBe(stable6000_2);
+        }
     });
 
     it('minor-only 6000.1 should not fallback to other minors if not present (keeps 6000.1)', () => {
@@ -114,5 +120,138 @@ describe('UnityVersion.findMatch', () => {
                 })[0]?.v;
             expect(match.version).toBe(stable6000_1);
         }
+    });
+
+    it('2022.0.0 should fallback to latest stable 2022.x if 2022.0.x is not present', () => {
+        const uv = new UnityVersion('2022.0.0', null, 'X86_64');
+        const match = uv.findMatch(releases);
+        const has2022_0 = releases.some(r => r.startsWith('2022.0') && /f\d+$/.test(r));
+        if (!has2022_0) {
+            const latest2022 = releases
+                .filter(release => release.startsWith('2022') && /f\d+$/.test(release))
+                .map(v => {
+                    const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    return m ? { v, minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, minor: 0, patch: 0, f: 0 };
+                })
+                .sort((a, b) => {
+                    if (a.minor !== b.minor) return b.minor - a.minor;
+                    if (a.patch !== b.patch) return b.patch - a.patch;
+                    return b.f - a.f;
+                })[0]?.v;
+            expect(match.version).toBe(latest2022);
+        } else {
+            const latest2022_0 = releases
+                .filter(release => release.startsWith('2022.0') && /f\d+$/.test(release))
+                .map(v => {
+                    const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    return m ? { v, patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, patch: 0, f: 0 };
+                })
+                .sort((a, b) => {
+                    if (a.patch !== b.patch) return b.patch - a.patch;
+                    return b.f - a.f;
+                })[0]?.v;
+            expect(match.version).toBe(latest2022_0);
+        }
+    });
+
+    // Pipeline-level tests mirroring production flow
+    it('pipeline: 6000 should resolve to the latest stable 6000.x', async () => {
+        const releasesList = await getLatestHubReleases();
+        const uv = new UnityVersion('6000', null, 'X86_64');
+        const matched = uv.findMatch(releasesList);
+        const info = await getEditorReleaseInfo(matched);
+        expect(/^(6000)\./.test(info.version)).toBe(true);
+        expect(/f\d+$/.test(info.version)).toBe(true);
+        // Ensure it is at least as new as the Hub fallback
+        const hubFallback = releasesList
+            .filter(r => r.startsWith('6000') && /f\d+$/.test(r))
+            .map(v => {
+                const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                return m ? { v, minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { v, minor: 0, patch: 0, f: 0 };
+            })
+            .sort((a, b) => {
+                if (a.minor !== b.minor) return b.minor - a.minor;
+                if (a.patch !== b.patch) return b.patch - a.patch;
+                return b.f - a.f;
+            })[0]?.v;
+        if (hubFallback) {
+            const parse = (v: string) => {
+                const m = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                return m ? { minor: parseInt(m[2]), patch: parseInt(m[3]), f: parseInt(m[5]) } : { minor: 0, patch: 0, f: 0 };
+            };
+            const a = parse(info.version);
+            const b = parse(hubFallback);
+            const cmp = (x: typeof a, y: typeof b) => (x.minor - y.minor) || (x.patch - y.patch) || (x.f - y.f);
+            expect(cmp(a, b)).toBeGreaterThanOrEqual(0);
+        }
+    }, 30000);
+
+    it('pipeline: 6000.2 should resolve to the latest stable 6000.2.x, or keep minor via API', async () => {
+        const releasesList = await getLatestHubReleases();
+        const uv = new UnityVersion('6000.2', null, 'X86_64');
+        const matched = uv.findMatch(releasesList);
+        const info = await getEditorReleaseInfo(matched);
+        // If Hub had 6000.2 stable, ensure we stayed within 6000.2.
+        const has6000_2 = releasesList.some(r => r.startsWith('6000.2') && /f\d+$/.test(r));
+        if (has6000_2) {
+            expect(/^6000\.2\./.test(info.version)).toBe(true);
+        } else {
+            // If Hub didn’t, API result should still be stable and in 6000.2
+            expect(/^6000\.2\./.test(info.version)).toBe(true);
+        }
+        expect(/f\d+$/.test(info.version)).toBe(true);
+    }, 30000);
+
+    it('pipeline: 6000.1 should resolve to stable 6000.1.x via API if Hub omits it', async () => {
+        const releasesList = await getLatestHubReleases();
+        const uv = new UnityVersion('6000.1', null, 'X86_64');
+        const matched = uv.findMatch(releasesList);
+        const info = await getEditorReleaseInfo(matched);
+        expect(/^6000\.1\./.test(info.version)).toBe(true);
+        expect(/f\d+$/.test(info.version)).toBe(true);
+    }, 30000);
+
+    it('pipeline: 2022.0.0 should resolve to latest stable 2022.x if 2022.0.x not listed by Hub', async () => {
+        const releasesList = await getLatestHubReleases();
+        const uv = new UnityVersion('2022.0.0', null, 'X86_64');
+        const matched = uv.findMatch(releasesList);
+        const info = await getEditorReleaseInfo(matched);
+        expect(/^2022\./.test(info.version)).toBe(true);
+        expect(/f\d+$/.test(info.version)).toBe(true);
+    }, 30000);
+
+    describe('integration flow (hub releases -> findMatch -> releases API)', () => {
+        it('6000 should resolve to latest stable 6000.x via API', async () => {
+            const uv0 = new UnityVersion('6000', null, 'X86_64');
+            const matched = uv0.findMatch(releases);
+            const info = await getEditorReleaseInfo(matched);
+            // Should be stable and start with 6000.
+            expect(/^(6000)\./.test(info.version)).toBe(true);
+            expect(/f\d+$/.test(info.version)).toBe(true);
+        }, 30000);
+
+        it('6000.2 should resolve to latest stable 6000.2.x via API if Hub lists it, otherwise leave 6000.2 for API', async () => {
+            const uv0 = new UnityVersion('6000.2', null, 'X86_64');
+            const matched = uv0.findMatch(releases);
+            const info = await getEditorReleaseInfo(matched);
+            expect(/^6000\.2\./.test(info.version)).toBe(true);
+            expect(/f\d+$/.test(info.version)).toBe(true);
+        }, 30000);
+
+        it('6000.1 should resolve to latest stable 6000.1.x via API even if Hub omits it', async () => {
+            const uv0 = new UnityVersion('6000.1', null, 'X86_64');
+            const matched = uv0.findMatch(releases);
+            const info = await getEditorReleaseInfo(matched);
+            expect(/^6000\.1\./.test(info.version)).toBe(true);
+            expect(/f\d+$/.test(info.version)).toBe(true);
+        }, 30000);
+
+        it('2022.0.0 should resolve to latest stable 2022.x via API when 2022.0 is unavailable', async () => {
+            const uv0 = new UnityVersion('2022.0.0', null, 'X86_64');
+            const matched = uv0.findMatch(releases);
+            const info = await getEditorReleaseInfo(matched);
+            expect(/^2022\./.test(info.version)).toBe(true);
+            expect(/f\d+$/.test(info.version)).toBe(true);
+        }, 30000);
     });
 });

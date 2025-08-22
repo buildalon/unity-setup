@@ -35859,6 +35859,7 @@ exports.SetInstallPath = SetInstallPath;
 exports.UnityEditor = UnityEditor;
 exports.getLatestHubReleases = getLatestHubReleases;
 exports.ListInstalledEditors = ListInstalledEditors;
+exports.getEditorReleaseInfo = getEditorReleaseInfo;
 const asar = __nccwpck_require__(6561);
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
@@ -36414,7 +36415,7 @@ async function getEditorReleaseInfo(unityVersion) {
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
     }
-    const isExplicitPrerelease = /[abcp]$/.test(unityVersion.version) || /[abcp]/.test(unityVersion.version);
+    const isExplicitPrerelease = /[abcpx]$/.test(unityVersion.version) || /[abcpx]/.test(unityVersion.version);
     const results = (data.results || [])
         .filter(r => isExplicitPrerelease ? true : /f\d+$/.test(r.version))
         .sort((a, b) => {
@@ -36533,7 +36534,7 @@ class UnityVersion {
                 major = xMatch[1];
                 minor = xMatch[2];
             }
-            const releases = versions
+            let releases = versions
                 .map(release => {
                 const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
                 return match && match.groups ? match.groups.version : null;
@@ -36555,6 +36556,27 @@ class UnityVersion {
                 }
                 return true;
             });
+            if (releases.length === 0 && minor === '0') {
+                releases = versions
+                    .map(release => {
+                    const match = release.match(/(?<version>\d{4}\.\d+\.\d+[abcfpx]\d+)/);
+                    return match && match.groups ? match.groups.version : null;
+                })
+                    .filter(Boolean)
+                    .filter(version => {
+                    if (!version) {
+                        return false;
+                    }
+                    const parts = version.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
+                    if (!parts || parts[4] !== 'f') {
+                        return false;
+                    }
+                    if (major && parts[1] !== major) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
             releases.sort((a, b) => {
                 const parse = (v) => {
                     const match = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);

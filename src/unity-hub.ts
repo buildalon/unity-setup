@@ -559,7 +559,7 @@ async function getModulesContent(modulesPath: string): Promise<any> {
     return JSON.parse(modulesContent);
 }
 
-async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
+export async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
     // Prefer querying the releases API with the exact fully-qualified Unity version (e.g., 2022.3.10f1).
     // If we don't have a fully-qualified version, use the most specific prefix available:
     //  - "YYYY.M" when provided (e.g., 6000.1)
@@ -598,7 +598,7 @@ async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRe
         throw new Error(`No Unity releases found for version: ${version}`);
     }
     // Filter to stable 'f' releases only unless the user explicitly asked for a pre-release
-    const isExplicitPrerelease = /[abcp]$/.test(unityVersion.version) || /[abcp]/.test(unityVersion.version);
+    const isExplicitPrerelease = /[abcpx]$/.test(unityVersion.version) || /[abcpx]/.test(unityVersion.version);
     const results = (data.results || [])
         .filter(r => isExplicitPrerelease ? true : /f\d+$/.test(r.version))
         // Sort descending by minor, patch, f-number where possible; fallback to semver coercion
