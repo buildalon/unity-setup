@@ -360,17 +360,22 @@ async function patchBeeBackend(editorPath: string): Promise<void> {
 }
 
 export async function getLatestHubReleases(): Promise<string[]> {
+    // Normalize output to bare version strings (e.g., 2022.3.62f1)
+    // Unity Hub can return lines like:
+    //  - "6000.0.56f1 (Apple silicon)"
+    //  - "2022.3.62f1 installed at C:\\..."
+    //  - "2022.3.62f1, installed at ..." (older format)
+    // We extract the first version token and discard the rest.
+    const versionRegex = /(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
     return (await execUnityHub([`editors`, `--releases`]))
         .split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
         .map(line => {
-            // If the line contains a comma, only take the part before the comma
-            if (line.includes(',')) {
-                return line.split(',')[0].trim();
-            }
-            return line;
-        });
+            const match = line.match(versionRegex);
+            return match ? match[0] : '';
+        })
+        .filter(v => v.length > 0);
 }
 
 async function installUnity(unityVersion: UnityVersion, modules: string[]): Promise<string | undefined> {
@@ -453,7 +458,7 @@ async function checkInstalledEditors(unityVersion: UnityVersion, failOnEmpty: bo
         const paths: string[] = await ListInstalledEditors();
         core.debug(`Paths: ${JSON.stringify(paths, null, 2)}`);
         if (paths && paths.length > 0) {
-            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*, installed at (?<editorPath>.*)/;
+            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*,? installed at (?<editorPath>.*)/;
             const matches = paths.map(path => path.match(pattern)).filter(match => match && match.groups);
             core.debug(`Matches: ${JSON.stringify(matches, null, 2)}`);
             if (paths.length !== matches.length) {
@@ -555,11 +560,12 @@ async function getModulesContent(modulesPath: string): Promise<any> {
 }
 
 async function getEditorReleaseInfo(unityVersion: UnityVersion): Promise<UnityRelease> {
-    let version = unityVersion.version.split('.')[0];
-
-    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
-        version = unityVersion.version.split('.')[0];
-    }
+    // Prefer querying the releases API with the exact fully-qualified Unity version (e.g., 2022.3.10f1).
+    // If we don't have a fully-qualified version, fall back to major stream (e.g., 2022) to get latest.
+    const fullUnityVersionPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
+    let version = fullUnityVersionPattern.test(unityVersion.version)
+        ? unityVersion.version
+        : unityVersion.version.split('.')[0];
 
     const releasesClient = new UnityReleasesClient();
     const request: GetUnityReleasesData = {

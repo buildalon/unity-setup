@@ -36198,16 +36198,16 @@ async function patchBeeBackend(editorPath) {
     }
 }
 async function getLatestHubReleases() {
+    const versionRegex = /(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/;
     return (await execUnityHub([`editors`, `--releases`]))
         .split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
         .map(line => {
-        if (line.includes(',')) {
-            return line.split(',')[0].trim();
-        }
-        return line;
-    });
+        const match = line.match(versionRegex);
+        return match ? match[0] : '';
+    })
+        .filter(v => v.length > 0);
 }
 async function installUnity(unityVersion, modules) {
     if (unityVersion.isLegacy()) {
@@ -36285,7 +36285,7 @@ async function checkInstalledEditors(unityVersion, failOnEmpty, installPath = un
         const paths = await ListInstalledEditors();
         core.debug(`Paths: ${JSON.stringify(paths, null, 2)}`);
         if (paths && paths.length > 0) {
-            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*, installed at (?<editorPath>.*)/;
+            const pattern = /(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\s*(?:\((?<arch>Apple silicon|Intel)\))?\s*,? installed at (?<editorPath>.*)/;
             const matches = paths.map(path => path.match(pattern)).filter(match => match && match.groups);
             core.debug(`Matches: ${JSON.stringify(matches, null, 2)}`);
             if (paths.length !== matches.length) {
@@ -36383,10 +36383,10 @@ async function getModulesContent(modulesPath) {
     return JSON.parse(modulesContent);
 }
 async function getEditorReleaseInfo(unityVersion) {
-    let version = unityVersion.version.split('.')[0];
-    if (/^\d{4}\.0(\.0)?$/.test(unityVersion.version)) {
-        version = unityVersion.version.split('.')[0];
-    }
+    const fullUnityVersionPattern = /^\d{4}\.\d+\.\d+[abcfpx]\d+$/;
+    let version = fullUnityVersionPattern.test(unityVersion.version)
+        ? unityVersion.version
+        : unityVersion.version.split('.')[0];
     const releasesClient = new unity_releases_api_1.UnityReleasesClient();
     const request = {
         query: {
@@ -36538,13 +36538,13 @@ class UnityVersion {
                     const match = v.match(/(\d{4})\.(\d+)\.(\d+)([abcfpx])(\d+)/);
                     return match ? [parseInt(match[2]), parseInt(match[3]), parseInt(match[5])] : [0, 0, 0];
                 };
-                const [aminor, apatch, af] = parse(a);
-                const [bminor, bpatch, bf] = parse(b);
-                if (aminor !== bminor) {
-                    return bminor - aminor;
+                const [aMinor, aPatch, af] = parse(a);
+                const [bMinor, bPatch, bf] = parse(b);
+                if (aMinor !== bMinor) {
+                    return bMinor - aMinor;
                 }
-                if (apatch !== bpatch) {
-                    return bpatch - apatch;
+                if (aPatch !== bPatch) {
+                    return bPatch - aPatch;
                 }
                 return bf - af;
             });

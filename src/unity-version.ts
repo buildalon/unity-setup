@@ -100,11 +100,11 @@ export class UnityVersion {
           return match ? [parseInt(match[2]), parseInt(match[3]), parseInt(match[5])] : [0, 0, 0];
         };
 
-        const [aminor, apatch, af] = parse(a);
-        const [bminor, bpatch, bf] = parse(b);
+        const [aMinor, aPatch, af] = parse(a);
+        const [bMinor, bPatch, bf] = parse(b);
 
-        if (aminor !== bminor) { return bminor - aminor; }
-        if (apatch !== bpatch) { return bpatch - apatch; }
+        if (aMinor !== bMinor) { return bMinor - aMinor; }
+        if (aPatch !== bPatch) { return bPatch - aPatch; }
         return bf - af;
       });
 
