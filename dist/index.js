@@ -36052,7 +36052,8 @@ const ignoredLines = [
     `Failed to connect to the bus:`,
     `Checking for beta autoupdate feature for deb/rpm distributions`,
     `Found package-type: deb`,
-    `XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid`
+    `XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid`,
+    `Keychain lookup failed: Error Domain=NSOSStatusErrorDomain Code=-25308 "errKCInteractionNotAllowed / errSecInteractionNotAllowed: / Interaction is not allowed with the Security Server." (-25308)`
 ];
 async function execUnityHub(args) {
     if (!hubPath) {
