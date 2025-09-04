@@ -63,7 +63,7 @@ Use any of the following patterns to control how the editor version is resolved:
 
 - Fully qualified: `2022.3.62f1` or `2019.4.40f1 (ffc62b691db5)`
 - Major + minor: `6000.2` → latest stable in the 6000.2.x line
-- Major only: `6000` or `2022` → latest stable in that major (e.g., `6000.2.1f1`, `2022.3.xx`)
+- Major only: `6000` or `2022` → latest stable in that major (e.g., `6000.2.1f1`, `2022.3.x`)
 - Wildcards: `2021.3.x`, `2022.3.*`, `6000.0.x`
 - Exact year+minor with trailing zero: `6000.0.0` confines selection to the 6000.0.x line
 
