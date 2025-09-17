@@ -31,10 +31,10 @@ jobs:
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
       - run: |
-          echo "UNITY_HUB_PATH: '${{ env.UNITY_HUB_PATH }}'"
-          echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
-          echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
-          echo "UNITY_PROJECT_PATH: '${{ env.UNITY_PROJECT_PATH }}'"
+          echo 'UNITY_HUB_PATH: ${{ env.UNITY_HUB_PATH }}'
+          echo 'UNITY_EDITORS: ${{ env.UNITY_EDITORS }}'
+          echo 'UNITY_EDITOR_PATH: ${{ env.UNITY_EDITOR_PATH }}'
+          echo 'UNITY_PROJECT_PATH: ${{ env.UNITY_PROJECT_PATH }}'
           # If unity-version is None, UNITY_EDITOR_PATH must be empty
           if [[ "${{ matrix.unity-version }}" == "None" ]]; then
             if [[ -n "${{ env.UNITY_EDITOR_PATH }}" ]]; then

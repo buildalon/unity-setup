@@ -6,13 +6,14 @@ on:
     branches: [main]
   pull_request:
     branches: ['*']
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   setup:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,7 +25,7 @@ jobs:
         id: setup-jobs
         with:
           build-options: ./.github/workflows/build-options.json
-          group-by: 'os'
+          group-by: 'unity-version'
     outputs:
       jobs: ${{ steps.setup-jobs.outputs.jobs }}
   validate:
@@ -36,6 +37,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
       fail-fast: false
+      max-parallel: 1
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:

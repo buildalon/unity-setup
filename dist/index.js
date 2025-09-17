@@ -35503,18 +35503,26 @@ async function ValidateInputs() {
             core.info(`  > ${module}`);
         }
     }
+    if (modules.length === 0) {
+        core.info(`  > None`);
+    }
     core.info(`buildTargets:`);
     const moduleMap = getPlatformTargetModuleMap();
     for (const target of buildTargets) {
         const module = moduleMap[target];
         if (module === undefined) {
-            core.warning(`${target} not a valid build target!`);
+            if (target.toLowerCase() !== 'none') {
+                core.warning(`${target} is not a valid build target for ${os.type()}`);
+            }
             continue;
         }
         if (!modules.includes(module)) {
             modules.push(module);
             core.info(`  > ${target} -> ${module}`);
         }
+    }
+    if (buildTargets.length == 0) {
+        core.info(`  > None`);
     }
     const versions = getUnityVersionsFromInput(architecture);
     const versionFilePath = await getVersionFilePath();
@@ -35533,6 +35541,9 @@ async function ValidateInputs() {
     core.info(`Unity Versions:`);
     for (const unityVersion of versions) {
         core.info(`  > ${unityVersion.toString()}`);
+    }
+    if (versions.length === 0) {
+        core.info(`  > None`);
     }
     let installPath = core.getInput('install-path');
     if (installPath) {
@@ -35574,40 +35585,41 @@ function getInstallationArch() {
 }
 function getPlatformTargetModuleMap() {
     const osType = os.type();
-    let moduleMap = undefined;
-    if (osType == 'Linux') {
-        moduleMap = {
-            "StandaloneLinux64": "linux-il2cpp",
-            "Android": "android",
-            "WebGL": "webgl",
-            "iOS": "ios",
-        };
-    }
-    else if (osType == 'Darwin') {
-        moduleMap = {
-            "StandaloneOSX": "mac-il2cpp",
-            "iOS": "ios",
-            "Android": "android",
-            "tvOS": "appletv",
-            "StandaloneLinux64": "linux-il2cpp",
-            "WebGL": "webgl",
-            "VisionOS": "visionos"
-        };
-    }
-    else if (osType == 'Windows_NT') {
-        moduleMap = {
-            "StandaloneWindows64": "windows-il2cpp",
-            "WSAPlayer": "universal-windows-platform",
-            "Android": "android",
-            "iOS": "ios",
-            "tvOS": "appletv",
-            "StandaloneLinux64": "linux-il2cpp",
-            "Lumin": "lumin",
-            "WebGL": "webgl",
-        };
-    }
-    else {
-        throw Error(`${osType} not supported`);
+    let moduleMap;
+    switch (osType) {
+        case 'Linux':
+            moduleMap = {
+                "StandaloneLinux64": "linux-il2cpp",
+                "Android": "android",
+                "WebGL": "webgl",
+                "iOS": "ios",
+            };
+            break;
+        case 'Darwin':
+            moduleMap = {
+                "StandaloneOSX": "mac-il2cpp",
+                "iOS": "ios",
+                "Android": "android",
+                "tvOS": "appletv",
+                "StandaloneLinux64": "linux-il2cpp",
+                "WebGL": "webgl",
+                "VisionOS": "visionos"
+            };
+            break;
+        case 'Windows_NT':
+            moduleMap = {
+                "StandaloneWindows64": "windows-il2cpp",
+                "WSAPlayer": "universal-windows-platform",
+                "Android": "android",
+                "iOS": "ios",
+                "tvOS": "appletv",
+                "StandaloneLinux64": "linux-il2cpp",
+                "Lumin": "lumin",
+                "WebGL": "webgl",
+            };
+            break;
+        default:
+            throw Error(`${osType} not supported`);
     }
     return moduleMap;
 }
@@ -35894,35 +35906,39 @@ function init() {
     }
 }
 async function Get() {
+    let isCleanInstall = false;
     try {
         await fs.promises.access(hubPath, fs.constants.X_OK);
     }
     catch (error) {
         hubPath = await installUnityHub();
+        isCleanInstall = true;
     }
-    const hubVersion = await getInstalledHubVersion();
-    if (!semver.valid(hubVersion)) {
-        throw new Error(`Failed to get installed Unity Hub version ${hubVersion}!`);
-    }
-    core.info(`Unity Hub Version:\n  > ${hubVersion}`);
-    const latestHubVersion = await getLatestHubVersion();
-    if (!semver.valid(latestHubVersion)) {
-        throw new Error(`Failed to get latest Unity Hub version!`);
-    }
-    core.debug(`Latest Unity Hub Version:\n  > ${latestHubVersion}`);
-    core.debug(`Comparing versions:\n  > ${hubVersion} < ${latestHubVersion} => ${semver.compare(hubVersion, latestHubVersion)}`);
-    if (semver.compare(hubVersion, latestHubVersion) < 0) {
-        core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
-        if (process.platform !== 'linux') {
-            core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
-            await (0, utility_1.RemovePath)(hubPath);
-            hubPath = await installUnityHub();
+    if (!isCleanInstall) {
+        const hubVersion = await getInstalledHubVersion();
+        if (!semver.valid(hubVersion)) {
+            throw new Error(`Failed to get installed Unity Hub version ${hubVersion}!`);
         }
-        else {
-            const scriptPath = __nccwpck_require__.ab + "update-unityhub-linux.sh";
-            const exitCode = await exec.exec('sh', [__nccwpck_require__.ab + "update-unityhub-linux.sh"]);
-            if (exitCode !== 0) {
-                throw new Error(`Failed to install Unity Hub: ${exitCode}`);
+        core.info(`Installed Unity Hub Version:\n  > ${hubVersion}`);
+        const latestHubVersion = await getLatestHubVersion();
+        if (!semver.valid(latestHubVersion)) {
+            throw new Error(`Failed to get latest Unity Hub version!`);
+        }
+        core.debug(`Latest Unity Hub Version:\n  > ${latestHubVersion}`);
+        core.debug(`Comparing versions:\n  > ${hubVersion} < ${latestHubVersion} => ${semver.compare(hubVersion, latestHubVersion)}`);
+        if (semver.compare(hubVersion, latestHubVersion) < 0) {
+            core.info(`Installing Latest Unity Hub Version:\n  > ${latestHubVersion}`);
+            if (process.platform !== 'linux') {
+                core.info(`Removing previous Unity Hub version:\n  > ${hubVersion}`);
+                await (0, utility_1.RemovePath)(hubPath);
+                hubPath = await installUnityHub();
+            }
+            else {
+                const scriptPath = __nccwpck_require__.ab + "update-unityhub-linux.sh";
+                const exitCode = await exec.exec('sh', [__nccwpck_require__.ab + "update-unityhub-linux.sh"]);
+                if (exitCode !== 0) {
+                    throw new Error(`Failed to install Unity Hub: ${exitCode}`);
+                }
             }
         }
     }
@@ -35968,7 +35984,7 @@ async function installUnityHub() {
         case 'darwin':
             {
                 const scriptPath = __nccwpck_require__.ab + "install-unityhub-macos.sh";
-                exitCode = await exec.exec('sh', [__nccwpck_require__.ab + "install-unityhub-macos.sh"]);
+                exitCode = await exec.exec('bash', [__nccwpck_require__.ab + "install-unityhub-macos.sh"]);
                 if (exitCode !== 0) {
                     throw new Error(`Failed to install Unity Hub: ${exitCode}`);
                 }
@@ -35979,7 +35995,7 @@ async function installUnityHub() {
             {
                 const scriptPath = __nccwpck_require__.ab + "install-unityhub-linux.sh";
                 let output = '';
-                exitCode = await exec.exec('sh', [__nccwpck_require__.ab + "install-unityhub-linux.sh"], {
+                exitCode = await exec.exec('bash', [__nccwpck_require__.ab + "install-unityhub-linux.sh"], {
                     listeners: {
                         stdout: (data) => {
                             output += data.toString();
@@ -36117,7 +36133,7 @@ const retryErrorMessages = [
 async function UnityEditor(unityVersion, modules) {
     core.info(`Getting release info for Unity ${unityVersion.toString()}...`);
     let editorPath = await checkInstalledEditors(unityVersion, false);
-    if (!unityVersion.isLegacy() && !editorPath) {
+    if (!unityVersion.isLegacy() && !editorPath && !unityVersion.changeset) {
         try {
             const releases = await getLatestHubReleases();
             unityVersion = unityVersion.findMatch(releases);
@@ -36126,7 +36142,12 @@ async function UnityEditor(unityVersion, modules) {
         }
         catch (error) {
             core.warning(`Failed to get Unity release info for ${unityVersion.toString()}! falling back to legacy search...\n${error}`);
-            unityVersion = await fallbackVersionLookup(unityVersion);
+            try {
+                unityVersion = await fallbackVersionLookup(unityVersion);
+            }
+            catch (fallbackError) {
+                core.warning(`Failed to lookup changeset for Unity ${unityVersion.toString()}!\n${fallbackError}`);
+            }
         }
     }
     let installPath = null;
@@ -36213,7 +36234,15 @@ async function installUnity(unityVersion, modules) {
     if (unityVersion.isLegacy()) {
         return await installUnity4x(unityVersion);
     }
-    core.startGroup(`Installing Unity ${unityVersion.toString()}...`);
+    if (process.platform === 'linux') {
+        const installLinuxDepsScript = __nccwpck_require__.ab + "install-linux-dependencies.sh";
+        const exitCode = await exec.exec('bash', [__nccwpck_require__.ab + "install-linux-dependencies.sh", unityVersion.version], {
+            ignoreReturnCode: true
+        });
+        if (exitCode !== 0) {
+            throw new Error(`Failed to install additional Linux dependencies for Unity ${unityVersion.toString()}: ${exitCode}`);
+        }
+    }
     const args = ['install', '--version', unityVersion.version];
     if (unityVersion.changeset) {
         args.push('--changeset', unityVersion.changeset);
@@ -36228,6 +36257,7 @@ async function installUnity(unityVersion, modules) {
         }
         args.push('--cm');
     }
+    core.startGroup(`Installing Unity ${unityVersion.toString()}...`);
     try {
         const output = await execUnityHub(args);
         if (output.includes(`Error while installing an editor or a module from changeset`)) {
@@ -36248,7 +36278,9 @@ async function installUnity4x(unityVersion) {
                 const installPath = path.join(installDir, `Unity ${unityVersion.version}`);
                 if (!fs.existsSync(installPath)) {
                     const scriptPath = __nccwpck_require__.ab + "unity-editor-installer.ps1";
-                    const exitCode = await exec.exec('pwsh', [__nccwpck_require__.ab + "unity-editor-installer.ps1", unityVersion.version, installDir]);
+                    const exitCode = await exec.exec('pwsh', [__nccwpck_require__.ab + "unity-editor-installer.ps1", unityVersion.version, installDir], {
+                        ignoreReturnCode: true
+                    });
                     if (exitCode !== 0) {
                         throw new Error(`Failed to install Unity ${unityVersion.toString()}: ${exitCode}`);
                     }
@@ -36261,8 +36293,9 @@ async function installUnity4x(unityVersion) {
                 const installPath = path.join(installDir, `Unity ${unityVersion.version}`, 'Unity.app');
                 if (!fs.existsSync(installPath)) {
                     const scriptPath = __nccwpck_require__.ab + "unity-editor-installer.sh";
-                    await fs.promises.chmod(__nccwpck_require__.ab + "unity-editor-installer.sh", 0o755);
-                    const exitCode = await exec.exec('sh', [__nccwpck_require__.ab + "unity-editor-installer.sh", unityVersion.version, installDir]);
+                    const exitCode = await exec.exec('bash', [__nccwpck_require__.ab + "unity-editor-installer.sh", unityVersion.version, installDir], {
+                        ignoreReturnCode: true
+                    });
                     if (exitCode !== 0) {
                         throw new Error(`Failed to install Unity ${unityVersion.toString()}: ${exitCode}`);
                     }
@@ -36409,7 +36442,7 @@ async function getEditorReleaseInfo(unityVersion) {
     core.debug(`Get Unity Release: ${JSON.stringify(request, null, 2)}`);
     const { data, error } = await releasesClient.api.ReleaseService.getUnityReleases(request);
     if (error) {
-        throw new Error(`Failed to get Unity releases: ${error}`);
+        throw new Error(`Failed to get Unity releases: ${JSON.stringify(error, null, 2)}`);
     }
     if (!data || !data.results || data.results.length === 0) {
         throw new Error(`No Unity releases found for version: ${version}`);
@@ -36441,26 +36474,25 @@ async function getEditorReleaseInfo(unityVersion) {
     return results[0];
 }
 async function fallbackVersionLookup(unityVersion) {
-    let version = unityVersion.version.split('.')[0];
-    if (/^\d{1,4}\.0(\.0)?$/.test(unityVersion.version)) {
-        version = unityVersion.version.split('.')[0];
-    }
-    const url = `https://unity.com/releases/editor/whats-new/${version}`;
+    const url = `https://unity.com/releases/editor/whats-new/${unityVersion.version}`;
     core.debug(`Fetching release page: "${url}"`);
     let response;
     try {
         response = await fetch(url);
     }
     catch (error) {
-        core.warning(`Failed to fetch changeset for Unity ${unityVersion.toString()} [network error]: ${error}`);
+        core.warning(`Failed to fetch changeset for Unity ${unityVersion.toString()}: ${error}`);
         return unityVersion;
     }
-    if (!response.ok) {
-        throw new Error(`Failed to fetch changeset [${response.status}] "${url}"`);
+    const responseText = await response.text();
+    if (core.isDebug() || !response.ok) {
+        core.info(responseText);
     }
-    const data = await response.text();
-    core.debug(`Release page content:\n${data}`);
-    const match = data.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch changeset for Unity ${unityVersion.toString()} [${response.status}] "${url}"`);
+    }
+    core.debug(`Release page content: \n${responseText}`);
+    const match = responseText.match(/unityhub:\/\/(?<version>\d+\.\d+\.\d+[abcfpx]?\d*)\/(?<changeset>[a-zA-Z0-9]+)/);
     if (match && match.groups && match.groups.changeset) {
         return new unity_version_1.UnityVersion(match.groups.version, match.groups.changeset, unityVersion.architecture);
     }
@@ -47254,7 +47286,7 @@ const main = async () => {
         if (installPath && installPath.length > 0) {
             await unityHub.SetInstallPath(installPath);
         }
-        const editors = [];
+        const installedEditors = [];
         for (const unityVersion of versions) {
             const unityEditorPath = await unityHub.UnityEditor(unityVersion, modules);
             core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath);
@@ -47262,12 +47294,12 @@ const main = async () => {
                 await (0, install_android_sdk_1.CheckAndroidSdkInstalled)(unityEditorPath, unityProjectPath);
             }
             core.info(`Installed Unity Editor: ${unityVersion.toString()} at ${unityEditorPath}`);
-            editors.push([unityVersion.version, unityEditorPath]);
+            installedEditors.push({ version: unityVersion.version, path: unityEditorPath });
         }
-        if (editors.length !== versions.length) {
-            throw new Error(`Expected to install ${versions.length} Unity versions, but installed ${editors.length}.`);
+        if (installedEditors.length !== versions.length) {
+            throw new Error(`Expected to install ${versions.length} Unity versions, but installed ${installedEditors.length}.`);
         }
-        core.exportVariable('UNITY_EDITORS', JSON.stringify(Object.fromEntries(editors)));
+        core.exportVariable('UNITY_EDITORS', Object.fromEntries(installedEditors.map(e => [e.version, e.path])));
         core.info('Unity Setup Complete!');
         process.exit(0);
     }
