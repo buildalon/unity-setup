@@ -17,7 +17,7 @@ case "$unityVersion" in
         sudo dpkg -i "libssl1.0.0_1.0.2g-1ubuntu4.20_${arch}.deb"
         rm "libssl1.0.0_1.0.2g-1ubuntu4.20_${arch}.deb"
         ;;
-    2019.3.*|2019.4.*|2020.*)
+    2019.3.*|2019.4.*|2020.*|2021.*)
         curl -LO "https://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_${arch}.deb"
         sudo dpkg -i "libssl1.1_1.1.0g-2ubuntu4_${arch}.deb"
         rm "libssl1.1_1.1.0g-2ubuntu4_${arch}.deb"
