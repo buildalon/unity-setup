@@ -68,12 +68,12 @@ Use any of the following patterns to control how the editor version is resolved:
 - Wildcards: `2021.3.x`, `2022.3.*`, `6000.0.x`
 - Exact year+minor with trailing zero: `6000.0.0` confines selection to the 6000.0.x line
 
-Notes:
-
-- If you want the latest across minors within a major, use just the major (e.g., `6000`).
-- If you want to stay within a specific minor, use `MAJOR.MINOR` (e.g., `6000.2`).
-- If you want to lock to the `.0` minor, use `6000.0.0` or `6000.0.x`.
-- Stable (f) releases are preferred unless you explicitly specify a pre-release (a/b/rc) version.
+> [!NOTE]
+>
+> - If you want the latest across minors within a major, use just the major (e.g., `6000`).
+> - If you want to stay within a specific minor, use `MAJOR.MINOR` (e.g., `6000.2`).
+> - If you want to lock to the `.0` minor, use `6000.0.0` or `6000.0.x`.
+> - Stable (f) releases are preferred unless you explicitly specify a pre-release (a/b/rc) version.
 
 ### outputs
 
