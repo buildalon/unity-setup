@@ -19,7 +19,7 @@ strategy:
       - 2021.3.x
       - 2022.3
       - 6000.0.x
-      - 6000.1
+      - 6000.1.*
       - 6000
     include:
       - os: ubuntu-latest
@@ -55,6 +55,8 @@ steps:
 | `build-targets` | Specify the build targets to install for. Remaps to corresponding module. One or more of `StandaloneWindows64` `WSAPlayer` `StandaloneOSX` `iOS` `StandaloneLinux64` `Android` `Lumin` `WebGL` `VisionOS`. | false |
 | `modules` | Modules to install with the editor. This list can be different per editor version. | false |
 | `architecture` | Specify the architecture to install. Either `x86_64` or `arm64`. | false |
+| `install-path` | Specify the path where Unity will be installed to. | false |
+| `auto-update-hub` | Automatically update Unity Hub to the latest version before installing Unity Editors. Can be `true` or `false`. Default is `true`. | false || false |
 | `install-path` | Specify the path where Unity will be installed to. | false |
 
 #### unity-version formats

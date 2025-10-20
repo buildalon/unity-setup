@@ -1,35 +1,46 @@
-import { CheckAndroidSdkInstalled } from './install-android-sdk';
-import { ValidateInputs } from './inputs';
-import unityHub = require('./unity-hub');
 import core = require('@actions/core');
+import { ValidateInputs } from './inputs';
+import {
+    UnityHub,
+    CheckAndroidSdkInstalled,
+} from '@rage-against-the-pixel/unity-cli';
 
-const main = async () => {
+async function main() {
     try {
-        const [versions, modules, unityProjectPath, installPath] = await ValidateInputs();
+        const { versions, modules, unityProjectPath, installPath } = await ValidateInputs();
 
         if (unityProjectPath) {
+            core.info(`UNITY_PROJECT_PATH:\n  > ${unityProjectPath}`);
             core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
         }
 
-        const unityHubPath = await unityHub.Get();
+        const autoUpdate = core.getInput('auto-update-hub');
+        const unityHub = new UnityHub();
+        const unityHubPath = await unityHub.Install(autoUpdate === 'true');
+
+        if (!unityHubPath || unityHubPath.length === 0) {
+            throw new Error('Failed to install or locate Unity Hub!');
+        }
+
+        core.info(`UNITY_HUB_PATH:\n  > ${unityHubPath}`);
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
 
         if (installPath && installPath.length > 0) {
             await unityHub.SetInstallPath(installPath);
         }
 
-        const installedEditors: { version: string; path: string }[] = [];
+        const installedEditors: { version: string; path: string; }[] = [];
 
         for (const unityVersion of versions) {
-            const unityEditorPath = await unityHub.UnityEditor(unityVersion, modules);
-            core.exportVariable('UNITY_EDITOR_PATH', unityEditorPath); // always sets to the latest installed editor path
+            const unityEditor = await unityHub.GetEditor(unityVersion, modules);
+            core.info(`UNITY_EDITOR_PATH:\n  > ${unityEditor.editorPath}`);
+            core.exportVariable('UNITY_EDITOR_PATH', unityEditor.editorPath); // always sets to the latest installed editor path
 
             if (modules.includes('android') && unityProjectPath !== undefined) {
-                await CheckAndroidSdkInstalled(unityEditorPath, unityProjectPath);
+                await CheckAndroidSdkInstalled(unityEditor, unityProjectPath);
             }
 
-            core.info(`Installed Unity Editor: ${unityVersion.toString()} at ${unityEditorPath}`);
-            installedEditors.push({ version: unityVersion.version, path: unityEditorPath });
+            installedEditors.push({ version: unityVersion.version, path: unityEditor.editorPath });
         }
 
         if (installedEditors.length !== versions.length) {
@@ -42,6 +53,6 @@ const main = async () => {
     } catch (error) {
         core.setFailed(error.stack);
     }
-};
+}
 
 main();
