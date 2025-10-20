@@ -16,6 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    timeout-minutes: 30
     env:
       UNITY_EDITORS: '' # set by the unity-setup action
       UNITY_HUB_PATH: '' # set by the unity-setup action
@@ -23,13 +24,21 @@ jobs:
       UNITY_PROJECT_PATH: '' # set by the unity-setup action
       BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Free Disk Space
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.unity-version == '6000.2' }}
+        uses: endersonmenezes/free-disk-space@v2
+        with:
+          remove_android: true
+          remove_dotnet: false
+          remove_tool_cache: false
+      - uses: actions/checkout@v5
       - uses: ./ # buildalon/unity-setup
         with:
           version-file: 'None'
           unity-version: ${{ matrix.unity-version }}
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
+          auto-update-hub: ${{ !contains(matrix.modules, 'None') }}
       - run: |
           echo 'UNITY_HUB_PATH: ${{ env.UNITY_HUB_PATH }}'
           echo 'UNITY_EDITORS: ${{ env.UNITY_EDITORS }}'
@@ -58,8 +67,8 @@ jobs:
           if [[ "$MATRIX_UNITY_VERSION_PREFIX" =~ ^([0-9]+\.[0-9]+\.[0-9]+[abcfpx]?[0-9]*) ]]; then
             MATRIX_UNITY_VERSION_PREFIX="${BASH_REMATCH[1]}"
           fi
-          # Support matrix.unity-version patterns ending with .x after major.minor (e.g., 2021.3.x)
-          if [[ "${{ matrix.unity-version }}" =~ ^([0-9]+\.[0-9]+)\.x$ ]]; then
+          # Support matrix.unity-version patterns ending with .x or .* after major.minor (e.g., 2021.3.x or 2021.3.*)
+          if [[ "${{ matrix.unity-version }}" =~ ^([0-9]+\.[0-9]+)\.[x\*]$ ]]; then
             UNITY_MAJOR_MINOR="${BASH_REMATCH[1]}"
             if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR_MINOR"* ]]; then
               echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"
@@ -67,8 +76,8 @@ jobs:
               echo "Unity version mismatch: $UNITY_EDITOR_VERSION does not satisfy ${{ matrix.unity-version }}"
               exit 1
             fi
-          # Support matrix.unity-version patterns ending with .x after major (e.g., 2022.x)
-          elif [[ "${{ matrix.unity-version }}" =~ ^([0-9]+)\.x$ ]]; then
+          # Support matrix.unity-version patterns ending with .x or .* after major (e.g., 2022.x or 2022.*)
+          elif [[ "${{ matrix.unity-version }}" =~ ^([0-9]+)\.[x\*]$ ]]; then
             UNITY_MAJOR="${BASH_REMATCH[1]}"
             if [[ "$UNITY_EDITOR_VERSION" == "$UNITY_MAJOR"* ]]; then
               echo "Unity version matches matrix.unity-version: $UNITY_EDITOR_VERSION satisfies ${{ matrix.unity-version }}"

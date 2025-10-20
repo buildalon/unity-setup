@@ -27,6 +27,10 @@ inputs:
   install-path:
     description: 'Specify the path where Unity will be installed to.'
     required: false
+  auto-update-hub:
+    description: 'Automatically update Unity Hub to the latest version before installing Unity Editors. Can be `true` or `false`.'
+    required: false
+    default: 'true'
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: node20
+  main: dist/index.js
