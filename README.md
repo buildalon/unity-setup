@@ -23,7 +23,7 @@ strategy:
       - 6000
     include:
       - os: ubuntu-latest
-        build-targets: StandaloneLinux64, Android, iOS
+        build-targets: StandaloneLinux64, Android, WebGL
         modules: linux-server
       - os: windows-latest
         build-targets: StandaloneWindows64, Android, WSAPlayer

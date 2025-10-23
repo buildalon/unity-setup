@@ -3779,14 +3779,17 @@ class LicensingClient {
     /**
      * Activates a Unity license.
      * @param options The activation options including license type, services config, serial, username, and password.
+     * @param skipEntitlementCheck Whether to skip the entitlement check.
      * @returns A promise that resolves when the license is activated.
      * @throws Error if activation fails or required parameters are missing.
      */
-    async Activate(options) {
-        let activeLicenses = await this.GetActiveEntitlements();
-        if (activeLicenses.includes(options.licenseType)) {
-            this.logger.info(`License of type '${options.licenseType}' is already active, skipping activation`);
-            return;
+    async Activate(options, skipEntitlementCheck = false) {
+        if (!skipEntitlementCheck) {
+            let activeLicenses = await this.GetActiveEntitlements();
+            if (activeLicenses.includes(options.licenseType)) {
+                this.logger.info(`License of type '${options.licenseType}' is already active, skipping activation`);
+                return;
+            }
         }
         switch (options.licenseType) {
             case LicenseType.floating: {
@@ -3988,6 +3991,14 @@ class Logger {
             this.logLevel = process.env.ACTIONS_STEP_DEBUG === 'true' ? LogLevel.DEBUG : LogLevel.CI;
         }
     }
+    printLine(message, lineColor, optionalParams = []) {
+        if (lineColor && lineColor.length > 0) {
+            process.stdout.write(`${lineColor}${message}\x1b[0m\n`, ...optionalParams);
+        }
+        else {
+            process.stdout.write(`${message}\n`, ...optionalParams);
+        }
+    }
     /**
      * Logs a message to the console.
      * @param level The log level for this message.
@@ -4018,15 +4029,14 @@ class Logger {
                     break;
                 }
                 default: {
-                    const clear = '\x1b[0m';
                     const stringColor = {
                         [LogLevel.DEBUG]: '\x1b[35m', // Purple
-                        [LogLevel.INFO]: clear, // No color / White
-                        [LogLevel.CI]: clear, // No color / White
+                        [LogLevel.INFO]: undefined, // No color / White
+                        [LogLevel.CI]: undefined, // No color / White
                         [LogLevel.WARN]: '\x1b[33m', // Yellow
                         [LogLevel.ERROR]: '\x1b[31m', // Red
-                    }[level] || clear; // Default to no color / White
-                    process.stdout.write(`${stringColor}${message}${clear}\n`, ...optionalParams);
+                    }[level] || undefined; // Default to no color / White
+                    this.printLine(message, stringColor, optionalParams);
                     break;
                 }
             }
@@ -4042,11 +4052,9 @@ class Logger {
                 // then print the rest of the lines inside the group in cyan color
                 const firstLine = message.toString().split('\n')[0];
                 const restLines = message.toString().split('\n').slice(1);
-                const cyan = '\x1b[36m';
-                const clear = '\x1b[0m';
                 process.stdout.write(`::group::${firstLine}\n`, ...optionalParams);
                 restLines.forEach(line => {
-                    process.stdout.write(`${cyan}${line}${clear}\n`, ...optionalParams);
+                    this.printLine(line, '\x1b[36m', ...optionalParams);
                 });
                 break;
             }
@@ -4267,12 +4275,12 @@ class UnityEditor {
             this.logger.warn(`No Unity templates found for ${this.version.toString()}`);
             return undefined;
         }
-        // Build a regex to match the template name and optional version suffix
-        // e.g., com.unity.template.3d(-cross-platform)?.*
-        // Supports files (.tgz / .tar.gz) and legacy folder templates without a suffix.
+        // Build a regex to match the template name, an optional numeric version suffix, and required file extension
+        // Example input: com.unity.template.3d(-cross-platform)?.*
+        // Example match: com.unity.template.3d-cross-platform-1.2.3.tar.gz or com.unity.template.3d-1.2.3.tgz
         let regex;
         try {
-            regex = new RegExp(`^${template}(?:[-.].*)?(?:\.tgz|\.tar\.gz)?$`);
+            regex = new RegExp(`^${template}(?:-\\d+\\.\\d+\\.\\d+)?(?:\\.tgz|\\.tar\\.gz)$`);
         }
         catch (e) {
             throw new Error(`Invalid template regex: ${template}`);
@@ -4297,7 +4305,7 @@ class UnityEditor {
      * @returns An array of available template file names.
      */
     GetAvailableTemplates() {
-        if (this.version.isLessThan('2018.0.0')) {
+        if (this.version.isLessThan('2019.0.0')) {
             this.logger.warn(`Unity version ${this.version.toString()} does not support project templates.`);
             return [];
         }
@@ -4354,19 +4362,38 @@ class UnityEditor {
             if (!command.args || command.args.length === 0) {
                 throw Error('No command arguments provided for Unity execution');
             }
-            if (!command.args.includes(`-automated`)) {
-                command.args.push(`-automated`);
-            }
-            if (!command.args.includes(`-batchmode`)) {
-                command.args.push(`-batchmode`);
-            }
             if (this.autoAddNoGraphics &&
                 !command.args.includes(`-nographics`) &&
                 !command.args.includes(`-force-graphics`)) {
-                command.args.push(`-nographics`);
+                command.args.unshift(`-nographics`);
+            }
+            if (!command.args.includes(`-batchmode`)) {
+                command.args.unshift(`-batchmode`);
+            }
+            if (!command.args.includes(`-automated`)) {
+                command.args.unshift(`-automated`);
             }
             if (!command.args.includes('-logFile')) {
-                command.args.push('-logFile', this.GenerateLogFilePath(command.projectPath));
+                command.args.unshift('-logFile', this.GenerateLogFilePath(command.projectPath));
+            }
+            else {
+                const existingLogPath = (0, utilities_1.GetArgumentValueAsString)('-logFile', command.args);
+                command.args.splice(command.args.indexOf(existingLogPath) - 1, 2);
+                command.args.unshift('-logFile', existingLogPath);
+            }
+            if (command.projectPath) {
+                if (!command.args.includes('-projectPath')) {
+                    command.args.unshift('-projectPath', command.projectPath);
+                }
+                else {
+                    const existingPath = (0, utilities_1.GetArgumentValueAsString)('-projectPath', command.args);
+                    if (existingPath !== command.projectPath) {
+                        throw Error(`Conflicting project paths provided. Argument: "${existingPath}", Command: "${command.projectPath}"`);
+                    }
+                    // Ensure -projectPath is the first argument
+                    command.args.splice(command.args.indexOf(existingPath) - 1, 2);
+                    command.args.unshift('-projectPath', command.projectPath);
+                }
             }
             const logPath = (0, utilities_1.GetArgumentValueAsString)('-logFile', command.args);
             logTail = (0, utilities_1.TailLogFile)(logPath);
