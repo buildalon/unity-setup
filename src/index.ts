@@ -15,8 +15,14 @@ async function main() {
         }
 
         const autoUpdate = core.getInput('auto-update-hub');
+        const hubVersion = core.getInput('hub-version');
+
+        if (autoUpdate === 'true' && hubVersion && hubVersion.length > 0) {
+            throw new Error('Cannot specify a specific Unity Hub version when auto-update is set to true.');
+        }
+
         const unityHub = new UnityHub();
-        const unityHubPath = await unityHub.Install(autoUpdate === 'true');
+        const unityHubPath = await unityHub.Install(autoUpdate === 'true', hubVersion);
 
         if (!unityHubPath || unityHubPath.length === 0) {
             throw new Error('Failed to install or locate Unity Hub!');

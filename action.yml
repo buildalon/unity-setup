@@ -31,6 +31,10 @@ inputs:
     description: 'Automatically update Unity Hub to the latest version before installing Unity Editors. Can be `true` or `false`.'
     required: false
     default: 'true'
+  hub-version:
+    description: 'Specify a specific version of Unity Hub to install. Example: `3.12.0`. Cannot be used with `auto-update-hub` set to `true`.'
+    required: false
+    default: ''
 runs:
   using: node20
   main: dist/index.js
