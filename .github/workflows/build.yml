@@ -39,6 +39,7 @@ jobs:
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
           auto-update-hub: ${{ !contains(matrix.modules, 'None') }}
+          hub-version: ${{ contains(matrix.modules, 'None') && '3.12.0' || '' }}
       - run: |
           echo 'UNITY_HUB_PATH: ${{ env.UNITY_HUB_PATH }}'
           echo 'UNITY_EDITORS: ${{ env.UNITY_EDITORS }}'
