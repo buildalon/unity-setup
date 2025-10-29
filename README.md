@@ -57,7 +57,7 @@ steps:
 | `architecture` | Specify the architecture to install. Either `x86_64` or `arm64`. | false |
 | `install-path` | Specify the path where Unity will be installed to. | false |
 | `auto-update-hub` | Automatically update Unity Hub to the latest version before installing Unity Editors. Can be `true` or `false`. Default is `true`. | false |
-| `hub-version` | Specify a specific version of Unity Hub to install. Example: `3.12.0`. Cannot be used with `auto-update-hub`. | false |
+| `hub-version` | Specify a specific version of Unity Hub to install. Example: `3.12.0`. When set, `auto-update-hub` is automatically disabled. | false |
 
 #### unity-version formats
 

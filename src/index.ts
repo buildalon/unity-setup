@@ -14,11 +14,11 @@ async function main() {
             core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
         }
 
-        const autoUpdate = core.getInput('auto-update-hub');
+        let autoUpdate = core.getInput('auto-update-hub');
         const hubVersion = core.getInput('hub-version');
 
         if (autoUpdate === 'true' && hubVersion && hubVersion.length > 0) {
-            throw new Error('Cannot specify a specific Unity Hub version when auto-update is set to true.');
+            autoUpdate = 'false';
         }
 
         const unityHub = new UnityHub();
