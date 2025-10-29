@@ -32,7 +32,7 @@ inputs:
     required: false
     default: 'true'
   hub-version:
-    description: 'Specify a specific version of Unity Hub to install. Example: `3.12.0`. Cannot be used with `auto-update-hub` set to `true`.'
+    description: 'Specify a specific version of Unity Hub to install. Example: `3.12.0`. When set, auto-update-hub is automatically disabled.'
     required: false
     default: ''
 runs:

@@ -27,6 +27,7 @@ jobs:
         with:
           build-options: ./.github/workflows/build-options.json
           group-by: unity-version
+          job-name-prefix: Install
     outputs:
       jobs: ${{ steps.setup-jobs.outputs.jobs }}
   validate:
