@@ -8,8 +8,10 @@
     "None",
     "4.7.2",
     "5.6.7f1 (e80cc3114ac1)",
-    "2019.4",
-    "2020",
+    "2017",
+    "2018",
+    "2019.x",
+    "2020.*",
     "2021.3.x",
     "2022.x",
     "6000.0.x",
@@ -44,24 +46,6 @@
     },
     {
       "os": "macos-latest",
-      "build-targets": "None",
-      "modules": "None"
-    },
-    {
-      "os": "ubuntu-latest",
-      "unity-version": "2019.4.40f1",
-      "build-targets": "None",
-      "modules": "None"
-    },
-    {
-      "os": "ubuntu-latest",
-      "unity-version": "2018.4.36f1 (6cd387d23174)",
-      "build-targets": "None",
-      "modules": "None"
-    },
-    {
-      "os": "ubuntu-latest",
-      "unity-version": "2017.4.40f1 (6e14067f8a9a)",
       "build-targets": "None",
       "modules": "None"
     }

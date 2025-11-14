@@ -33,6 +33,7 @@ strategy:
         modules: mac-server
 steps:
   - uses: buildalon/unity-setup@v2
+    id: unity-setup
     with:
       version-file: 'path/to/your/unity/project/ProjectSettings/ProjectVersion.txt'
       unity-version: ${{ matrix.unity-version }} # overrides version in version-file
@@ -40,6 +41,13 @@ steps:
       modules: ${{ matrix.modules }}
 
   - run: |
+      echo "Step Outputs:"
+      echo "steps.unity-setup.unity-hub-path: '${{ steps.unity-setup.outputs.unity-hub-path }}'"
+      echo "steps.unity-setup.unity-editors: '${{ steps.unity-setup.outputs.unity-editors }}'"
+      echo "steps.unity-setup.unity-editor-path: '${{ steps.unity-setup.outputs.unity-editor-path }}'"
+      echo "steps.unity-setup.unity-project-path: '${{ steps.unity-setup.outputs.unity-project-path }}'"
+
+      echo "Environment Variables:"
       echo "UNITY_HUB_PATH: '${{ env.UNITY_HUB_PATH }}'"
       echo "UNITY_EDITORS: '${{ env.UNITY_EDITORS }}'"
       echo "UNITY_EDITOR_PATH: '${{ env.UNITY_EDITOR_PATH }}'"
@@ -78,7 +86,30 @@ Use any of the following patterns to control how the editor version is resolved:
 
 ### outputs
 
+#### step outputs
+
+Steps outputs available for use in subsequent steps:
+
+> [!TIP]
+> prefix step outputs with the step id you set in your workflow. In the example above, the step id is `unity-setup`:
+>
+> `${{ steps.unity-setup.outputs.unity-hub-path }}`
+
+- `unity-hub-path`: The file path to the Unity Hub installation.
+- `unity-editors`: A JSON array of all installed Unity Editors on the runner.
+- `unity-editor-path`: The path to the latest installed version of Unity.
+- `unity-project-path`: The file path to the Unity project.
+
+#### environment variables
+
+Environment variables available for use in subsequent steps:
+
+> [!TIP]
+> prefix environment variables with `env.` when using in subsequent steps. For example:
+>
+> `${{ env.UNITY_HUB_PATH }}`.
+
 - `UNITY_HUB_PATH`: The path to the installed unity hub.
+- `UNITY_EDITORS`: A JSON array of all installed Unity Editors on the runner.
+- `UNITY_EDITOR_PATH`: The path to the latest installed version of Unity.
 - `UNITY_PROJECT_PATH`: The path to the Unity project.
-- `UNITY_EDITOR_PATH`: The path to the last installed version of Unity.
-- `UNITY_EDITORS`: A json object array of each editor installation `[{"version":"path"},...]`.

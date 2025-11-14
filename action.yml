@@ -35,6 +35,15 @@ inputs:
     description: 'Specify a specific version of Unity Hub to install. Example: `3.12.0`. When set, auto-update-hub is automatically disabled.'
     required: false
     default: ''
+outputs:
+  unity-hub-path:
+    description: 'The file path to the Unity Hub installation.'
+  unity-editors:
+    description: 'A JSON array of all installed Unity Editors on the runner.'
+  unity-editor-path:
+    description: 'The path to the latest installed version of Unity.'
+  unity-project-path:
+    description: 'The file path to the Unity project.'
 runs:
   using: node20
   main: dist/index.js
