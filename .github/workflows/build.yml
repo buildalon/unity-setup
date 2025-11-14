@@ -41,10 +41,48 @@ jobs:
           auto-update-hub: ${{ !contains(matrix.modules, 'None') }}
           hub-version: ${{ contains(matrix.modules, 'None') && '3.12.0' || '' }}
       - run: |
-          echo 'UNITY_HUB_PATH: ${{ env.UNITY_HUB_PATH }}'
-          echo 'UNITY_EDITORS: ${{ env.UNITY_EDITORS }}'
-          echo 'UNITY_EDITOR_PATH: ${{ env.UNITY_EDITOR_PATH }}'
-          echo 'UNITY_PROJECT_PATH: ${{ env.UNITY_PROJECT_PATH }}'
+          ENV_UNITY_HUB_PATH="${{ env.UNITY_HUB_PATH }}"
+          echo "env.UNITY_HUB_PATH: \"${ENV_UNITY_HUB_PATH}\""
+          STEPS_UNITY_HUB_PATH="${{ steps.unity-setup.outputs.unity-hub-path }}"
+          echo "steps.unity-setup.outputs.unity-hub-path: \"${STEPS_UNITY_HUB_PATH}\""
+          ENV_UNITY_EDITORS='${{ env.UNITY_EDITORS }}' # single quotes to preserve JSON format and quotes from breaking the script
+          # The json string is raw and not escaped, which breaks echoing it directly. Escape quotes for safe echoing.
+          ENV_UNITY_EDITORS="${ENV_UNITY_EDITORS//\"/\\\"}"
+          echo "env.UNITY_EDITORS: \"${ENV_UNITY_EDITORS}\""
+          STEPS_UNITY_EDITORS='${{ steps.unity-setup.outputs.unity-editors }}' # single quotes to preserve JSON format and quotes from breaking the script
+          # The json string is raw and not escaped, which breaks echoing it directly. Escape quotes for safe echoing.
+          STEPS_UNITY_EDITORS="${STEPS_UNITY_EDITORS//\"/\\\"}"
+          echo "steps.unity-setup.outputs.unity-editors: \"${STEPS_UNITY_EDITORS}\""
+          ENV_UNITY_EDITOR_PATH="${{ env.UNITY_EDITOR_PATH }}"
+          echo "env.UNITY_EDITOR_PATH: \"${ENV_UNITY_EDITOR_PATH}\""
+          STEPS_UNITY_EDITOR_PATH="${{ steps.unity-setup.outputs.unity-editor-path }}"
+          echo "steps.unity-setup.outputs.unity-editor-path: \"${STEPS_UNITY_EDITOR_PATH}\""
+          ENV_UNITY_PROJECT_PATH="${{ env.UNITY_PROJECT_PATH }}"
+          echo "env.UNITY_PROJECT_PATH: \"${ENV_UNITY_PROJECT_PATH}\""
+          STEPS_UNITY_PROJECT_PATH="${{ steps.unity-setup.outputs.unity-project-path }}"
+          echo "steps.unity-setup.outputs.unity-project-path: \"${STEPS_UNITY_PROJECT_PATH}\""
+
+          # validate both the env and output variables are the same
+          if [[ "${ENV_UNITY_HUB_PATH}" != "${STEPS_UNITY_HUB_PATH}" ]]; then
+            echo "Error: UNITY_HUB_PATH env and output do not match!"
+            exit 1
+          fi
+
+          if [[ "${ENV_UNITY_EDITORS}" != "${STEPS_UNITY_EDITORS}" ]]; then
+            echo "Error: UNITY_EDITORS env and output do not match!"
+            exit 1
+          fi
+          
+          if [[ "${ENV_UNITY_EDITOR_PATH}" != "${STEPS_UNITY_EDITOR_PATH}" ]]; then
+            echo "Error: UNITY_EDITOR_PATH env and output do not match!"
+            exit 1
+          fi
+          
+          if [[ "${ENV_UNITY_PROJECT_PATH}" != "${STEPS_UNITY_PROJECT_PATH}" ]]; then
+            echo "Error: UNITY_PROJECT_PATH env and output do not match!"
+            exit 1
+          fi
+          
           # If unity-version is None, UNITY_EDITOR_PATH must be empty
           if [[ "${{ matrix.unity-version }}" == "None" ]]; then
             if [[ -n "${{ env.UNITY_EDITOR_PATH }}" ]]; then

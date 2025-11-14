@@ -12,6 +12,7 @@ async function main() {
         if (unityProjectPath) {
             core.info(`UNITY_PROJECT_PATH:\n  > ${unityProjectPath}`);
             core.exportVariable('UNITY_PROJECT_PATH', unityProjectPath);
+            core.setOutput('unity-project-path', unityProjectPath);
         }
 
         let autoUpdate = core.getInput('auto-update-hub');
@@ -30,6 +31,7 @@ async function main() {
 
         core.info(`UNITY_HUB_PATH:\n  > ${unityHubPath}`);
         core.exportVariable('UNITY_HUB_PATH', unityHubPath);
+        core.setOutput('unity-hub-path', unityHubPath);
 
         if (installPath && installPath.length > 0) {
             await unityHub.SetInstallPath(installPath);
@@ -40,7 +42,9 @@ async function main() {
         for (const unityVersion of versions) {
             const unityEditor = await unityHub.GetEditor(unityVersion, modules);
             core.info(`UNITY_EDITOR_PATH:\n  > ${unityEditor.editorPath}`);
-            core.exportVariable('UNITY_EDITOR_PATH', unityEditor.editorPath); // always sets to the latest installed editor path
+            // always sets to the latest installed editor path
+            core.exportVariable('UNITY_EDITOR_PATH', unityEditor.editorPath);
+            core.setOutput('unity-editor-path', unityEditor.editorPath);
 
             if (modules.includes('android') && unityProjectPath !== undefined) {
                 await CheckAndroidSdkInstalled(unityEditor, unityProjectPath);
@@ -53,7 +57,8 @@ async function main() {
             throw new Error(`Expected to install ${versions.length} Unity versions, but installed ${installedEditors.length}.`);
         }
 
-        core.exportVariable('UNITY_EDITORS', Object.fromEntries(installedEditors.map(e => [e.version, e.path])));
+        core.exportVariable('UNITY_EDITORS', JSON.stringify(installedEditors));
+        core.setOutput('unity-editors', JSON.stringify(installedEditors));
         core.info('Unity Setup Complete!');
         process.exit(0);
     } catch (error) {
