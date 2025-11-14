@@ -25,7 +25,7 @@ jobs:
       BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
     steps:
       - name: Free Disk Space
-        if: ${{ matrix.os == 'ubuntu-latest' && (matrix.unity-version == '6000.2' || matrix.unity-version == '6000.1.*') }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: endersonmenezes/free-disk-space@v2
         with:
           remove_android: true
