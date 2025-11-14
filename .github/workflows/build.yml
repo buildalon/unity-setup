@@ -33,6 +33,7 @@ jobs:
           remove_tool_cache: false
       - uses: actions/checkout@v5
       - uses: ./ # buildalon/unity-setup
+        id: unity-setup
         with:
           version-file: 'None'
           unity-version: ${{ matrix.unity-version }}
