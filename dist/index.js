@@ -3274,16 +3274,16 @@ async function getJDKPath(editor) {
     return jdkPath;
 }
 async function getSdkManager(editor) {
-    let globPath = [];
+    let globCandidates = [];
     if (editor.version.range('>=2019.0.0 <2021.0.0')) {
         logger.debug('Using sdkmanager bundled with Unity 2019 and 2020');
         switch (process.platform) {
             case 'darwin':
             case 'linux':
-                globPath = [editor.editorRootPath, '**', 'AndroidPlayer', '**', 'sdkmanager'];
+                globCandidates = [[editor.editorRootPath, '**', 'AndroidPlayer', '**', 'sdkmanager']];
                 break;
             case 'win32':
-                globPath = [editor.editorRootPath, '**', 'AndroidPlayer', '**', 'sdkmanager.bat'];
+                globCandidates = [[editor.editorRootPath, '**', 'AndroidPlayer', '**', 'sdkmanager.bat']];
                 break;
             default:
                 throw new Error(`Unsupported platform: ${process.platform}`);
@@ -3294,10 +3294,10 @@ async function getSdkManager(editor) {
         switch (process.platform) {
             case 'darwin':
             case 'linux':
-                globPath = [editor.editorRootPath, '**', 'AndroidPlayer', '**', 'cmdline-tools', '**', 'sdkmanager'];
+                globCandidates = [[editor.editorRootPath, '**', 'AndroidPlayer', '**', 'cmdline-tools', '**', 'sdkmanager']];
                 break;
             case 'win32':
-                globPath = [editor.editorRootPath, '**', 'AndroidPlayer', '**', 'cmdline-tools', '**', 'sdkmanager.bat'];
+                globCandidates = [[editor.editorRootPath, '**', 'AndroidPlayer', '**', 'cmdline-tools', '**', 'sdkmanager.bat']];
                 break;
             default:
                 throw new Error(`Unsupported platform: ${process.platform}`);
@@ -3309,21 +3309,31 @@ async function getSdkManager(editor) {
         if (!systemSdkPath) {
             throw new Error('Android installation not found: No system ANDROID_SDK_ROOT or ANDROID_HOME defined');
         }
+        const sdkManagerBinary = process.platform === 'win32' ? 'sdkmanager.bat' : 'sdkmanager';
         switch (process.platform) {
             case 'darwin':
             case 'linux':
-                globPath = [systemSdkPath, 'cmdline-tools', 'latest', 'bin', 'sdkmanager'];
-                break;
             case 'win32':
-                globPath = [systemSdkPath, 'cmdline-tools', 'latest', 'bin', 'sdkmanager.bat'];
+                globCandidates = [
+                    [systemSdkPath, 'cmdline-tools', 'latest', 'bin', sdkManagerBinary],
+                    [systemSdkPath, 'cmdline-tools', '**', 'bin', sdkManagerBinary],
+                    [systemSdkPath, 'tools', 'bin', sdkManagerBinary]
+                ];
                 break;
             default:
                 throw new Error(`Unsupported platform: ${process.platform}`);
         }
     }
-    const sdkmanagerPath = await (0, utilities_1.ResolveGlobToPath)(globPath);
+    const sdkmanagerPath = await (0, utilities_1.ResolvePathCandidates)(globCandidates);
     if (!sdkmanagerPath) {
-        throw new Error(`Failed to resolve sdkmanager in ${globPath}`);
+        const normalizedCandidates = globCandidates.map(candidate => path_1.default.join(...candidate).split(path_1.default.sep).join('/'));
+        if (normalizedCandidates.length > 0) {
+            logger.ci(`sdkmanager glob candidates:\n${normalizedCandidates.map(candidate => `  > ${candidate}`).join('\n')}`);
+        }
+        else {
+            logger.ci('sdkmanager glob candidates:\n  > <none>');
+        }
+        throw new Error('Failed to resolve sdkmanager in expected locations');
     }
     await fs_1.default.promises.access(sdkmanagerPath, fs_1.default.constants.R_OK);
     logger.ci(`sdkmanagerPath:\n  > "${sdkmanagerPath}"`);
@@ -4099,6 +4109,63 @@ class Logger {
     error(message, ...optionalParams) {
         this.log(LogLevel.ERROR, message, optionalParams);
     }
+    /**
+     * Annotates a file and line number in CI environments that support it.
+     * @param logLevel The level of the log.
+     * @param message The message to annotate.
+     * @param file The file to annotate.
+     * @param line The line number to annotate.
+     * @param endLine The end line number to annotate.
+     * @param column The column number to annotate.
+     * @param endColumn The end column number to annotate.
+     * @param title The title of the annotation.
+     */
+    annotate(logLevel, message, file, line, endLine, column, endColumn, title) {
+        let annotation = '';
+        switch (this._ci) {
+            case 'GITHUB_ACTIONS': {
+                var level;
+                switch (logLevel) {
+                    case LogLevel.CI:
+                    case LogLevel.INFO:
+                    case LogLevel.DEBUG: {
+                        level = 'notice';
+                        break;
+                    }
+                    case LogLevel.WARN: {
+                        level = 'warning';
+                        break;
+                    }
+                    case LogLevel.ERROR: {
+                        level = 'error';
+                        break;
+                    }
+                }
+                let parts = [];
+                if (file !== undefined && file.length > 0) {
+                    parts.push(`file=${file}`);
+                }
+                if (line !== undefined && line > 0) {
+                    parts.push(`line=${line}`);
+                }
+                if (endLine !== undefined && endLine > 0) {
+                    parts.push(`endLine=${endLine}`);
+                }
+                if (column !== undefined && column > 0) {
+                    parts.push(`col=${column}`);
+                }
+                if (endColumn !== undefined && endColumn > 0) {
+                    parts.push(`endColumn=${endColumn}`);
+                }
+                if (title !== undefined && title.length > 0) {
+                    parts.push(`title=${title}`);
+                }
+                annotation = `::${level} ${parts.join(',')}::${message}`;
+                break;
+            }
+        }
+        process.stdout.write(`${annotation}\n`);
+    }
     shouldLog(level) {
         if (level === LogLevel.CI) {
             return true;
@@ -4146,6 +4213,20 @@ class Logger {
                     fs.appendFileSync(githubOutput, `${name}=${value}\n`, { encoding: 'utf8' });
                 }
                 break;
+            }
+        }
+    }
+    CI_appendWorkflowSummary(telemetry) {
+        switch (this._ci) {
+            case 'GITHUB_ACTIONS': {
+                const githubSummary = process.env.GITHUB_STEP_SUMMARY;
+                if (githubSummary) {
+                    let table = `| Key | Value |\n| --- | ----- |\n`;
+                    telemetry.forEach(item => {
+                        table += `| ${item.key} | ${item.value} |\n`;
+                    });
+                    fs.appendFileSync(githubSummary, table, { encoding: 'utf8' });
+                }
             }
         }
     }
@@ -4405,20 +4486,27 @@ class UnityEditor {
                 }
             }
             const logPath = (0, utilities_1.GetArgumentValueAsString)('-logFile', command.args);
-            logTail = (0, utilities_1.TailLogFile)(logPath);
+            logTail = (0, utilities_1.TailLogFile)(logPath, command.projectPath);
             const commandStr = `\x1b[34m${this.editorPath} ${command.args.join(' ')}\x1b[0m`;
             this.logger.startGroup(commandStr);
             if (this.version.isLegacy() && process.platform === 'darwin' && process.arch === 'arm64') {
                 throw new Error(`Cannot execute Unity ${this.version.toString()} on Apple Silicon Macs.`);
             }
+            const linuxEnvOverrides = process.platform === 'linux'
+                ? await this.prepareLinuxAudioEnvironment()
+                : undefined;
+            const baseEditorEnv = {
+                ...process.env,
+                UNITY_THISISABUILDMACHINE: '1',
+                ...(linuxEnvOverrides ?? {})
+            };
             if (process.platform === 'linux' &&
                 !command.args.includes('-nographics')) {
                 unityProcess = (0, child_process_1.spawn)('xvfb-run', [this.editorPath, ...command.args], {
                     stdio: ['ignore', 'ignore', 'ignore'],
                     env: {
-                        ...process.env,
-                        DISPLAY: ':99',
-                        UNITY_THISISABUILDMACHINE: '1'
+                        ...baseEditorEnv,
+                        DISPLAY: baseEditorEnv.DISPLAY || ':99'
                     }
                 });
             }
@@ -4436,10 +4524,7 @@ class UnityEditor {
             else {
                 unityProcess = (0, child_process_1.spawn)(this.editorPath, command.args, {
                     stdio: ['ignore', 'ignore', 'ignore'],
-                    env: {
-                        ...process.env,
-                        UNITY_THISISABUILDMACHINE: '1'
-                    }
+                    env: baseEditorEnv
                 });
             }
             if (!unityProcess?.pid || unityProcess.killed) {
@@ -4513,6 +4598,38 @@ class UnityEditor {
         const logsDir = this.GetLogsDirectory(projectPath);
         const timestamp = new Date().toISOString().replace(/[-:]/g, ``).replace(/\..+/, ``);
         return path.join(logsDir, `${prefix ? prefix + '-' : ''}Unity-${timestamp}.log`);
+    }
+    async prepareLinuxAudioEnvironment() {
+        if (process.platform !== 'linux') {
+            return {};
+        }
+        const envOverrides = {
+            SDL_AUDIODRIVER: process.env.SDL_AUDIODRIVER || 'dummy',
+            AUDIODRIVER: process.env.AUDIODRIVER || 'dummy',
+            AUDIODEV: process.env.AUDIODEV || 'null',
+            ALSA_CARD: process.env.ALSA_CARD || 'Loopback',
+            PULSE_SINK: process.env.PULSE_SINK || 'unity_dummy'
+        };
+        const defaultRuntimeDir = `/run/user/${typeof process.getuid === 'function' ? process.getuid() : 1000}`;
+        const runtimeDir = process.env.XDG_RUNTIME_DIR || defaultRuntimeDir;
+        envOverrides.XDG_RUNTIME_DIR = runtimeDir;
+        try {
+            await fs.promises.mkdir(runtimeDir, { recursive: true, mode: 0o700 });
+        }
+        catch (error) {
+            this.logger.debug(`Failed to ensure XDG_RUNTIME_DIR (${runtimeDir}): ${error}`);
+        }
+        await this.tryExec('bash', ['-c', 'pulseaudio --check 2>/dev/null || pulseaudio --start --exit-idle-time=-1 || true']);
+        await this.tryExec('bash', ['-c', 'command -v pactl >/dev/null 2>&1 && { pactl list short sinks 2>/dev/null | grep -q unity_dummy || pactl load-module module-null-sink sink_name=unity_dummy sink_properties=device.description=UnityCI >/tmp/unity-null-sink.id; } || true']);
+        return envOverrides;
+    }
+    async tryExec(command, args) {
+        try {
+            await (0, utilities_1.Exec)(command, args, { silent: true, showCommand: false });
+        }
+        catch (error) {
+            this.logger.debug(`Skipped helper command "${command} ${args.join(' ')}": ${error}`);
+        }
     }
     /**
      * Get the root path of the Unity Editor installation based on the provided editor path.
@@ -4691,9 +4808,13 @@ class UnityHub {
         try {
             exitCode = await new Promise((resolve, reject) => {
                 let isSettled = false; // Has the promise been settled (resolved or rejected)?
-                let isHubTaskComplete = false; // Has the Unity Hub tasks completed successfully?
+                let isHubTaskCompleteSuccess = false; // Has the Unity Hub tasks completed successfully?
+                let isHubTaskCompleteFailed = false; // Has the Unity Hub tasks completed with failure?
                 let lineBuffer = ''; // Buffer for incomplete lines
-                const tasksCompleteMessage = 'All Tasks Completed Successfully.';
+                const tasksCompleteMessages = [
+                    'All Tasks Completed Successfully.',
+                    'Completed with errors.'
+                ];
                 const child = (0, child_process_1.spawn)(executable, execArgs, {
                     stdio: ['ignore', 'pipe', 'pipe']
                 });
@@ -4722,8 +4843,9 @@ class UnityHub {
                         else {
                             lineBuffer = '';
                         }
-                        if (lines.includes(tasksCompleteMessage)) {
-                            isHubTaskComplete = true;
+                        if (lines.some(line => tasksCompleteMessages.includes(line))) {
+                            isHubTaskCompleteSuccess = lines.includes('All Tasks Completed Successfully.');
+                            isHubTaskCompleteFailed = lines.includes('Completed with errors.');
                             if (child?.pid) {
                                 try {
                                     child.kill('SIGTERM');
@@ -4742,7 +4864,15 @@ class UnityHub {
                                     // Ignore, process may have already exited
                                 }
                                 finally {
-                                    settle(0);
+                                    if (isHubTaskCompleteSuccess) {
+                                        settle(0);
+                                    }
+                                    else if (isHubTaskCompleteFailed) {
+                                        settle(1);
+                                    }
+                                    else {
+                                        settle(null);
+                                    }
                                 }
                             }
                         }
@@ -4766,8 +4896,9 @@ class UnityHub {
                                 .filter(line => line.length > 0); // filter out empty lines
                             lineBuffer = '';
                             const outputLines = lines.filter(line => !ignoredLines.some(ignored => line.includes(ignored)));
-                            if (outputLines.includes(tasksCompleteMessage)) {
-                                isHubTaskComplete = true;
+                            if (outputLines.some(line => tasksCompleteMessages.includes(line))) {
+                                isHubTaskCompleteSuccess = outputLines.includes('All Tasks Completed Successfully.');
+                                isHubTaskCompleteFailed = outputLines.includes('Completed with errors.');
                             }
                             for (const line of outputLines) {
                                 output += `${line}\n`;
@@ -4790,12 +4921,7 @@ class UnityHub {
                     isSettled = true;
                     removeListeners();
                     flushOutput();
-                    if (isHubTaskComplete) {
-                        resolve(0);
-                    }
-                    else {
-                        resolve(code === null ? 0 : code);
-                    }
+                    resolve(code === null ? 0 : code);
                 }
                 child.stdout.on('data', processOutput);
                 child.stderr.on('data', processOutput);
@@ -5001,7 +5127,7 @@ wget -qO - https://hub.unity3d.com/linux/keys/public | gpg --dearmor | tee /usr/
 echo "deb [signed-by=/usr/share/keyrings/Unity_Technologies_ApS.gpg] https://hub.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/unityhub.list
 echo "deb https://archive.ubuntu.com/ubuntu jammy main universe" | tee /etc/apt/sources.list.d/jammy.list
 apt-get update
-apt-get install -y --no-install-recommends unityhub${version ? '=' + version : ''} ffmpeg libgtk2.0-0 libglu1-mesa libgconf-2-4 libncurses5
+apt-get install -y --no-install-recommends unityhub${version ? '=' + version : ''} ffmpeg libgtk2.0-0 libglu1-mesa libgconf-2-4 libncurses5 pulseaudio
 apt-get clean
 sed -i 's/^\\(.*DISPLAY=:.*XAUTHORITY=.*\\)\\( "\\$@" \\)2>&1$/\\1\\2/' /usr/bin/xvfb-run
 printf '#!/bin/bash\nxvfb-run --auto-servernum /opt/unityhub/unityhub "$@" 2>/dev/null' | tee /usr/bin/unity-hub >/dev/null
@@ -6133,6 +6259,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResolveGlobToPath = ResolveGlobToPath;
+exports.ResolvePathCandidates = ResolvePathCandidates;
 exports.PromptForSecretInput = PromptForSecretInput;
 exports.Exec = Exec;
 exports.DownloadFile = DownloadFile;
@@ -6170,6 +6297,23 @@ async function ResolveGlobToPath(globs) {
         return path;
     }
     throw new Error(`No accessible file found for glob pattern: ${path.normalize(globPath)}`);
+}
+/**
+ * Resolves a list of glob patterns to the first matching file path.
+ * @param globsList A list of arrays of path segments that may include glob patterns.
+ * @returns The first matching file path, or undefined if none found.
+ */
+async function ResolvePathCandidates(globsList) {
+    for (const globPath of globsList) {
+        try {
+            return await ResolveGlobToPath(globPath);
+        }
+        catch (error) {
+            const joinedPath = path.join(...globPath);
+            logger.debug(`Failed to resolve sdkmanager using glob: ${joinedPath}`);
+        }
+    }
+    return undefined;
 }
 /**
  * Prompts the user for input, masking the input with asterisks.
@@ -6442,15 +6586,21 @@ async function ReadPidFile(pidFilePath) {
 async function Delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+const remappedEditorLog = {
+    'OpenCL device, baking cannot use GPU lightmapper.': logging_1.LogLevel.INFO,
+    'Failed to find a suitable OpenCL device, baking cannot use GPU lightmapper.': logging_1.LogLevel.INFO,
+};
 /**
  * Tails a log file using fs.watch and ReadStream for efficient reading.
  * @param logPath The path to the log file to tail.
+ * @param projectPath The path to the project (used for log annotation).
  * @returns An object containing the tail promise and signalEnd function.
  */
-function TailLogFile(logPath) {
+function TailLogFile(logPath, projectPath) {
     let logEnded = false;
     let lastSize = 0;
     const logPollingInterval = 250;
+    const telemetry = [];
     async function readNewLogContent() {
         try {
             if (!fs.existsSync(logPath)) {
@@ -6474,13 +6624,54 @@ function TailLogFile(logPath) {
                 lastSize = stats.size;
                 if (bytesToRead > 0) {
                     const chunk = buffer.toString('utf8');
+                    // Parse telemetry lines in this chunk (lines starting with '##utp:')
                     try {
-                        process.stdout.write(chunk);
+                        const lines = chunk.split(/\r?\n/);
+                        for (const rawLine of lines) {
+                            const line = rawLine.trim();
+                            if (!line) {
+                                continue;
+                            }
+                            if (line.startsWith('##utp:')) {
+                                const jsonPart = line.substring('##utp:'.length).trim();
+                                try {
+                                    const utp = JSON.parse(jsonPart);
+                                    telemetry.push(utp);
+                                    if (utp.message && remappedEditorLog[utp.message] !== undefined) {
+                                        const remappedLevel = remappedEditorLog[utp.message];
+                                        logging_1.Logger.instance.log(remappedLevel, utp.message);
+                                        continue;
+                                    }
+                                    if (utp.severity && utp.severity.toLowerCase() === 'error') {
+                                        const file = utp.file ? utp.file.replace(/\\/g, '/') : undefined;
+                                        const lineNum = utp.line ? utp.line : undefined;
+                                        const message = utp.message;
+                                        const stacktrace = utp.stacktrace ? `${utp.stacktrace}` : undefined;
+                                        if (!message.startsWith(`\n::error::\u001B[31m`)) { // indicates a duplicate annotation
+                                            // only annotate if the file is within the current project
+                                            if (projectPath && file && file.startsWith(projectPath)) {
+                                                logging_1.Logger.instance.annotate(logging_1.LogLevel.ERROR, stacktrace == undefined ? message : `${message}\n${stacktrace}`, file, lineNum);
+                                            }
+                                            else {
+                                                logging_1.Logger.instance.error(stacktrace == undefined ? message : `${message}\n${stacktrace}`);
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (error) {
+                                    logger.warn(`Failed to parse telemetry JSON: ${error} -- raw: ${jsonPart}`);
+                                }
+                            }
+                            else {
+                                process.stdout.write(`${line}\n`);
+                            }
+                        }
                     }
                     catch (error) {
                         if (error.code !== 'EPIPE') {
                             throw error;
                         }
+                        logger.warn(`Error while parsing telemetry from log chunk: ${error}`);
                     }
                 }
             }
@@ -6500,6 +6691,7 @@ function TailLogFile(logPath) {
                 await WaitForFileToBeUnlocked(logPath, 10_000);
                 await readNewLogContent();
                 try {
+                    // write a final newline to separate log output
                     process.stdout.write('\n');
                 }
                 catch (error) {
@@ -6517,7 +6709,7 @@ function TailLogFile(logPath) {
     function stopLogTail() {
         logEnded = true;
     }
-    return { tailPromise, stopLogTail };
+    return { tailPromise, stopLogTail, telemetry };
 }
 /**
  * Waits for a file to be unlocked (not exclusively locked by another process).
