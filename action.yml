@@ -45,5 +45,5 @@ outputs:
   unity-project-path:
     description: 'The file path to the Unity project.'
 runs:
-  using: node20
+  using: node24
   main: dist/index.js
