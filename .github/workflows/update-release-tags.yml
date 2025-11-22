@@ -12,5 +12,4 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          fetch-tags: true
       - uses: RageAgainstThePixel/update-action-release-tags@v1

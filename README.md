@@ -21,16 +21,16 @@ strategy:
       - 6000.0.x
       - 6000.1.*
       - 6000
-    include:
-      - os: ubuntu-latest
-        build-targets: StandaloneLinux64, Android, WebGL
-        modules: linux-server
-      - os: windows-latest
-        build-targets: StandaloneWindows64, Android, WSAPlayer
-        modules: windows-server
-      - os: macos-latest
-        build-targets: StandaloneOSX, Android, iOS, VisionOS
-        modules: mac-server
+  include:
+    - os: ubuntu-latest
+      build-targets: StandaloneLinux64, Android, WebGL
+      modules: linux-server
+    - os: windows-latest
+      build-targets: StandaloneWindows64, Android, WSAPlayer
+      modules: windows-server
+    - os: macos-latest
+      build-targets: StandaloneOSX, Android, iOS, VisionOS
+      modules: mac-server
 steps:
   - uses: buildalon/unity-setup@v2
     id: unity-setup

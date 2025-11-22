@@ -25,8 +25,8 @@ jobs:
       BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
     steps:
       - name: Free Disk Space
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: endersonmenezes/free-disk-space@v2
+        if: ${{ matrix.os == 'ubuntu-latest' && (matrix.unity-version != '2018' && matrix.unity-version != '2017.4.40f1') }}
+        uses: endersonmenezes/free-disk-space@713d134e243b926eba4a5cce0cf608bfd1efb89a # v2.1.1
         with:
           remove_android: true
           remove_dotnet: false
@@ -35,7 +35,7 @@ jobs:
       - uses: ./ # buildalon/unity-setup
         id: unity-setup
         with:
-          version-file: 'None'
+          version-file: None
           unity-version: ${{ matrix.unity-version }}
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
