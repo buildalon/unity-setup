@@ -3573,6 +3573,125 @@ class LicensingClient {
                 throw new Error(`Failed to determine Unity common directory for platform: ${platform}`);
         }
     }
+    /**
+     * Gets the path to the Unity Licensing Client services configuration file.
+     * @see https://docs.unity.com/en-us/licensing-server/client-config#copying-the-configuration-file
+     * @returns The path to the services configuration file.
+     */
+    servicesConfigPath() {
+        let servicesConfigDirectory;
+        switch (process.platform) {
+            case 'win32':
+                // %PROGRAMDATA%\Unity\Config
+                servicesConfigDirectory = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Unity', 'Config');
+                break;
+            case 'darwin':
+                // /Library/Application Support/Unity/config
+                servicesConfigDirectory = path.join('/Library', 'Application Support', 'Unity', 'config');
+                break;
+            case 'linux':
+                // /usr/share/unity3d/config
+                servicesConfigDirectory = path.join('/usr', 'share', 'unity3d', 'config');
+                break;
+            default:
+                throw new Error(`Unsupported platform: ${process.platform}`);
+        }
+        // Ensure the services directory exists
+        if (!fs.existsSync(servicesConfigDirectory)) {
+            fs.mkdirSync(servicesConfigDirectory, { recursive: true });
+        }
+        if (process.platform !== 'win32') {
+            fs.chmodSync(servicesConfigDirectory, 0o755);
+        }
+        fs.accessSync(servicesConfigDirectory, fs.constants.R_OK | fs.constants.W_OK);
+        return path.join(servicesConfigDirectory, 'services-config.json');
+    }
+    resolveServicesConfigContent(input) {
+        const trimmedInput = input.trim();
+        if (trimmedInput.length === 0) {
+            throw new Error('Services config value is empty. Provide a file path, JSON, or base64 encoded JSON string.');
+        }
+        const rawJson = (0, utilities_1.tryParseJson)(trimmedInput);
+        if (rawJson) {
+            return rawJson;
+        }
+        try {
+            const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+            if (base64Regex.test(trimmedInput)) {
+                const decoded = Buffer.from(trimmedInput, 'base64').toString('utf-8').trim();
+                const decodedJson = (0, utilities_1.tryParseJson)(decoded);
+                if (decodedJson) {
+                    return decodedJson;
+                }
+            }
+            else {
+                throw new Error('Input does not match base64 format.');
+            }
+        }
+        catch (error) {
+            throw new Error(`Failed to decode services config as base64: ${error}`);
+        }
+        throw new Error('Services config value is not a valid JSON string or base64 encoded JSON string.');
+    }
+    async setupServicesConfig(configSource) {
+        const servicesConfigPath = this.servicesConfigPath();
+        if (fs.existsSync(configSource)) {
+            fs.copyFileSync(configSource, servicesConfigPath);
+        }
+        else {
+            const configContent = this.resolveServicesConfigContent(configSource);
+            fs.writeFileSync(servicesConfigPath, configContent, { encoding: 'utf-8' });
+        }
+        if (process.platform !== 'win32') {
+            fs.chmodSync(servicesConfigPath, 0o644);
+        }
+        fs.accessSync(servicesConfigPath, fs.constants.R_OK);
+        return servicesConfigPath;
+    }
+    /**
+     * Gets the path to the Unity Licensing Client log file.
+     * @see https://docs.unity.com/en-us/licensing-server/troubleshooting-client#logs
+     * @returns The path to the log file.
+     */
+    static ClientLogPath() {
+        switch (process.platform) {
+            case 'win32':
+                // $env:LOCALAPPDATA\Unity\Unity.Licensing.Client.log
+                return path.join(process.env.LOCALAPPDATA || '', 'Unity', 'Unity.Licensing.Client.log');
+            case 'darwin':
+                // ~/Library/Logs/Unity/Unity.Licensing.Client.log
+                return path.join(process.env.HOME || '', 'Library', 'Logs', 'Unity', 'Unity.Licensing.Client.log');
+            case 'linux':
+                // ~/.config/unity3d/Unity/Unity.Licensing.Client.log
+                return path.join(process.env.HOME || '', '.config', 'unity3d', 'Unity', 'Unity.Licensing.Client.log');
+            default:
+                throw new Error(`Unsupported platform: ${process.platform}`);
+        }
+    }
+    /**
+     * Gets the path to the Unity Licensing Client audit log file.
+     * @see https://docs.unity.com/en-us/licensing-server/troubleshooting-client#logs
+     * @returns The path to the audit log file.
+     */
+    static ClientAuditLogPath() {
+        switch (process.platform) {
+            case 'win32':
+                // $env:LOCALAPPDATA\Unity\Unity.Entitlements.Audit.log
+                return path.join(process.env.LOCALAPPDATA || '', 'Unity', 'Unity.Entitlements.Audit.log');
+            case 'darwin':
+                // ~/Library/Logs/Unity/Unity.Entitlements.Audit.log
+                return path.join(process.env.HOME || '', 'Library', 'Logs', 'Unity', 'Unity.Entitlements.Audit.log');
+            case 'linux':
+                // ~/.config/unity3d/Unity/Unity.Entitlements.Audit.log
+                return path.join(process.env.HOME || '', '.config', 'unity3d', 'Unity', 'Unity.Entitlements.Audit.log');
+            default:
+                throw new Error(`Unsupported platform: ${process.platform}`);
+        }
+    }
+    /**
+     * Displays the context information of the licensing client to the console.
+     * @see https://docs.unity.com/en-us/licensing-server/troubleshooting-client#exit-codes
+     */
     getExitCodeMessage(exitCode) {
         switch (exitCode) {
             case 0:
@@ -3712,7 +3831,7 @@ class LicensingClient {
         }
         process.env['UNITY_COMMON_DIR'] = patchedDirectory;
     }
-    async exec(args) {
+    async exec(args, silent = false) {
         await this.patchLicenseVersion();
         if (!this.licenseClientPath) {
             this.licenseClientPath = await this.init();
@@ -3757,13 +3876,15 @@ class LicensingClient {
             });
         }
         finally {
-            const maskedOutput = this.maskSerialInOutput(output);
-            const splitLines = maskedOutput.split(/\r?\n/);
-            for (const line of splitLines) {
-                if (line === undefined || line.length === 0) {
-                    continue;
+            if (!silent || exitCode !== 0) {
+                const maskedOutput = this.maskSerialInOutput(output);
+                const splitLines = maskedOutput.split(/\r?\n/);
+                for (const line of splitLines) {
+                    if (line === undefined || line.length === 0) {
+                        continue;
+                    }
+                    this.logger.info(line);
                 }
-                this.logger.info(line);
             }
             this.logger.endGroup();
             if (exitCode !== 0) {
@@ -3787,15 +3908,94 @@ class LicensingClient {
         await this.exec(['--version']);
     }
     /**
+     * Displays the context information of the licensing client to the console.
+     */
+    async Context() {
+        await this.exec(['--showContext']);
+    }
+    async getClientLogSize() {
+        try {
+            const stats = await fs.promises.stat(LicensingClient.ClientLogPath());
+            return stats.size;
+        }
+        catch (error) {
+            if (error.code === 'ENOENT') {
+                return 0;
+            }
+            throw error;
+        }
+    }
+    async waitForLicenseServerConfiguration(timeoutMs = 30_000, pollIntervalMs = 1_000) {
+        const logPath = LicensingClient.ClientLogPath();
+        const configuredPattern = /Floating license server URL is:\s*(?<url>[^\s]+)\s*\(via config file\)/;
+        const notConfiguredPattern = /Floating license server is not configured/;
+        const deadline = Date.now() + timeoutMs;
+        let offset = await this.getClientLogSize();
+        let remainder = '';
+        while (Date.now() < deadline) {
+            let newChunk = '';
+            try {
+                const stats = await fs.promises.stat(logPath);
+                if (stats.size > offset) {
+                    const length = stats.size - offset;
+                    const handle = await fs.promises.open(logPath, 'r');
+                    try {
+                        const buffer = Buffer.alloc(length);
+                        await handle.read(buffer, 0, length, offset);
+                        newChunk = buffer.toString('utf-8');
+                        offset = stats.size;
+                    }
+                    finally {
+                        await handle.close();
+                    }
+                }
+            }
+            catch (error) {
+                if (error.code !== 'ENOENT') {
+                    this.logger.error(`Failed to inspect licensing client log: ${error}`);
+                    continue;
+                }
+            }
+            if (newChunk.length > 0) {
+                remainder += newChunk;
+                const lines = remainder.split(/\r?\n/);
+                remainder = lines.pop() ?? '';
+                for (const line of lines) {
+                    const configuredMatch = line.match(configuredPattern);
+                    if (configuredMatch && configuredMatch.groups?.url) {
+                        this.logger.info(`License server configured with URL: ${configuredMatch.groups.url}`);
+                        return;
+                    }
+                    if (notConfiguredPattern.test(line)) {
+                        this.logger.debug('Floating license server is not configured. Waiting for configuration...');
+                    }
+                }
+            }
+            await this.exec(['--showContext'], true);
+            await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        }
+        throw new Error(`Timed out waiting for floating license server configuration. Check '${logPath}' for details.`);
+    }
+    /**
      * Activates a Unity license.
      * @param options The activation options including license type, services config, serial, username, and password.
      * @param skipEntitlementCheck Whether to skip the entitlement check.
-     * @returns A promise that resolves when the license is activated.
+     * @returns A promise that resolves to the floating license token if applicable, otherwise undefined.
      * @throws Error if activation fails or required parameters are missing.
      */
     async Activate(options, skipEntitlementCheck = false) {
+        let servicesConfigPath;
+        if (options.licenseType === LicenseType.floating) {
+            if (!options.servicesConfig) {
+                throw new Error('Services config path is required for floating license activation');
+            }
+            servicesConfigPath = await this.setupServicesConfig(options.servicesConfig);
+            this.logger.debug(`Using services config at: ${servicesConfigPath}`);
+        }
+        // For floating licenses, skip the entitlement check
+        skipEntitlementCheck = options.licenseType === LicenseType.floating;
         if (!skipEntitlementCheck) {
-            let activeLicenses = await this.GetActiveEntitlements();
+            const activeLicenses = await this.GetActiveEntitlements();
             if (activeLicenses.includes(options.licenseType)) {
                 this.logger.info(`License of type '${options.licenseType}' is already active, skipping activation`);
                 return;
@@ -3803,35 +4003,16 @@ class LicensingClient {
         }
         switch (options.licenseType) {
             case LicenseType.floating: {
-                if (!options.servicesConfig) {
-                    throw new Error('Services config path is required for floating license activation');
+                await this.waitForLicenseServerConfiguration();
+                const output = await this.exec([`--acquire-floating`], true);
+                const tokenMatch = output.match(/with token:\s*"(?<token>[\w-]+)"/);
+                if (!tokenMatch || !tokenMatch.groups || !tokenMatch.groups['token']) {
+                    throw new Error(`Failed to acquire floating license lease: No token found in output.\n  ${output}`);
                 }
-                let servicesPath;
-                switch (process.platform) {
-                    case 'win32':
-                        servicesPath = path.join(process.env.PROGRAMDATA || '', 'Unity', 'config');
-                        break;
-                    case 'darwin':
-                        servicesPath = path.join('/Library', 'Application Support', 'Unity', 'config');
-                        break;
-                    case 'linux':
-                        servicesPath = path.join('/usr', 'share', 'unity3d', 'config');
-                        break;
-                    default:
-                        throw new Error(`Unsupported platform: ${process.platform}`);
-                }
-                // Ensure the services directory exists
-                if (!fs.existsSync(servicesPath)) {
-                    await fs.promises.mkdir(servicesPath, { recursive: true });
-                }
-                const servicesConfigPath = path.join(servicesPath, 'services-config.json');
-                if (fs.existsSync(options.servicesConfig)) {
-                    await fs.promises.copyFile(options.servicesConfig, servicesConfigPath);
-                }
-                else {
-                    await fs.promises.writeFile(servicesConfigPath, Buffer.from(options.servicesConfig, 'base64'));
-                }
-                break;
+                const token = tokenMatch.groups['token'];
+                this.logger.CI_mask(token);
+                this.logger.info(output);
+                return token;
             }
             default: { // personal and professional license activation
                 if (!options.username) {
@@ -3859,24 +4040,19 @@ class LicensingClient {
                     throw Error('Password is required for Unity License Activation!');
                 }
                 await this.activateLicense(options.licenseType, options.username, options.password, options.serial);
-                break;
+                return undefined;
             }
         }
     }
     /**
      * Deactivates a Unity license.
      * @param licenseType The type of license to deactivate.
+     * @param token The token received when acquiring a floating license lease. Required when deactivating a floating license.
      * @returns A promise that resolves when the license is deactivated.
      * @throws Error if deactivation fails.
      */
-    async Deactivate(licenseType) {
-        if (licenseType === LicenseType.floating) {
-            return;
-        }
-        const activeLicenses = await this.GetActiveEntitlements();
-        if (activeLicenses.includes(licenseType)) {
-            await this.returnLicense(licenseType);
-        }
+    async Deactivate(licenseType, token) {
+        await this.returnLicense(licenseType, token);
     }
     /**
      * Shows the currently active entitlements/licenses.
@@ -3928,11 +4104,26 @@ class LicensingClient {
         }
         this.logger.info(`Successfully activated license of type '${licenseType}'`);
     }
-    async returnLicense(licenseType) {
-        await this.exec([`--return-ulf`]);
-        const activeLicenses = await this.GetActiveEntitlements();
-        if (activeLicenses.includes(licenseType)) {
-            throw new Error(`Failed to return license of type '${licenseType}'`);
+    async returnLicense(licenseType, token) {
+        if (licenseType === LicenseType.floating) {
+            if (!token || token.length === 0) {
+                throw new Error('A token is required to return a floating license');
+            }
+            await this.exec([`--return-floating`, token]);
+        }
+        else {
+            let activeLicenses = await this.GetActiveEntitlements();
+            if (activeLicenses.includes(licenseType)) {
+                await this.exec([`--return-ulf`]);
+            }
+            else {
+                this.logger.info(`No active license of type '${licenseType}' found`);
+                return;
+            }
+            activeLicenses = await this.GetActiveEntitlements();
+            if (activeLicenses.includes(licenseType)) {
+                throw new Error(`Failed to return license of type '${licenseType}'`);
+            }
         }
         this.logger.info(`Successfully returned license of type '${licenseType}'`);
     }
@@ -3987,6 +4178,7 @@ var LogLevel;
 (function (LogLevel) {
     LogLevel["DEBUG"] = "debug";
     LogLevel["CI"] = "ci";
+    LogLevel["UTP"] = "utp";
     LogLevel["INFO"] = "info";
     LogLevel["WARN"] = "warning";
     LogLevel["ERROR"] = "error";
@@ -4043,6 +4235,7 @@ class Logger {
                         [LogLevel.DEBUG]: '\x1b[35m', // Purple
                         [LogLevel.INFO]: undefined, // No color / White
                         [LogLevel.CI]: undefined, // No color / White
+                        [LogLevel.UTP]: undefined, // No color / White
                         [LogLevel.WARN]: '\x1b[33m', // Yellow
                         [LogLevel.ERROR]: '\x1b[31m', // Red
                     }[level] || undefined; // Default to no color / White
@@ -4124,53 +4317,62 @@ class Logger {
         let annotation = '';
         switch (this._ci) {
             case 'GITHUB_ACTIONS': {
-                var level;
-                switch (logLevel) {
-                    case LogLevel.CI:
-                    case LogLevel.INFO:
-                    case LogLevel.DEBUG: {
-                        level = 'notice';
-                        break;
+                const level = {
+                    [LogLevel.CI]: 'notice',
+                    [LogLevel.INFO]: 'notice',
+                    [LogLevel.DEBUG]: 'notice',
+                    [LogLevel.UTP]: 'notice',
+                    [LogLevel.WARN]: 'warning',
+                    [LogLevel.ERROR]: 'error',
+                }[logLevel] ?? 'notice';
+                const parts = [];
+                const appendPart = (key, value) => {
+                    if (value === undefined || value === null) {
+                        return;
                     }
-                    case LogLevel.WARN: {
-                        level = 'warning';
-                        break;
+                    const stringValue = value.toString();
+                    if (stringValue.length === 0) {
+                        return;
                     }
-                    case LogLevel.ERROR: {
-                        level = 'error';
-                        break;
-                    }
-                }
-                let parts = [];
-                if (file !== undefined && file.length > 0) {
-                    parts.push(`file=${file}`);
-                }
+                    parts.push(`${key}=${this.escapeGitHubCommandValue(stringValue)}`);
+                };
+                appendPart('file', file);
                 if (line !== undefined && line > 0) {
-                    parts.push(`line=${line}`);
+                    appendPart('line', line);
                 }
                 if (endLine !== undefined && endLine > 0) {
-                    parts.push(`endLine=${endLine}`);
+                    appendPart('endLine', endLine);
                 }
                 if (column !== undefined && column > 0) {
-                    parts.push(`col=${column}`);
+                    appendPart('col', column);
                 }
                 if (endColumn !== undefined && endColumn > 0) {
-                    parts.push(`endColumn=${endColumn}`);
+                    appendPart('endColumn', endColumn);
                 }
-                if (title !== undefined && title.length > 0) {
-                    parts.push(`title=${title}`);
-                }
-                annotation = `::${level} ${parts.join(',')}::${message}`;
+                appendPart('title', title);
+                const metadata = parts.length > 0 ? ` ${parts.join(',')}` : '';
+                annotation = `::${level}${metadata}::${this.escapeGitHubCommandValue(message)}`;
                 break;
             }
         }
-        process.stdout.write(`${annotation}\n`);
+        if (annotation.length > 0) {
+            process.stdout.write(`${annotation}\n`);
+        }
+        else {
+            this.log(logLevel, message);
+        }
+    }
+    escapeGitHubCommandValue(value) {
+        return value
+            .replace(/%/g, '%25')
+            .replace(/\r/g, '%0D')
+            .replace(/\n/g, '%0A');
     }
     shouldLog(level) {
         if (level === LogLevel.CI) {
             return true;
         }
-        const levelOrder = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+        const levelOrder = [LogLevel.DEBUG, LogLevel.UTP, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
         return levelOrder.indexOf(level) >= levelOrder.indexOf(this.logLevel);
     }
     /**
@@ -4282,6 +4484,7 @@ const logging_1 = __nccwpck_require__(4486);
 const unity_version_1 = __nccwpck_require__(3331);
 const child_process_1 = __nccwpck_require__(2081);
 const utilities_1 = __nccwpck_require__(9746);
+const unity_logging_1 = __nccwpck_require__(6753);
 class UnityEditor {
     editorPath;
     editorRootPath;
@@ -4486,7 +4689,7 @@ class UnityEditor {
                 }
             }
             const logPath = (0, utilities_1.GetArgumentValueAsString)('-logFile', command.args);
-            logTail = (0, utilities_1.TailLogFile)(logPath, command.projectPath);
+            logTail = (0, unity_logging_1.TailLogFile)(logPath, command.projectPath);
             const commandStr = `\x1b[34m${this.editorPath} ${command.args.join(' ')}\x1b[0m`;
             this.logger.startGroup(commandStr);
             if (this.version.isLegacy() && process.platform === 'darwin' && process.arch === 'arm64') {
@@ -4515,10 +4718,7 @@ class UnityEditor {
                 this.version.architecture === 'X86_64') { // Force the Unity Editor to run under Rosetta 2 on Apple Silicon Macs if the editor is x86_64
                 unityProcess = (0, child_process_1.spawn)('arch', ['-x86_64', this.editorPath, ...command.args], {
                     stdio: ['ignore', 'ignore', 'ignore'],
-                    env: {
-                        ...process.env,
-                        UNITY_THISISABUILDMACHINE: '1'
-                    }
+                    env: baseEditorEnv
                 });
             }
             else {
@@ -4651,6 +4851,22 @@ class UnityEditor {
         }
         fs.accessSync(editorRootPath, fs.constants.R_OK);
         return editorRootPath;
+    }
+    /**
+     * Gets the path to the Unity Editor log directory.
+     * @returns The path to the Unity Editor logs directory.
+     */
+    static GetEditorLogsDirectory() {
+        switch (process.platform) {
+            case 'win32':
+                return path.join(process.env.LOCALAPPDATA || '', 'Unity', 'Editor');
+            case 'darwin':
+                return path.join(process.env.HOME || '', 'Library', 'Logs', 'Unity');
+            case 'linux':
+                return path.join(process.env.HOME || '', '.config', 'unity3d', 'Editor');
+            default:
+                throw new Error(`Unsupported platform: ${process.platform}`);
+        }
     }
     /**
      * Uninstall the Unity Editor.
@@ -4983,15 +5199,19 @@ class UnityHub {
             throw new Error('Cannot use autoUpdate with version.');
         }
         let isInstalled = false;
+        let installedVersion = undefined;
         try {
             await fs.promises.access(this.executable, fs.constants.X_OK);
+            installedVersion = await this.getInstalledHubVersion();
             isInstalled = true;
         }
         catch {
             await this.installHub(version);
         }
         if (isInstalled && autoUpdate) {
-            const installedVersion = await this.getInstalledHubVersion();
+            if (!installedVersion) {
+                installedVersion = await this.getInstalledHubVersion();
+            }
             this.logger.ci(`Installed Unity Hub version: ${installedVersion.version}`);
             let versionToInstall = null;
             if (!version) {
@@ -5127,7 +5347,15 @@ wget -qO - https://hub.unity3d.com/linux/keys/public | gpg --dearmor | tee /usr/
 echo "deb [signed-by=/usr/share/keyrings/Unity_Technologies_ApS.gpg] https://hub.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/unityhub.list
 echo "deb https://archive.ubuntu.com/ubuntu jammy main universe" | tee /etc/apt/sources.list.d/jammy.list
 apt-get update
-apt-get install -y --no-install-recommends unityhub${version ? '=' + version : ''} ffmpeg libgtk2.0-0 libglu1-mesa libgconf-2-4 libncurses5 pulseaudio
+apt-get install -y --no-install-recommends \\
+  unityhub${version ? '=' + version : ''} \\
+  xvfb \\
+  ffmpeg \\
+  libgtk2.0-0 \\
+  libglu1-mesa \\
+  libgconf-2-4 \\
+  libncurses5 \\
+  pulseaudio
 apt-get clean
 sed -i 's/^\\(.*DISPLAY=:.*XAUTHORITY=.*\\)\\( "\\$@" \\)2>&1$/\\1\\2/' /usr/bin/xvfb-run
 printf '#!/bin/bash\nxvfb-run --auto-servernum /opt/unityhub/unityhub "$@" 2>/dev/null' | tee /usr/bin/unity-hub >/dev/null
@@ -5822,9 +6050,1014 @@ done
         }
         return moduleMap;
     }
+    /**
+     * Returns the path to the Unity Hub log file.
+     * @see https://docs.unity.com/en-us/licensing-server/troubleshooting-client#logs
+     * @returns The Unity Hub log file path.
+     */
+    static LogPath() {
+        switch (process.platform) {
+            case 'win32':
+                // %APPDATA%\UnityHub\logs\info-log.json
+                return path.join(process.env.APPDATA || '', 'UnityHub', 'logs', 'info-log.json');
+            case 'darwin':
+                // ~/Library/Application Support/UnityHub/logs/info-log.json
+                return path.join(process.env.HOME || '', 'Library', 'Application Support', 'UnityHub', 'logs', 'info-log.json');
+            case 'linux':
+                // ~/.config/UnityHub/logs/info-log.json
+                return path.join(process.env.HOME || '', '.config', 'UnityHub', 'logs', 'info-log.json');
+            default:
+                throw new Error(`Unsupported platform: ${process.platform}`);
+        }
+    }
+    /**
+     * Returns the path to the Unity Package Manager log file.
+     * @see https://docs.unity3d.com/Manual/LogFiles.html
+     * @returns The Unity Package Manager log file path.
+     */
+    static PackageManagerLogsPath() {
+        switch (process.platform) {
+            case 'win32':
+                // C:\Users\username\AppData\Local\Unity\Editor\upm.log
+                return path.join(process.env.LOCALAPPDATA || '', 'Unity', 'Editor', 'upm.log');
+            case 'darwin':
+                // ~/Library/Logs/Unity/upm.log
+                return path.join(process.env.HOME || '', 'Library', 'Logs', 'Unity', 'upm.log');
+            case 'linux':
+                // ~/.config/unity3d/upm.log
+                return path.join(process.env.HOME || '', '.config', 'unity3d', 'upm.log');
+            default:
+                throw new Error(`Unsupported platform: ${process.platform}`);
+        }
+    }
 }
 exports.UnityHub = UnityHub;
 //# sourceMappingURL=unity-hub.js.map
+
+/***/ }),
+
+/***/ 6753:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ActionTableRenderer = void 0;
+exports.sanitizeTelemetryJson = sanitizeTelemetryJson;
+exports.stringDisplayWidth = stringDisplayWidth;
+exports.formatActionTimelineTable = formatActionTimelineTable;
+exports.TailLogFile = TailLogFile;
+const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
+const logging_1 = __nccwpck_require__(4486);
+const utilities_1 = __nccwpck_require__(9746);
+const utp_1 = __nccwpck_require__(6282);
+/**
+ * Editor log messages whose severity has been changed.
+ * Useful for making certain error messages that are not critical less noisy.
+ * Key is the exact log message, value is the remapped LogLevel.
+ */
+const remappedEditorLogs = {
+    'OpenCL device, baking cannot use GPU lightmapper.': logging_1.LogLevel.INFO,
+    'Failed to find a suitable OpenCL device, baking cannot use GPU lightmapper.': logging_1.LogLevel.INFO,
+};
+// Detects GitHub-style annotation markers to avoid emitting duplicates
+const annotationPrefixRegex = /\n::[a-z]+::/i;
+const TIMELINE_HEADING = '🔨 Unity Build Timeline';
+const PLAYER_BUILD_INFO_HEADING = '📋 Player Build Info';
+function sanitizeTelemetryJson(raw) {
+    if (!raw) {
+        return '';
+    }
+    return raw
+        .replace(/\uFEFF/gu, '')
+        .replace(/\u0000/gu, '')
+        .trim();
+}
+const MIN_DESCRIPTION_COLUMN_WIDTH = 16;
+const DEFAULT_TERMINAL_WIDTH = 120;
+const TERMINAL_WIDTH_SAFETY_MARGIN = 2;
+const MIN_TERMINAL_WIDTH = 40;
+const extendedPictographicRegex = /\p{Extended_Pictographic}/u;
+class ActionTelemetryAccumulator {
+    pendingActions = new Map();
+    completedActions = [];
+    totalDurationMs = 0;
+    totalErrorCount = 0;
+    playerBuildInfoSteps = [];
+    record(action) {
+        if (action.phase === utp_1.Phase.Begin) {
+            this.pendingActions.set(this.getActionKey(action), action);
+            return true;
+        }
+        if (action.phase === utp_1.Phase.End) {
+            const key = this.getActionKey(action);
+            let start = this.pendingActions.get(key);
+            if (start) {
+                this.pendingActions.delete(key);
+            }
+            else {
+                const fallback = this.findPendingMatchFor(action);
+                if (fallback) {
+                    start = fallback.action;
+                    this.pendingActions.delete(fallback.key);
+                }
+            }
+            const durationMs = this.calculateDurationMs(start, action);
+            const errors = this.extractErrors(action);
+            const summary = {
+                name: action.name ?? 'Unnamed Action',
+                description: action.description ?? '',
+                durationMs,
+                errors,
+            };
+            this.completedActions.push(summary);
+            this.totalDurationMs += durationMs;
+            this.totalErrorCount += errors.length;
+            return true;
+        }
+        return false;
+    }
+    recordPlayerBuildInfo(info) {
+        if (!Array.isArray(info.steps) || info.steps.length === 0) {
+            return false;
+        }
+        const normalizedSteps = info.steps
+            .map(step => {
+            const description = step.description?.trim();
+            if (!description) {
+                return undefined;
+            }
+            const durationMs = Math.max(0, step.duration ?? 0);
+            const errorCount = Math.max(0, step.errors ?? 0);
+            return {
+                description,
+                durationMs,
+                errorCount,
+            };
+        })
+            .filter((step) => step !== undefined);
+        if (normalizedSteps.length === 0) {
+            return false;
+        }
+        this.playerBuildInfoSteps = normalizedSteps;
+        return true;
+    }
+    snapshot() {
+        if (this.completedActions.length === 0 && this.pendingActions.size === 0 && this.playerBuildInfoSteps.length === 0) {
+            return undefined;
+        }
+        return {
+            completed: [...this.completedActions],
+            pending: Array.from(this.pendingActions.values()).map(action => ({
+                name: action.name ?? 'Unnamed Action',
+                description: action.description ?? '',
+            })),
+            totalDurationMs: this.totalDurationMs,
+            totalErrorCount: this.totalErrorCount,
+            playerBuildInfo: this.playerBuildInfoSteps.length > 0
+                ? {
+                    steps: [...this.playerBuildInfoSteps],
+                    totalDurationMs: this.playerBuildInfoSteps.reduce((sum, step) => sum + step.durationMs, 0),
+                    totalErrorCount: this.playerBuildInfoSteps.reduce((sum, step) => sum + step.errorCount, 0),
+                }
+                : undefined,
+        };
+    }
+    getActionKey(action) {
+        const pid = action.processId ?? 'na';
+        const name = action.name ?? '';
+        const description = action.description ?? '';
+        return `${pid}::${name}::${description}`;
+    }
+    findPendingMatchFor(action) {
+        for (const [key, pending] of this.pendingActions.entries()) {
+            const sameProcess = (pending.processId ?? 'na') === (action.processId ?? 'na');
+            const sameName = (pending.name ?? '') === (action.name ?? '');
+            if (!sameProcess || !sameName) {
+                continue;
+            }
+            const pendingDescription = pending.description ?? '';
+            const endingDescription = action.description ?? '';
+            if (!pendingDescription || !endingDescription) {
+                continue;
+            }
+            if (endingDescription.startsWith(pendingDescription) || pendingDescription.startsWith(endingDescription)) {
+                return { key, action: pending };
+            }
+        }
+        return undefined;
+    }
+    calculateDurationMs(start, end) {
+        if (start?.time != null && end.time != null) {
+            return Math.max(0, end.time - start.time);
+        }
+        if (typeof end.duration === 'number') {
+            return Math.max(0, end.duration);
+        }
+        return 0;
+    }
+    extractErrors(action) {
+        if (!Array.isArray(action.errors) || action.errors.length === 0) {
+            return [];
+        }
+        return action.errors.map(formatErrorDetailValue);
+    }
+}
+function formatErrorDetailValue(value) {
+    let raw = '';
+    if (value instanceof Error) {
+        raw = value.stack && value.stack.length > 0 ? value.stack : (value.message || value.toString());
+    }
+    else if (typeof value === 'string') {
+        raw = value;
+    }
+    else if (value === undefined || value === null) {
+        raw = '';
+    }
+    else if (typeof value === 'object') {
+        try {
+            raw = JSON.stringify(value, null, 2);
+        }
+        catch {
+            raw = String(value);
+        }
+    }
+    else {
+        raw = String(value);
+    }
+    return raw.replace(/\r\n/g, '\n').trimEnd();
+}
+function formatDuration(ms) {
+    if (ms >= 86_400_000) {
+        const days = ms / 86_400_000;
+        return `${days.toFixed(days >= 10 ? 0 : 1)} d`;
+    }
+    if (ms >= 3_600_000) {
+        const hours = ms / 3_600_000;
+        return `${hours.toFixed(hours >= 10 ? 0 : 1)} h`;
+    }
+    if (ms >= 60_000) {
+        const minutes = ms / 60_000;
+        return `${minutes.toFixed(minutes >= 10 ? 0 : 1)} m`;
+    }
+    if (ms >= 1_000) {
+        const seconds = ms / 1_000;
+        return `${seconds.toFixed(seconds >= 10 ? 0 : 1)} s`;
+    }
+    return `${ms} ms`;
+}
+function truncateDisplay(value, maxWidth) {
+    if (maxWidth <= 0) {
+        return '';
+    }
+    if (stringDisplayWidth(value) <= maxWidth) {
+        return value;
+    }
+    if (maxWidth <= 3) {
+        let width = 0;
+        let result = '';
+        for (const symbol of [...value]) {
+            const codePoint = symbol.codePointAt(0);
+            if (codePoint === undefined) {
+                continue;
+            }
+            const charWidth = charDisplayWidth(codePoint);
+            if (width + charWidth > maxWidth) {
+                break;
+            }
+            width += charWidth;
+            result += symbol;
+            if (width >= maxWidth) {
+                break;
+            }
+        }
+        return result;
+    }
+    const ellipsis = '...';
+    const ellipsisWidth = stringDisplayWidth(ellipsis);
+    const targetWidth = Math.max(1, maxWidth - ellipsisWidth);
+    let width = 0;
+    let result = '';
+    for (const symbol of [...value]) {
+        const codePoint = symbol.codePointAt(0);
+        if (codePoint === undefined) {
+            continue;
+        }
+        const charWidth = charDisplayWidth(codePoint);
+        if (width + charWidth > targetWidth) {
+            break;
+        }
+        width += charWidth;
+        result += symbol;
+    }
+    if (!result) {
+        return ellipsis;
+    }
+    return `${result}${ellipsis}`;
+}
+function stringDisplayWidth(value) {
+    let width = 0;
+    for (const symbol of [...value]) {
+        const codePoint = symbol.codePointAt(0);
+        if (codePoint === undefined) {
+            continue;
+        }
+        width += charDisplayWidth(codePoint);
+    }
+    return width;
+}
+function charDisplayWidth(codePoint) {
+    if (isZeroWidthCodePoint(codePoint)) {
+        return 0;
+    }
+    if (isEmojiPresentation(codePoint) || isFullWidthCodePoint(codePoint)) {
+        return 2;
+    }
+    return 1;
+}
+function isZeroWidthCodePoint(codePoint) {
+    if (codePoint === 0) {
+        return true;
+    }
+    if (codePoint === 0x200d) {
+        return true; // zero width joiner used in emoji sequences
+    }
+    if (codePoint < 32 || (codePoint >= 0x7f && codePoint < 0xa0)) {
+        return true;
+    }
+    if (isCombiningMark(codePoint)) {
+        return true;
+    }
+    if ((codePoint >= 0xfe00 && codePoint <= 0xfe0f) || (codePoint >= 0xe0100 && codePoint <= 0xe01ef)) {
+        return true; // variation selectors
+    }
+    return false;
+}
+function isEmojiPresentation(codePoint) {
+    // Use Unicode Extended_Pictographic to detect emoji that are rendered double-width
+    return extendedPictographicRegex.test(String.fromCodePoint(codePoint));
+}
+function isCombiningMark(codePoint) {
+    const ranges = [
+        [0x0300, 0x036f],
+        [0x0483, 0x0489],
+        [0x07eb, 0x07f3],
+        [0x135d, 0x135f],
+        [0x1ab0, 0x1aff],
+        [0x1dc0, 0x1dff],
+        [0x20d0, 0x20ff],
+        [0xfe20, 0xfe2f],
+    ];
+    return ranges.some(([start, end]) => codePoint >= start && codePoint <= end);
+}
+function isFullWidthCodePoint(codePoint) {
+    return codePoint >= 0x1100 && (codePoint <= 0x115f ||
+        codePoint === 0x2329 ||
+        codePoint === 0x232a ||
+        (codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint !== 0x303f) ||
+        (codePoint >= 0xac00 && codePoint <= 0xd7a3) ||
+        (codePoint >= 0xf900 && codePoint <= 0xfaff) ||
+        (codePoint >= 0xfe10 && codePoint <= 0xfe19) ||
+        (codePoint >= 0xfe30 && codePoint <= 0xfe6b) ||
+        (codePoint >= 0xff01 && codePoint <= 0xff60) ||
+        (codePoint >= 0xffe0 && codePoint <= 0xffe6) ||
+        (codePoint >= 0x1f300 && codePoint <= 0x1f64f) ||
+        (codePoint >= 0x1f900 && codePoint <= 0x1f9ff) ||
+        (codePoint >= 0x20000 && codePoint <= 0x3fffd));
+}
+function padDisplay(value, width, alignment = 'left') {
+    if (width <= 0) {
+        return '';
+    }
+    let text = value;
+    let valueWidth = stringDisplayWidth(text);
+    if (valueWidth > width) {
+        text = truncateDisplay(text, width);
+        valueWidth = stringDisplayWidth(text);
+    }
+    if (valueWidth === width) {
+        return text;
+    }
+    const padding = width - valueWidth;
+    if (alignment === 'right') {
+        return `${' '.repeat(padding)}${text}`;
+    }
+    if (alignment === 'center') {
+        const left = Math.floor(padding / 2);
+        return `${' '.repeat(left)}${text}${' '.repeat(padding - left)}`;
+    }
+    return `${text}${' '.repeat(padding)}`;
+}
+function computeTablePadding(columnCount) {
+    return columnCount * 3 + 1;
+}
+function computeTableWidth(columnWidths) {
+    let sum = 0;
+    for (const width of columnWidths) {
+        sum += width ?? 0;
+    }
+    return sum + computeTablePadding(columnWidths.length);
+}
+function adjustDescriptionColumnWidth(columnWidths, descriptionColumnIndex, descriptionHeaderWidth, maxWidth) {
+    if (maxWidth === undefined || !Number.isFinite(maxWidth) || maxWidth <= 0) {
+        return columnWidths;
+    }
+    const targetWidth = Math.floor(maxWidth);
+    const totalWidth = computeTableWidth(columnWidths);
+    const paddingWidth = computeTablePadding(columnWidths.length);
+    let sumWithoutDescription = 0;
+    columnWidths.forEach((width, index) => {
+        if (index === descriptionColumnIndex) {
+            return;
+        }
+        sumWithoutDescription += width ?? 0;
+    });
+    const minDescriptionWidth = Math.max(descriptionHeaderWidth, MIN_DESCRIPTION_COLUMN_WIDTH);
+    const currentDescriptionWidth = columnWidths[descriptionColumnIndex] ?? minDescriptionWidth;
+    const availableWidthForDescription = targetWidth - paddingWidth - sumWithoutDescription;
+    if (totalWidth <= targetWidth) {
+        columnWidths[descriptionColumnIndex] = Math.max(currentDescriptionWidth, availableWidthForDescription);
+        return columnWidths;
+    }
+    if (availableWidthForDescription >= minDescriptionWidth) {
+        columnWidths[descriptionColumnIndex] = Math.max(minDescriptionWidth, Math.min(currentDescriptionWidth, availableWidthForDescription));
+        return columnWidths;
+    }
+    columnWidths[descriptionColumnIndex] = minDescriptionWidth;
+    return columnWidths;
+}
+function buildBorderLine(columnWidths, left, middle, right) {
+    let result = left;
+    columnWidths.forEach((width, index) => {
+        const segmentWidth = Math.max(0, width + 2);
+        result += '─'.repeat(segmentWidth);
+        result += index === columnWidths.length - 1 ? right : middle;
+    });
+    return result;
+}
+function formatActionTimelineTable(snapshot, options) {
+    const showErrorsColumn = snapshot.totalErrorCount > 0;
+    const tableRows = [];
+    snapshot.pending.forEach(action => {
+        const row = {
+            status: '⏳',
+            description: action.description ?? '',
+            durationText: '...',
+        };
+        if (showErrorsColumn) {
+            row.errorsText = '';
+        }
+        tableRows.push(row);
+    });
+    snapshot.completed.forEach(action => {
+        const row = {
+            status: action.errors.length > 0 ? '❌' : '✅',
+            description: action.description ?? '',
+            durationText: formatDuration(action.durationMs),
+        };
+        if (showErrorsColumn) {
+            row.errorsText = action.errors.length.toString();
+        }
+        tableRows.push(row);
+    });
+    if (tableRows.length === 0 && snapshot.playerBuildInfo === undefined) {
+        return undefined;
+    }
+    const totalsRow = {
+        status: 'Σ',
+        description: ' Total Build Duration',
+        durationText: formatDuration(snapshot.totalDurationMs),
+    };
+    if (showErrorsColumn) {
+        totalsRow.errorsText = snapshot.totalErrorCount.toString();
+    }
+    const statusHeader = 'Status';
+    const descriptionHeader = 'Description';
+    const durationHeader = 'Duration';
+    const errorsHeader = '# of Errors';
+    let statusWidth = Math.max(stringDisplayWidth(statusHeader), ...tableRows.map(row => stringDisplayWidth(row.status)), stringDisplayWidth(totalsRow.status));
+    let descriptionWidth = Math.max(stringDisplayWidth(descriptionHeader), ...tableRows.map(row => stringDisplayWidth(row.description)), stringDisplayWidth(totalsRow.description));
+    let durationWidth = Math.max(stringDisplayWidth(durationHeader), ...tableRows.map(row => stringDisplayWidth(row.durationText)), stringDisplayWidth(totalsRow.durationText));
+    let errorsWidth = showErrorsColumn ? Math.max(stringDisplayWidth(errorsHeader), ...tableRows.map(row => stringDisplayWidth(row.errorsText ?? '')), stringDisplayWidth(totalsRow.errorsText ?? '')) : 0;
+    let columns = showErrorsColumn
+        ? [statusWidth, descriptionWidth, durationWidth, errorsWidth]
+        : [statusWidth, descriptionWidth, durationWidth];
+    columns = adjustDescriptionColumnWidth(columns, 1, stringDisplayWidth(descriptionHeader), options?.maxWidth);
+    statusWidth = columns[0] ?? statusWidth;
+    descriptionWidth = columns[1] ?? descriptionWidth;
+    durationWidth = columns[2] ?? durationWidth;
+    if (showErrorsColumn) {
+        errorsWidth = columns[3] ?? errorsWidth;
+    }
+    const resolvedColumns = showErrorsColumn
+        ? [statusWidth, descriptionWidth, durationWidth, errorsWidth]
+        : [statusWidth, descriptionWidth, durationWidth];
+    const padStatus = (value) => padDisplay(value, statusWidth, 'center');
+    const formatRow = (row) => {
+        let line = `│ ${padStatus(row.status)} │ ${padDisplay(row.description, descriptionWidth)} │ ${padDisplay(row.durationText, durationWidth, 'right')} │`;
+        if (showErrorsColumn) {
+            line += ` ${padDisplay(row.errorsText ?? '', errorsWidth, 'right')} │`;
+        }
+        return line;
+    };
+    const topBorder = buildBorderLine(resolvedColumns, '┌', '┬', '┐');
+    const headerRow = showErrorsColumn
+        ? `│ ${padStatus(statusHeader)} │ ${padDisplay(descriptionHeader, descriptionWidth)} │ ${padDisplay(durationHeader, durationWidth, 'right')} │ ${padDisplay(errorsHeader, errorsWidth, 'right')} │`
+        : `│ ${padStatus(statusHeader)} │ ${padDisplay(descriptionHeader, descriptionWidth)} │ ${padDisplay(durationHeader, durationWidth, 'right')} │`;
+    const headerDivider = buildBorderLine(resolvedColumns, '├', '┼', '┤');
+    const totalsDivider = buildBorderLine(resolvedColumns, '├', '┼', '┤');
+    const bottomBorder = buildBorderLine(resolvedColumns, '└', '┴', '┘');
+    let output = `${TIMELINE_HEADING}\n`;
+    output += `${topBorder}\n`;
+    output += `${headerRow}\n`;
+    output += `${headerDivider}\n`;
+    tableRows.forEach(row => {
+        output += `${formatRow(row)}\n`;
+    });
+    output += `${totalsDivider}\n`;
+    output += `${formatRow(totalsRow)}\n`;
+    output += `${bottomBorder}\n`;
+    const playerBuildInfoOptions = options?.maxWidth === undefined ? undefined : { maxWidth: options.maxWidth };
+    if (snapshot.playerBuildInfo) {
+        const playerBuildInfoSection = formatPlayerBuildInfoTable(snapshot.playerBuildInfo, playerBuildInfoOptions);
+        if (playerBuildInfoSection) {
+            output += `\n${playerBuildInfoSection}`;
+        }
+    }
+    if (showErrorsColumn && snapshot.totalErrorCount > 0) {
+        const errorSection = formatErrorDetailsSection(snapshot.completed);
+        if (errorSection) {
+            output += `\n${errorSection}\n`;
+        }
+        else {
+            output += '\n';
+        }
+    }
+    else {
+        output += '\n';
+    }
+    return {
+        text: output,
+        lineCount: countLines(output),
+    };
+}
+function countLines(block) {
+    if (!block) {
+        return 0;
+    }
+    const normalized = block.endsWith('\n') ? block : `${block}\n`;
+    return normalized.split('\n').length - 1;
+}
+function formatPlayerBuildInfoTable(playerInfo, options) {
+    if (!playerInfo.steps || playerInfo.steps.length === 0) {
+        return undefined;
+    }
+    const rows = playerInfo.steps.map(step => ({
+        description: step.description,
+        durationText: formatDuration(step.durationMs),
+        errorsText: step.errorCount.toString(),
+    }));
+    const totalsRow = {
+        description: ' Total Player Build Duration',
+        durationText: formatDuration(playerInfo.totalDurationMs),
+        errorsText: playerInfo.totalErrorCount.toString(),
+    };
+    const descriptionHeader = 'Description';
+    const durationHeader = 'Duration';
+    const errorsHeader = '# of Errors';
+    let descriptionWidth = Math.max(stringDisplayWidth(descriptionHeader), ...rows.map(row => stringDisplayWidth(row.description)), stringDisplayWidth(totalsRow.description));
+    let durationWidth = Math.max(stringDisplayWidth(durationHeader), ...rows.map(row => stringDisplayWidth(row.durationText)), stringDisplayWidth(totalsRow.durationText));
+    let errorWidth = Math.max(stringDisplayWidth(errorsHeader), ...rows.map(row => stringDisplayWidth(row.errorsText)), stringDisplayWidth(totalsRow.errorsText));
+    let columns = [descriptionWidth, durationWidth, errorWidth];
+    columns = adjustDescriptionColumnWidth(columns, 0, stringDisplayWidth(descriptionHeader), options?.maxWidth);
+    descriptionWidth = columns[0] ?? descriptionWidth;
+    durationWidth = columns[1] ?? durationWidth;
+    errorWidth = columns[2] ?? errorWidth;
+    const padDescription = (value) => padDisplay(value, descriptionWidth);
+    const topBorder = buildBorderLine([descriptionWidth, durationWidth, errorWidth], '┌', '┬', '┐');
+    const headerDivider = buildBorderLine([descriptionWidth, durationWidth, errorWidth], '├', '┼', '┤');
+    const totalsDivider = buildBorderLine([descriptionWidth, durationWidth, errorWidth], '├', '┼', '┤');
+    const bottomBorder = buildBorderLine([descriptionWidth, durationWidth, errorWidth], '└', '┴', '┘');
+    let output = `${PLAYER_BUILD_INFO_HEADING}\n`;
+    output += `${topBorder}\n`;
+    output += `│ ${padDescription(descriptionHeader)} │ ${padDisplay(durationHeader, durationWidth, 'right')} │ ${padDisplay(errorsHeader, errorWidth, 'right')} │\n`;
+    output += `${headerDivider}\n`;
+    rows.forEach(row => {
+        output += `│ ${padDescription(row.description)} │ ${padDisplay(row.durationText, durationWidth, 'right')} │ ${padDisplay(row.errorsText, errorWidth, 'right')} │\n`;
+    });
+    output += `${totalsDivider}\n`;
+    output += `│ ${padDescription(totalsRow.description)} │ ${padDisplay(totalsRow.durationText, durationWidth, 'right')} │ ${padDisplay(totalsRow.errorsText, errorWidth, 'right')} │\n`;
+    output += `${bottomBorder}\n`;
+    if (!output.endsWith('\n')) {
+        output += '\n';
+    }
+    return output;
+}
+function formatErrorDetailsSection(actions) {
+    const actionsWithErrors = actions.filter(action => action.errors.length > 0);
+    if (actionsWithErrors.length === 0) {
+        return undefined;
+    }
+    const lines = ['Error Details'];
+    actionsWithErrors.forEach(action => {
+        const headerText = (action.description && action.description.trim().length > 0)
+            ? action.description
+            : (action.name && action.name.trim().length > 0 ? action.name : 'Unnamed Action');
+        lines.push('');
+        lines.push(headerText);
+        action.errors.forEach(errorText => {
+            const normalized = errorText.length > 0 ? errorText : '(no details provided)';
+            const segments = normalized.split('\n');
+            const [firstLine, ...rest] = segments;
+            lines.push(`  - ${firstLine}`);
+            rest.forEach(segment => {
+                if (segment.length === 0) {
+                    lines.push('');
+                }
+                else {
+                    lines.push(`    ${segment}`);
+                }
+            });
+        });
+    });
+    return lines.join('\n').trimEnd();
+}
+class ActionTableRenderer {
+    canUpdateTerminal;
+    lastRenderLineCount = 0;
+    anchorActive = false;
+    constructor(canUpdateTerminal) {
+        this.canUpdateTerminal = canUpdateTerminal;
+    }
+    prepareForContent() {
+        if (!this.canUpdateTerminal) {
+            return;
+        }
+        this.clearTimelineRegion();
+    }
+    render(snapshot) {
+        if (!snapshot) {
+            this.clearTimelineRegion();
+            return;
+        }
+        const formatted = formatActionTimelineTable(snapshot, { maxWidth: this.getMaxWidth() });
+        if (!formatted) {
+            this.clearTimelineRegion();
+            return;
+        }
+        if (this.canUpdateTerminal) {
+            this.clearTimelineRegion();
+            process.stdout.write(formatted.text);
+            this.anchorActive = true;
+            this.lastRenderLineCount = formatted.lineCount;
+        }
+        else {
+            process.stdout.write(formatted.text);
+        }
+    }
+    clearTimelineRegion() {
+        if (!this.anchorActive || this.lastRenderLineCount <= 0) {
+            return;
+        }
+        this.rewindToAnchor();
+        process.stdout.write('\u001b[J');
+        this.anchorActive = false;
+        this.lastRenderLineCount = 0;
+    }
+    rewindToAnchor() {
+        // The TIMELINE_HEADING line is our anchor; rewind to it before clearing so updates stay in place.
+        const linesToMove = this.lastRenderLineCount;
+        if (linesToMove <= 0) {
+            return;
+        }
+        process.stdout.write(`\u001b[${linesToMove}F`);
+    }
+    getMaxWidth() {
+        const detectedWidth = this.detectTerminalWidth();
+        const adjustedWidth = detectedWidth - TERMINAL_WIDTH_SAFETY_MARGIN;
+        return Math.max(MIN_TERMINAL_WIDTH, adjustedWidth);
+    }
+    detectTerminalWidth() {
+        const stdoutColumns = typeof process.stdout.columns === 'number' ? process.stdout.columns : undefined;
+        if (stdoutColumns && stdoutColumns > 0) {
+            return stdoutColumns;
+        }
+        const envColumns = Number(process.env.COLUMNS);
+        if (Number.isFinite(envColumns) && envColumns > 0) {
+            return envColumns;
+        }
+        return DEFAULT_TERMINAL_WIDTH;
+    }
+}
+exports.ActionTableRenderer = ActionTableRenderer;
+function toNumeric(value) {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : undefined;
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? undefined : parsed;
+}
+function normalizeMemoryLabelEntries(memoryLabels) {
+    if (!memoryLabels) {
+        return [];
+    }
+    if (Array.isArray(memoryLabels)) {
+        const entries = [];
+        for (const labelObject of memoryLabels) {
+            for (const [label, value] of Object.entries(labelObject)) {
+                const numericValue = toNumeric(value);
+                if (numericValue !== undefined) {
+                    entries.push([label, numericValue]);
+                }
+            }
+        }
+        return entries;
+    }
+    return Object.entries(memoryLabels)
+        .map(([label, value]) => {
+        const numericValue = toNumeric(value);
+        return numericValue === undefined ? undefined : [label, numericValue];
+    })
+        .filter((entry) => entry !== undefined);
+}
+function formatMemoryLeakTable(memLeaks) {
+    const rows = normalizeMemoryLabelEntries(memLeaks.memoryLabels);
+    const allocated = memLeaks.allocatedMemory ?? 0;
+    const labelHeader = 'Label';
+    const sizeHeader = 'Size';
+    const totalLabel = 'Total';
+    const nonePlaceholder = '(none)';
+    const totalValueStr = allocated.toString();
+    const rowLabelWidth = rows.length > 0 ? Math.max(...rows.map(([label]) => label.length)) : nonePlaceholder.length;
+    const rowSizeWidth = rows.length > 0 ? Math.max(...rows.map(([, size]) => size.toString().length)) : 0;
+    const labelWidth = Math.max(labelHeader.length, totalLabel.length, rowLabelWidth);
+    const sizeWidth = Math.max(sizeHeader.length, totalValueStr.length, rowSizeWidth);
+    const columns = [labelWidth, sizeWidth];
+    const topBorder = buildBorderLine(columns, '┌', '┬', '┐');
+    const headerDivider = buildBorderLine(columns, '├', '┼', '┤');
+    const bottomBorder = buildBorderLine(columns, '└', '┴', '┘');
+    let output = 'Memory Leaks Detected:\n';
+    output += `${topBorder}\n`;
+    output += `│ ${labelHeader.padEnd(labelWidth)} │ ${sizeHeader.padStart(sizeWidth)} │\n`;
+    output += `${headerDivider}\n`;
+    if (rows.length === 0) {
+        output += `│ ${nonePlaceholder.padEnd(labelWidth)} │ ${''.padStart(sizeWidth)} │\n`;
+    }
+    else {
+        for (const [label, size] of rows) {
+            output += `│ ${label.padEnd(labelWidth)} │ ${size.toString().padStart(sizeWidth)} │\n`;
+        }
+    }
+    output += `${headerDivider}\n`;
+    output += `│ ${totalLabel.padEnd(labelWidth)} │ ${totalValueStr.padStart(sizeWidth)} │\n`;
+    output += `${bottomBorder}\n`;
+    return output;
+}
+function buildUtpLogPath(logPath) {
+    const parsed = path.parse(logPath);
+    const utpFileName = `${parsed.name}-utp-json.log`;
+    return parsed.dir ? path.join(parsed.dir, utpFileName) : utpFileName;
+}
+async function writeUtpTelemetryLog(filePath, entries, logger) {
+    try {
+        await fs.promises.writeFile(filePath, `${JSON.stringify(entries)}\n`, 'utf8');
+    }
+    catch (error) {
+        logger.warn(`Failed to write UTP telemetry log (${filePath}): ${error}`);
+    }
+}
+/**
+ * Tails a log file using fs.watch and ReadStream for efficient reading.
+ * @param logPath The path to the log file to tail.
+ * @param projectPath The path to the project (used for log annotation).
+ * @returns An object containing the tail promise and signalEnd function.
+ */
+function TailLogFile(logPath, projectPath) {
+    let logEnded = false;
+    let lastSize = 0;
+    const logPollingInterval = 250;
+    const telemetry = [];
+    const logger = logging_1.Logger.instance;
+    const actionAccumulator = new ActionTelemetryAccumulator();
+    const actionTableRenderer = new ActionTableRenderer(process.stdout.isTTY === true && process.env.CI !== 'true');
+    const utpLogPath = buildUtpLogPath(logPath);
+    let telemetryFlushed = false;
+    const renderActionTable = () => {
+        const snapshot = actionAccumulator.snapshot();
+        if (snapshot) {
+            actionTableRenderer.render(snapshot);
+        }
+    };
+    const flushTelemetryLog = async () => {
+        if (telemetryFlushed) {
+            return;
+        }
+        telemetryFlushed = true;
+        await writeUtpTelemetryLog(utpLogPath, telemetry, logger);
+    };
+    const writeStdoutThenTableContent = (content, restoreTable = true) => {
+        actionTableRenderer.prepareForContent();
+        process.stdout.write(content);
+        if (restoreTable) {
+            renderActionTable();
+        }
+    };
+    function printUTP(utp) {
+        // switch utp types, fallback to json if we don't have a toString() implementation or a type implementation
+        switch (utp.type) {
+            case 'Action': {
+                const actionEntry = utp;
+                const tableChanged = actionAccumulator.record(actionEntry);
+                if (tableChanged) {
+                    renderActionTable();
+                }
+                break;
+            }
+            case 'MemoryLeaks':
+                logger.debug(formatMemoryLeakTable(utp));
+                break;
+            case 'PlayerBuildInfo': {
+                const infoEntry = utp;
+                const changed = actionAccumulator.recordPlayerBuildInfo(infoEntry);
+                if (changed) {
+                    renderActionTable();
+                }
+                break;
+            }
+            default:
+                // Print raw JSON for unhandled UTP types
+                writeStdoutThenTableContent(`${JSON.stringify(utp)}\n`);
+                break;
+        }
+    }
+    async function readNewLogContent() {
+        try {
+            if (!fs.existsSync(logPath)) {
+                return;
+            }
+            const stats = await fs.promises.stat(logPath);
+            if (stats.size < lastSize) {
+                lastSize = 0;
+            }
+            if (stats.size > lastSize) {
+                const bytesToRead = stats.size - lastSize;
+                const buffer = Buffer.alloc(bytesToRead);
+                let fh;
+                try {
+                    fh = await fs.promises.open(logPath, fs.constants.O_RDONLY);
+                    await fh.read(buffer, 0, bytesToRead, lastSize);
+                }
+                finally {
+                    await fh?.close();
+                }
+                lastSize = stats.size;
+                if (bytesToRead > 0) {
+                    const chunk = buffer.toString('utf8');
+                    // Parse telemetry lines in this chunk (lines starting with '##utp:')
+                    try {
+                        const lines = chunk.split(/\r?\n/);
+                        for (const rawLine of lines) {
+                            const line = rawLine.trim();
+                            if (!line) {
+                                continue;
+                            }
+                            // Attempt to parse telemetry utp JSON
+                            if (line.startsWith('##utp:')) {
+                                const jsonPart = line.substring('##utp:'.length).trim();
+                                try {
+                                    const sanitizedJson = sanitizeTelemetryJson(jsonPart);
+                                    if (!sanitizedJson) {
+                                        continue;
+                                    }
+                                    const utpJson = JSON.parse(sanitizedJson);
+                                    const utp = utpJson;
+                                    telemetry.push(utp);
+                                    if (utp.message && 'severity' in utp && (utp.severity === utp_1.Severity.Error || utp.severity === utp_1.Severity.Exception || utp.severity === utp_1.Severity.Assert)) {
+                                        let messageLevel = logging_1.LogLevel.ERROR;
+                                        if (remappedEditorLogs[utp.message] !== undefined) {
+                                            messageLevel = remappedEditorLogs[utp.message];
+                                        }
+                                        const file = utp.file ? utp.file.replace(/\\/g, '/') : undefined;
+                                        const lineNum = utp.line ? utp.line : undefined;
+                                        const message = utp.message;
+                                        const stacktrace = utp.stacktrace ? `${utp.stacktrace}` : undefined;
+                                        if (!annotationPrefixRegex.test(message)) {
+                                            // only annotate if the file is within the current project
+                                            if (projectPath && file && file.startsWith(projectPath)) {
+                                                logger.annotate(logging_1.LogLevel.ERROR, stacktrace == undefined ? message : `${message}\n${stacktrace}`, file, lineNum);
+                                            }
+                                            else {
+                                                switch (messageLevel) {
+                                                    case logging_1.LogLevel.WARN:
+                                                        logger.warn(stacktrace == undefined ? message : `${message}\n${stacktrace}`);
+                                                        break;
+                                                    case logging_1.LogLevel.ERROR:
+                                                        logger.error(stacktrace == undefined ? message : `${message}\n${stacktrace}`);
+                                                        break;
+                                                    case logging_1.LogLevel.INFO:
+                                                    default:
+                                                        logger.info(stacktrace == undefined ? message : `${message}\n${stacktrace}`);
+                                                        break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else if (logging_1.Logger.instance.logLevel === logging_1.LogLevel.UTP) {
+                                        printUTP(utp);
+                                    }
+                                }
+                                catch (error) {
+                                    logger.warn(`Failed to parse telemetry JSON: ${error} -- raw: ${jsonPart}`);
+                                }
+                            }
+                            else {
+                                if (logging_1.Logger.instance.logLevel !== logging_1.LogLevel.UTP) {
+                                    process.stdout.write(`${line}\n`);
+                                }
+                            }
+                        }
+                    }
+                    catch (error) {
+                        if (error.code !== 'EPIPE') {
+                            throw error;
+                        }
+                        logger.warn(`Error while parsing telemetry from log chunk: ${error}`);
+                    }
+                }
+            }
+        }
+        catch (error) {
+            logger.warn(`Error while tailing log file: ${error}`);
+        }
+    }
+    const tailPromise = new Promise((resolve, reject) => {
+        (async () => {
+            try {
+                while (!logEnded) {
+                    await (0, utilities_1.Delay)(logPollingInterval);
+                    await readNewLogContent();
+                }
+                // Final read to capture any remaining content after tailing stops
+                await (0, utilities_1.WaitForFileToBeUnlocked)(logPath, 10_000);
+                await readNewLogContent();
+                try {
+                    // write a final newline to separate log output
+                    process.stdout.write('\n');
+                }
+                catch (error) {
+                    if (error.code !== 'EPIPE') {
+                        logger.warn(`Error while writing log tail: ${error}`);
+                    }
+                }
+                await flushTelemetryLog();
+                resolve();
+            }
+            catch (error) {
+                await flushTelemetryLog();
+                reject(error);
+            }
+        })();
+    });
+    function stopLogTail() {
+        logEnded = true;
+    }
+    return { tailPromise, stopLogTail, telemetry };
+}
+//# sourceMappingURL=unity-logging.js.map
 
 /***/ }),
 
@@ -6178,9 +7411,6 @@ class UnityVersion {
         const normalizedMajor = Number.isNaN(majorValue) ? undefined : majorValue;
         const requestedMinor = UnityVersion.parseMinorToken(minorToken);
         let candidates = UnityVersion.filterFinalReleases(releases, normalizedMajor, requestedMinor, channels);
-        if (!candidates.length && minorToken === '0') {
-            candidates = UnityVersion.filterFinalReleases(releases, normalizedMajor, undefined, channels);
-        }
         logging_1.Logger.instance.debug(`Found ${candidates.length} candidate(s) for version pattern ${version}`);
         candidates.forEach(release => {
             logging_1.Logger.instance.debug(`  - ${release.version}`);
@@ -6269,12 +7499,12 @@ exports.GetTempDir = GetTempDir;
 exports.GetArgumentValueAsString = GetArgumentValueAsString;
 exports.ReadPidFile = ReadPidFile;
 exports.Delay = Delay;
-exports.TailLogFile = TailLogFile;
 exports.WaitForFileToBeUnlocked = WaitForFileToBeUnlocked;
 exports.TestFileAccess = TestFileAccess;
 exports.KillProcess = KillProcess;
 exports.KillChildProcesses = KillChildProcesses;
 exports.isProcessElevated = isProcessElevated;
+exports.tryParseJson = tryParseJson;
 const os = __importStar(__nccwpck_require__(2037));
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
@@ -6586,131 +7816,6 @@ async function ReadPidFile(pidFilePath) {
 async function Delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-const remappedEditorLog = {
-    'OpenCL device, baking cannot use GPU lightmapper.': logging_1.LogLevel.INFO,
-    'Failed to find a suitable OpenCL device, baking cannot use GPU lightmapper.': logging_1.LogLevel.INFO,
-};
-/**
- * Tails a log file using fs.watch and ReadStream for efficient reading.
- * @param logPath The path to the log file to tail.
- * @param projectPath The path to the project (used for log annotation).
- * @returns An object containing the tail promise and signalEnd function.
- */
-function TailLogFile(logPath, projectPath) {
-    let logEnded = false;
-    let lastSize = 0;
-    const logPollingInterval = 250;
-    const telemetry = [];
-    async function readNewLogContent() {
-        try {
-            if (!fs.existsSync(logPath)) {
-                return;
-            }
-            const stats = await fs.promises.stat(logPath);
-            if (stats.size < lastSize) {
-                lastSize = 0;
-            }
-            if (stats.size > lastSize) {
-                const bytesToRead = stats.size - lastSize;
-                const buffer = Buffer.alloc(bytesToRead);
-                let fh;
-                try {
-                    fh = await fs.promises.open(logPath, fs.constants.O_RDONLY);
-                    await fh.read(buffer, 0, bytesToRead, lastSize);
-                }
-                finally {
-                    await fh?.close();
-                }
-                lastSize = stats.size;
-                if (bytesToRead > 0) {
-                    const chunk = buffer.toString('utf8');
-                    // Parse telemetry lines in this chunk (lines starting with '##utp:')
-                    try {
-                        const lines = chunk.split(/\r?\n/);
-                        for (const rawLine of lines) {
-                            const line = rawLine.trim();
-                            if (!line) {
-                                continue;
-                            }
-                            if (line.startsWith('##utp:')) {
-                                const jsonPart = line.substring('##utp:'.length).trim();
-                                try {
-                                    const utp = JSON.parse(jsonPart);
-                                    telemetry.push(utp);
-                                    if (utp.message && remappedEditorLog[utp.message] !== undefined) {
-                                        const remappedLevel = remappedEditorLog[utp.message];
-                                        logging_1.Logger.instance.log(remappedLevel, utp.message);
-                                        continue;
-                                    }
-                                    if (utp.severity && utp.severity.toLowerCase() === 'error') {
-                                        const file = utp.file ? utp.file.replace(/\\/g, '/') : undefined;
-                                        const lineNum = utp.line ? utp.line : undefined;
-                                        const message = utp.message;
-                                        const stacktrace = utp.stacktrace ? `${utp.stacktrace}` : undefined;
-                                        if (!message.startsWith(`\n::error::\u001B[31m`)) { // indicates a duplicate annotation
-                                            // only annotate if the file is within the current project
-                                            if (projectPath && file && file.startsWith(projectPath)) {
-                                                logging_1.Logger.instance.annotate(logging_1.LogLevel.ERROR, stacktrace == undefined ? message : `${message}\n${stacktrace}`, file, lineNum);
-                                            }
-                                            else {
-                                                logging_1.Logger.instance.error(stacktrace == undefined ? message : `${message}\n${stacktrace}`);
-                                            }
-                                        }
-                                    }
-                                }
-                                catch (error) {
-                                    logger.warn(`Failed to parse telemetry JSON: ${error} -- raw: ${jsonPart}`);
-                                }
-                            }
-                            else {
-                                process.stdout.write(`${line}\n`);
-                            }
-                        }
-                    }
-                    catch (error) {
-                        if (error.code !== 'EPIPE') {
-                            throw error;
-                        }
-                        logger.warn(`Error while parsing telemetry from log chunk: ${error}`);
-                    }
-                }
-            }
-        }
-        catch (error) {
-            logger.warn(`Error while tailing log file: ${error}`);
-        }
-    }
-    const tailPromise = new Promise((resolve, reject) => {
-        (async () => {
-            try {
-                while (!logEnded) {
-                    await Delay(logPollingInterval);
-                    await readNewLogContent();
-                }
-                // Final read to capture any remaining content after tailing stops
-                await WaitForFileToBeUnlocked(logPath, 10_000);
-                await readNewLogContent();
-                try {
-                    // write a final newline to separate log output
-                    process.stdout.write('\n');
-                }
-                catch (error) {
-                    if (error.code !== 'EPIPE') {
-                        logger.warn(`Error while writing log tail: ${error}`);
-                    }
-                }
-                resolve();
-            }
-            catch (error) {
-                reject(error);
-            }
-        })();
-    });
-    function stopLogTail() {
-        logEnded = true;
-    }
-    return { tailPromise, stopLogTail, telemetry };
-}
 /**
  * Waits for a file to be unlocked (not exclusively locked by another process).
  * If the file does not exist, it is considered unlocked.
@@ -6867,7 +7972,70 @@ async function isProcessElevated() {
     ], { silent: true, showCommand: false });
     return output.trim().toLowerCase() === 'true';
 }
+function tryParseJson(content) {
+    if (!content) {
+        return undefined;
+    }
+    try {
+        JSON.parse(content);
+        return content;
+    }
+    catch {
+        return undefined;
+    }
+}
 //# sourceMappingURL=utilities.js.map
+
+/***/ }),
+
+/***/ 6282:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Severity = exports.Phase = exports.UTPPlayerBuildInfo = exports.UTPMemoryLeak = exports.UTPBase = void 0;
+class UTPBase {
+    type;
+    version;
+    phase;
+    time;
+    processId;
+    severity;
+    message;
+    stacktrace;
+    line;
+    file;
+    name;
+    description;
+    duration;
+    errors;
+}
+exports.UTPBase = UTPBase;
+class UTPMemoryLeak extends UTPBase {
+    allocatedMemory;
+    memoryLabels;
+}
+exports.UTPMemoryLeak = UTPMemoryLeak;
+class UTPPlayerBuildInfo extends UTPBase {
+    steps;
+}
+exports.UTPPlayerBuildInfo = UTPPlayerBuildInfo;
+var Phase;
+(function (Phase) {
+    Phase["Begin"] = "Begin";
+    Phase["End"] = "End";
+    Phase["Immediate"] = "Immediate";
+})(Phase || (exports.Phase = Phase = {}));
+var Severity;
+(function (Severity) {
+    Severity["Info"] = "Info";
+    Severity["Warning"] = "Warning";
+    Severity["Error"] = "Error";
+    Severity["Exception"] = "Exception";
+    Severity["Assert"] = "Assert";
+})(Severity || (exports.Severity = Severity = {}));
+//# sourceMappingURL=utp.js.map
 
 /***/ }),
 
@@ -39885,6 +41053,7 @@ class LRUCache {
     #sizes;
     #starts;
     #ttls;
+    #autopurgeTimers;
     #hasDispose;
     #hasFetchMethod;
     #hasDisposeAfter;
@@ -39903,6 +41072,7 @@ class LRUCache {
             // properties
             starts: c.#starts,
             ttls: c.#ttls,
+            autopurgeTimers: c.#autopurgeTimers,
             sizes: c.#sizes,
             keyMap: c.#keyMap,
             keyList: c.#keyList,
@@ -40004,13 +41174,11 @@ class LRUCache {
                 throw new TypeError('sizeCalculation set to non-function');
             }
         }
-        if (memoMethod !== undefined &&
-            typeof memoMethod !== 'function') {
+        if (memoMethod !== undefined && typeof memoMethod !== 'function') {
             throw new TypeError('memoMethod must be a function if defined');
         }
         this.#memoMethod = memoMethod;
-        if (fetchMethod !== undefined &&
-            typeof fetchMethod !== 'function') {
+        if (fetchMethod !== undefined && typeof fetchMethod !== 'function') {
             throw new TypeError('fetchMethod must be a function if specified');
         }
         this.#fetchMethod = fetchMethod;
@@ -40065,9 +41233,7 @@ class LRUCache {
         this.updateAgeOnGet = !!updateAgeOnGet;
         this.updateAgeOnHas = !!updateAgeOnHas;
         this.ttlResolution =
-            isPosInt(ttlResolution) || ttlResolution === 0 ?
-                ttlResolution
-                : 1;
+            isPosInt(ttlResolution) || ttlResolution === 0 ? ttlResolution : 1;
         this.ttlAutopurge = !!ttlAutopurge;
         this.ttl = ttl || 0;
         if (this.ttl) {
@@ -40102,10 +41268,21 @@ class LRUCache {
         const starts = new ZeroArray(this.#max);
         this.#ttls = ttls;
         this.#starts = starts;
+        const purgeTimers = this.ttlAutopurge ?
+            new Array(this.#max)
+            : undefined;
+        this.#autopurgeTimers = purgeTimers;
         this.#setItemTTL = (index, ttl, start = this.#perf.now()) => {
             starts[index] = ttl !== 0 ? start : 0;
             ttls[index] = ttl;
-            if (ttl !== 0 && this.ttlAutopurge) {
+            // clear out the purge timer if we're setting TTL to 0, and
+            // previously had a ttl purge timer running, so it doesn't
+            // fire unnecessarily.
+            if (purgeTimers?.[index]) {
+                clearTimeout(purgeTimers[index]);
+                purgeTimers[index] = undefined;
+            }
+            if (ttl !== 0 && purgeTimers) {
                 const t = setTimeout(() => {
                     if (this.#isStale(index)) {
                         this.#delete(this.#keyList[index], 'expire');
@@ -40117,6 +41294,7 @@ class LRUCache {
                     t.unref();
                 }
                 /* c8 ignore stop */
+                purgeTimers[index] = t;
             }
         };
         this.#updateItemAge = index => {
@@ -40308,8 +41486,7 @@ class LRUCache {
     *keys() {
         for (const i of this.#indexes()) {
             const k = this.#keyList[i];
-            if (k !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (k !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield k;
             }
         }
@@ -40323,8 +41500,7 @@ class LRUCache {
     *rkeys() {
         for (const i of this.#rindexes()) {
             const k = this.#keyList[i];
-            if (k !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (k !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield k;
             }
         }
@@ -40336,8 +41512,7 @@ class LRUCache {
     *values() {
         for (const i of this.#indexes()) {
             const v = this.#valList[i];
-            if (v !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (v !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield this.#valList[i];
             }
         }
@@ -40351,8 +41526,7 @@ class LRUCache {
     *rvalues() {
         for (const i of this.#rindexes()) {
             const v = this.#valList[i];
-            if (v !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (v !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield this.#valList[i];
             }
         }
@@ -40710,6 +41884,10 @@ class LRUCache {
             }
         }
         this.#removeItemSize(head);
+        if (this.#autopurgeTimers?.[head]) {
+            clearTimeout(this.#autopurgeTimers[head]);
+            this.#autopurgeTimers[head] = undefined;
+        }
         // if we aren't about to use the index, then null these out
         if (free) {
             this.#keyList[head] = undefined;
@@ -40782,8 +41960,7 @@ class LRUCache {
     peek(k, peekOptions = {}) {
         const { allowStale = this.allowStale } = peekOptions;
         const index = this.#keyMap.get(k);
-        if (index === undefined ||
-            (!allowStale && this.#isStale(index))) {
+        if (index === undefined || (!allowStale && this.#isStale(index))) {
             return;
         }
         const v = this.#valList[index];
@@ -40829,7 +42006,7 @@ class LRUCache {
             // cache and ignore the abort, or if it's still pending on this specific
             // background request, then write it to the cache.
             const vl = this.#valList[index];
-            if (vl === p || ignoreAbort && updateCache && vl === undefined) {
+            if (vl === p || (ignoreAbort && updateCache && vl === undefined)) {
                 if (v === undefined) {
                     if (bf.__staleWhileFetching !== undefined) {
                         this.#valList[index] = bf.__staleWhileFetching;
@@ -40893,8 +42070,7 @@ class LRUCache {
             // defer check until we are actually aborting,
             // so fetchMethod can override.
             ac.signal.addEventListener('abort', () => {
-                if (!options.ignoreFetchAbort ||
-                    options.allowStaleOnFetchAbort) {
+                if (!options.ignoreFetchAbort || options.allowStaleOnFetchAbort) {
                     res(undefined);
                     // when it eventually resolves, update the cache.
                     if (options.allowStaleOnFetchAbort) {
@@ -41126,6 +42302,10 @@ class LRUCache {
         if (this.#size !== 0) {
             const index = this.#keyMap.get(k);
             if (index !== undefined) {
+                if (this.#autopurgeTimers?.[index]) {
+                    clearTimeout(this.#autopurgeTimers?.[index]);
+                    this.#autopurgeTimers[index] = undefined;
+                }
                 deleted = true;
                 if (this.#size === 1) {
                     this.#clear(reason);
@@ -41201,6 +42381,11 @@ class LRUCache {
         if (this.#ttls && this.#starts) {
             this.#ttls.fill(0);
             this.#starts.fill(0);
+            for (const t of this.#autopurgeTimers ?? []) {
+                if (t !== undefined)
+                    clearTimeout(t);
+            }
+            this.#autopurgeTimers?.fill(undefined);
         }
         if (this.#sizes) {
             this.#sizes.fill(0);
@@ -44351,7 +45536,7 @@ function composeCollection(CN, ctx, token, props, onError) {
     let tag = ctx.schema.tags.find(t => t.tag === tagName && t.collection === expType);
     if (!tag) {
         const kt = ctx.schema.knownTags[tagName];
-        if (kt && kt.collection === expType) {
+        if (kt?.collection === expType) {
             ctx.schema.tags.push(Object.assign({}, kt, { default: false }));
             tag = kt;
         }
@@ -45237,7 +46422,7 @@ function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, ta
         });
         if (!props.found) {
             if (props.anchor || props.tag || value) {
-                if (value && value.type === 'block-seq')
+                if (value?.type === 'block-seq')
                     onError(props.end, 'BAD_INDENT', 'All sequence items must start at the same column');
                 else
                     onError(offset, 'MISSING_CHAR', 'Sequence item without - indicator');
@@ -45454,7 +46639,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
                 }
             }
             else if (value) {
-                if ('source' in value && value.source && value.source[0] === ':')
+                if ('source' in value && value.source?.[0] === ':')
                     onError(value, 'MISSING_CHAR', `Missing space after : in ${fcName}`);
                 else
                     onError(valueProps.start, 'MISSING_CHAR', `Missing , or : between ${fcName} items`);
@@ -45498,7 +46683,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
     const expectedEnd = isMap ? '}' : ']';
     const [ce, ...ee] = fc.end;
     let cePos = offset;
-    if (ce && ce.source === expectedEnd)
+    if (ce?.source === expectedEnd)
         cePos = ce.offset + ce.source.length;
     else {
         const name = fcName[0].toUpperCase() + fcName.substring(1);
@@ -46879,7 +48064,7 @@ const prettifyError = (src, lc) => (error) => {
     if (/[^ ]/.test(lineStr)) {
         let count = 1;
         const end = error.linePos[1];
-        if (end && end.line === line && end.col > col) {
+        if (end?.line === line && end.col > col) {
             count = Math.max(1, Math.min(end.col - col, 80 - ci));
         }
         const pointer = ' '.repeat(ci) + '^'.repeat(count);
@@ -47047,7 +48232,7 @@ class Alias extends Node.NodeBase {
             data = anchors.get(source);
         }
         /* istanbul ignore if */
-        if (!data || data.res === undefined) {
+        if (data?.res === undefined) {
             const msg = 'This should not happen: Alias anchor was not resolved?';
             throw new ReferenceError(msg);
         }
@@ -49389,7 +50574,7 @@ class Parser {
     }
     *step() {
         const top = this.peek(1);
-        if (this.type === 'doc-end' && (!top || top.type !== 'doc-end')) {
+        if (this.type === 'doc-end' && top?.type !== 'doc-end') {
             while (this.stack.length > 0)
                 yield* this.pop();
             this.stack.push({
@@ -49921,7 +51106,7 @@ class Parser {
             do {
                 yield* this.pop();
                 top = this.peek(1);
-            } while (top && top.type === 'flow-collection');
+            } while (top?.type === 'flow-collection');
         }
         else if (fc.end.length === 0) {
             switch (this.type) {
@@ -52107,7 +53292,7 @@ function stringifyNumber({ format, minFractionDigits, tag, value }) {
     const num = typeof value === 'number' ? value : Number(value);
     if (!isFinite(num))
         return isNaN(num) ? '.nan' : num < 0 ? '-.inf' : '.inf';
-    let n = JSON.stringify(value);
+    let n = Object.is(value, -0) ? '-0' : JSON.stringify(value);
     if (!format &&
         minFractionDigits &&
         (!tag || tag === 'tag:yaml.org,2002:float') &&
@@ -52238,7 +53423,7 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
             ws += `\n${stringifyComment.indentComment(cs, ctx.indent)}`;
         }
         if (valueStr === '' && !ctx.inFlow) {
-            if (ws === '\n')
+            if (ws === '\n' && valueComment)
                 ws = '\n\n';
         }
         else {
@@ -57660,6 +58845,7 @@ class LRUCache {
     #sizes;
     #starts;
     #ttls;
+    #autopurgeTimers;
     #hasDispose;
     #hasFetchMethod;
     #hasDisposeAfter;
@@ -57678,6 +58864,7 @@ class LRUCache {
             // properties
             starts: c.#starts,
             ttls: c.#ttls,
+            autopurgeTimers: c.#autopurgeTimers,
             sizes: c.#sizes,
             keyMap: c.#keyMap,
             keyList: c.#keyList,
@@ -57779,13 +58966,11 @@ class LRUCache {
                 throw new TypeError('sizeCalculation set to non-function');
             }
         }
-        if (memoMethod !== undefined &&
-            typeof memoMethod !== 'function') {
+        if (memoMethod !== undefined && typeof memoMethod !== 'function') {
             throw new TypeError('memoMethod must be a function if defined');
         }
         this.#memoMethod = memoMethod;
-        if (fetchMethod !== undefined &&
-            typeof fetchMethod !== 'function') {
+        if (fetchMethod !== undefined && typeof fetchMethod !== 'function') {
             throw new TypeError('fetchMethod must be a function if specified');
         }
         this.#fetchMethod = fetchMethod;
@@ -57840,9 +59025,7 @@ class LRUCache {
         this.updateAgeOnGet = !!updateAgeOnGet;
         this.updateAgeOnHas = !!updateAgeOnHas;
         this.ttlResolution =
-            isPosInt(ttlResolution) || ttlResolution === 0 ?
-                ttlResolution
-                : 1;
+            isPosInt(ttlResolution) || ttlResolution === 0 ? ttlResolution : 1;
         this.ttlAutopurge = !!ttlAutopurge;
         this.ttl = ttl || 0;
         if (this.ttl) {
@@ -57877,10 +59060,21 @@ class LRUCache {
         const starts = new ZeroArray(this.#max);
         this.#ttls = ttls;
         this.#starts = starts;
+        const purgeTimers = this.ttlAutopurge ?
+            new Array(this.#max)
+            : undefined;
+        this.#autopurgeTimers = purgeTimers;
         this.#setItemTTL = (index, ttl, start = this.#perf.now()) => {
             starts[index] = ttl !== 0 ? start : 0;
             ttls[index] = ttl;
-            if (ttl !== 0 && this.ttlAutopurge) {
+            // clear out the purge timer if we're setting TTL to 0, and
+            // previously had a ttl purge timer running, so it doesn't
+            // fire unnecessarily.
+            if (purgeTimers?.[index]) {
+                clearTimeout(purgeTimers[index]);
+                purgeTimers[index] = undefined;
+            }
+            if (ttl !== 0 && purgeTimers) {
                 const t = setTimeout(() => {
                     if (this.#isStale(index)) {
                         this.#delete(this.#keyList[index], 'expire');
@@ -57892,6 +59086,7 @@ class LRUCache {
                     t.unref();
                 }
                 /* c8 ignore stop */
+                purgeTimers[index] = t;
             }
         };
         this.#updateItemAge = index => {
@@ -58083,8 +59278,7 @@ class LRUCache {
     *keys() {
         for (const i of this.#indexes()) {
             const k = this.#keyList[i];
-            if (k !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (k !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield k;
             }
         }
@@ -58098,8 +59292,7 @@ class LRUCache {
     *rkeys() {
         for (const i of this.#rindexes()) {
             const k = this.#keyList[i];
-            if (k !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (k !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield k;
             }
         }
@@ -58111,8 +59304,7 @@ class LRUCache {
     *values() {
         for (const i of this.#indexes()) {
             const v = this.#valList[i];
-            if (v !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (v !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield this.#valList[i];
             }
         }
@@ -58126,8 +59318,7 @@ class LRUCache {
     *rvalues() {
         for (const i of this.#rindexes()) {
             const v = this.#valList[i];
-            if (v !== undefined &&
-                !this.#isBackgroundFetch(this.#valList[i])) {
+            if (v !== undefined && !this.#isBackgroundFetch(this.#valList[i])) {
                 yield this.#valList[i];
             }
         }
@@ -58485,6 +59676,10 @@ class LRUCache {
             }
         }
         this.#removeItemSize(head);
+        if (this.#autopurgeTimers?.[head]) {
+            clearTimeout(this.#autopurgeTimers[head]);
+            this.#autopurgeTimers[head] = undefined;
+        }
         // if we aren't about to use the index, then null these out
         if (free) {
             this.#keyList[head] = undefined;
@@ -58557,8 +59752,7 @@ class LRUCache {
     peek(k, peekOptions = {}) {
         const { allowStale = this.allowStale } = peekOptions;
         const index = this.#keyMap.get(k);
-        if (index === undefined ||
-            (!allowStale && this.#isStale(index))) {
+        if (index === undefined || (!allowStale && this.#isStale(index))) {
             return;
         }
         const v = this.#valList[index];
@@ -58604,7 +59798,7 @@ class LRUCache {
             // cache and ignore the abort, or if it's still pending on this specific
             // background request, then write it to the cache.
             const vl = this.#valList[index];
-            if (vl === p || ignoreAbort && updateCache && vl === undefined) {
+            if (vl === p || (ignoreAbort && updateCache && vl === undefined)) {
                 if (v === undefined) {
                     if (bf.__staleWhileFetching !== undefined) {
                         this.#valList[index] = bf.__staleWhileFetching;
@@ -58668,8 +59862,7 @@ class LRUCache {
             // defer check until we are actually aborting,
             // so fetchMethod can override.
             ac.signal.addEventListener('abort', () => {
-                if (!options.ignoreFetchAbort ||
-                    options.allowStaleOnFetchAbort) {
+                if (!options.ignoreFetchAbort || options.allowStaleOnFetchAbort) {
                     res(undefined);
                     // when it eventually resolves, update the cache.
                     if (options.allowStaleOnFetchAbort) {
@@ -58901,6 +60094,10 @@ class LRUCache {
         if (this.#size !== 0) {
             const index = this.#keyMap.get(k);
             if (index !== undefined) {
+                if (this.#autopurgeTimers?.[index]) {
+                    clearTimeout(this.#autopurgeTimers?.[index]);
+                    this.#autopurgeTimers[index] = undefined;
+                }
                 deleted = true;
                 if (this.#size === 1) {
                     this.#clear(reason);
@@ -58976,6 +60173,11 @@ class LRUCache {
         if (this.#ttls && this.#starts) {
             this.#ttls.fill(0);
             this.#starts.fill(0);
+            for (const t of this.#autopurgeTimers ?? []) {
+                if (t !== undefined)
+                    clearTimeout(t);
+            }
+            this.#autopurgeTimers?.fill(undefined);
         }
         if (this.#sizes) {
             this.#sizes.fill(0);
