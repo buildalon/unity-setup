@@ -66,6 +66,10 @@ steps:
 | `install-path` | Specify the path where Unity will be installed to. | false |
 | `auto-update-hub` | Automatically update Unity Hub to the latest version before installing Unity Editors. Can be `true` or `false`. Default is `true`. | false |
 | `hub-version` | Specify a specific version of Unity Hub to install. Example: `3.12.0`. When set, `auto-update-hub` is automatically disabled. | false |
+| `cache-installation` | Cache the Unity installation between workflow runs to speed up subsequent runs. Can be `true` or `false`. Default is `false`. | false |
+
+> [!NOTE]
+> `cache-installation` does not apply to the Unity Hub installation, only to Unity Editor installations.
 
 #### unity-version formats
 

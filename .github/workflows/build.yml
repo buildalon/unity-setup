@@ -1,6 +1,4 @@
 name: build
-permissions:
-  contents: read
 on:
   workflow_call:
     inputs:
@@ -10,10 +8,10 @@ on:
 jobs:
   build:
     name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
-    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     timeout-minutes: 30
@@ -26,12 +24,12 @@ jobs:
     steps:
       - name: Free Disk Space
         if: ${{ matrix.os == 'ubuntu-latest' && (matrix.unity-version != '2018' && matrix.unity-version != '2017.4.40f1') }}
-        uses: endersonmenezes/free-disk-space@713d134e243b926eba4a5cce0cf608bfd1efb89a # v2.1.1
+        uses: endersonmenezes/free-disk-space@e6ed9b02e683a3b55ed0252f1ee469ce3b39a885 # v3.1.0
         with:
           remove_android: true
           remove_dotnet: false
           remove_tool_cache: false
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: ./ # buildalon/unity-setup
         id: unity-setup
         with:
@@ -73,17 +71,17 @@ jobs:
             echo "Error: UNITY_EDITORS env and output do not match!"
             exit 1
           fi
-          
+
           if [[ "${ENV_UNITY_EDITOR_PATH}" != "${STEPS_UNITY_EDITOR_PATH}" ]]; then
             echo "Error: UNITY_EDITOR_PATH env and output do not match!"
             exit 1
           fi
-          
+
           if [[ "${ENV_UNITY_PROJECT_PATH}" != "${STEPS_UNITY_PROJECT_PATH}" ]]; then
             echo "Error: UNITY_PROJECT_PATH env and output do not match!"
             exit 1
           fi
-          
+
           # If unity-version is None, UNITY_EDITOR_PATH must be empty
           if [[ "${{ matrix.unity-version }}" == "None" ]]; then
             if [[ -n "${{ env.UNITY_EDITOR_PATH }}" ]]; then
