@@ -1,14 +1,19 @@
-import fs = require('fs');
-import os = require('os');
-import path = require('path');
-import core = require('@actions/core');
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as core from '@actions/core';
 import {
     UnityHub,
     UnityVersion,
     ResolveGlobToPath
 } from '@rage-against-the-pixel/unity-cli';
 
-export async function ValidateInputs(): Promise<{ versions: UnityVersion[], modules: string[], unityProjectPath: string | null, installPath: string }> {
+export async function ValidateInputs(): Promise<{
+    versions: UnityVersion[],
+    modules: string[],
+    unityProjectPath: string | undefined,
+    installPath: string | undefined
+}> {
     const modules: string[] = [];
     const architectureInput = core.getInput('architecture') || getInstallationArch();
     let architecture: 'X86_64' | 'ARM64' | null = null;
@@ -161,12 +166,15 @@ function getDefaultModules(): string[] {
 async function getVersionFilePath(): Promise<string | undefined> {
     let projectVersionPath = core.getInput('version-file');
 
-    if (projectVersionPath !== undefined && projectVersionPath.toLowerCase() === 'none') {
+    if (projectVersionPath !== undefined &&
+        projectVersionPath.toLowerCase() === 'none') {
         return undefined;
     }
 
+    const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
+
     if (!projectVersionPath) {
-        projectVersionPath = await ResolveGlobToPath([process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt']);
+        projectVersionPath = await ResolveGlobToPath([workspace, '**', 'ProjectVersion.txt']);
     }
 
     if (projectVersionPath) {
@@ -176,13 +184,13 @@ async function getVersionFilePath(): Promise<string | undefined> {
         } catch (error) {
             core.debug(error);
             try {
-                projectVersionPath = path.join(process.env.GITHUB_WORKSPACE, projectVersionPath);
+                projectVersionPath = path.join(workspace, projectVersionPath);
                 await fs.promises.access(projectVersionPath, fs.constants.R_OK);
                 return projectVersionPath;
             } catch (error) {
                 core.error(error);
                 try {
-                    projectVersionPath = await ResolveGlobToPath([process.env.GITHUB_WORKSPACE, '**', 'ProjectVersion.txt']);
+                    projectVersionPath = await ResolveGlobToPath([workspace, '**', 'ProjectVersion.txt']);
                     await fs.promises.access(projectVersionPath, fs.constants.R_OK);
                     return projectVersionPath;
                 } catch (error) {
@@ -192,7 +200,7 @@ async function getVersionFilePath(): Promise<string | undefined> {
         }
     }
 
-    core.warning(`Could not find ProjectVersion.txt in ${process.env.GITHUB_WORKSPACE}! UNITY_PROJECT_PATH will not be set.`);
+    core.warning(`Could not find ProjectVersion.txt in ${workspace}! UNITY_PROJECT_PATH will not be set.`);
     return undefined;
 }
 
@@ -262,13 +270,13 @@ async function getUnityVersionFromFile(versionFilePath: string, architecture: 'X
         throw Error(`No version match found!`);
     }
 
-    if (!match.groups.version) {
+    if (!match.groups?.version) {
         throw Error(`No version group found!`);
     }
 
-    if (!match.groups.changeset) {
+    if (!match.groups?.changeset) {
         throw Error(`No changeset group found!`);
     }
 
-    return new UnityVersion(match.groups.version, match.groups.changeset, architecture);
+    return new UnityVersion(match.groups.version, match.groups.changeset, architecture ?? undefined);
 }

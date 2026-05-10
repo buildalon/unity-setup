@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/discord/939721153688264824.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/VM9cWJ9rjH) [![marketplace](https://img.shields.io/static/v1?label=&labelColor=505050&message=Buildalon%20Actions&color=FF1E6F&logo=github-actions&logoColor=0076D6)](https://github.com/marketplace?query=buildalon) [![actions](https://github.com/buildalon/unity-setup/actions/workflows/validate.yml/badge.svg?branch=main&event=push)](https://github.com/buildalon/unity-setup/actions/workflows/validate.yml)
 
-A GitHub Action for setting up the [Unity Game Engine](https://unity.com) for CI/CD workflows.
+A GitHub Action for setting up the [Unity Game Engine](https://unity.com) on GitHub Action Runners.
 
 ## How to use
 
@@ -39,6 +39,7 @@ steps:
       unity-version: ${{ matrix.unity-version }} # overrides version in version-file
       build-targets: ${{ matrix.build-targets }}
       modules: ${{ matrix.modules }}
+      cache-installation: true # Caches the Unity installation between workflow runs
 
   - run: |
       echo "Step Outputs:"
