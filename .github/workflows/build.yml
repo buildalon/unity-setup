@@ -1,4 +1,6 @@
 name: build
+permissions:
+  contents: read
 on:
   workflow_call:
     inputs:
@@ -12,19 +14,16 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
-    permissions:
-      contents: read
     timeout-minutes: 30
     env:
       UNITY_EDITORS: '' # set by the unity-setup action
       UNITY_HUB_PATH: '' # set by the unity-setup action
       UNITY_EDITOR_PATH: '' # set by the unity-setup action
       UNITY_PROJECT_PATH: '' # set by the unity-setup action
-      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
     steps:
       - name: Free Disk Space
         if: ${{ matrix.os == 'ubuntu-latest' && (matrix.unity-version != '2018' && matrix.unity-version != '2017.4.40f1') }}
-        uses: endersonmenezes/free-disk-space@e6ed9b02e683a3b55ed0252f1ee469ce3b39a885 # v3.1.0
+        uses: endersonmenezes/free-disk-space@230e80ea48c76abde36bb8fb305e52563c649d4e # v3.2.2
         with:
           remove_android: true
           remove_dotnet: false

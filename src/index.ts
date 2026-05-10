@@ -1,6 +1,6 @@
 import * as fs from 'fs';
-import core = require('@actions/core');
-import cache = require('@actions/cache');
+import * as core from '@actions/core';
+import * as cache from '@actions/cache';
 import { ValidateInputs } from './inputs';
 import {
     UnityHub,
