@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 jobs:
   update-release-tags:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: write
     steps:
