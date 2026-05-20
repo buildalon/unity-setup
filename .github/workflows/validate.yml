@@ -15,7 +15,7 @@ concurrency:
 jobs:
   setup:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:
@@ -47,7 +47,7 @@ jobs:
   timeline:
     needs: [setup, validate]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:

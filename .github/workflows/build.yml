@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Free Disk Space
         if: ${{ matrix.os == 'ubuntu-latest' && (matrix.unity-version != '2018' && matrix.unity-version != '2017.4.40f1') }}
-        uses: endersonmenezes/free-disk-space@230e80ea48c76abde36bb8fb305e52563c649d4e # v3.2.2
+        uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1 # v3.2.2
         with:
           remove_android: true
           remove_dotnet: false

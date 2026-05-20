@@ -118,3 +118,4 @@ Environment variables available for use in subsequent steps:
 - `UNITY_EDITORS`: A JSON array of all installed Unity Editors on the runner.
 - `UNITY_EDITOR_PATH`: The path to the latest installed version of Unity.
 - `UNITY_PROJECT_PATH`: The path to the Unity project.
+
