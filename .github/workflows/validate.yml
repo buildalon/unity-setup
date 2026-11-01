@@ -1,7 +1,7 @@
 name: validate
 on:
   schedule:
-    - cron: '0 8 2 * *' # monthly: the older editors, which no longer change
+    - cron: '0 8 21 * *' # monthly: the older editors, which no longer change
   push:
     branches: [main]
   pull_request:
