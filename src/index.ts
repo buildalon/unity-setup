@@ -3,10 +3,12 @@ import * as core from '@actions/core';
 import * as cache from '@actions/cache';
 import { ValidateInputs } from './inputs';
 import {
-    UnityHub,
     CheckAndroidSdkInstalled,
+    UnityCli,
+    UnityInstaller,
     UnityVersion,
 } from '@rage-against-the-pixel/unity-cli';
+import { ClassifyFailure } from '@rage-against-the-pixel/unity-cli/dist/failure-markers';
 
 const IS_POST = !!core.getState('isPost');
 
@@ -18,6 +20,14 @@ async function main() {
             await post();
         }
     } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const marker = ClassifyFailure(message);
+
+        if (marker) {
+            // a failure a rerun can clear carries the marker retry-failed-jobs looks for
+            core.notice(message, { title: marker });
+        }
+
         core.setFailed(error.stack);
     }
 }
@@ -50,6 +60,26 @@ function getInstallationCacheKey(versions: UnityVersion[], modules: string[]): I
     };
 }
 
+/**
+ * Reads the release channels to accept when resolving a partial version.
+ * @returns The channel letters, f (stable) by default.
+ */
+function getChannels(): string[] {
+    const allowed = ['f', 'p', 'b', 'a', 'x'];
+    const channels = (core.getInput('channels') || 'f')
+        .split(/[ ,]+/)
+        .map(channel => channel.trim().toLowerCase())
+        .filter(Boolean);
+
+    for (const channel of channels) {
+        if (!allowed.includes(channel)) {
+            throw new Error(`Invalid channel '${channel}'. Expected one or more of: ${allowed.join(', ')}.`);
+        }
+    }
+
+    return channels;
+}
+
 interface InstallationCacheKeys {
     primaryKey: string;
     restoreKeys: string[];
@@ -64,32 +94,24 @@ async function setup() {
         core.setOutput('unity-project-path', unityProjectPath);
     }
 
-    let autoUpdate = core.getInput('auto-update-hub');
-    const hubVersion = core.getInput('hub-version');
-
-    if (autoUpdate === 'true' && hubVersion && hubVersion.length > 0) {
-        autoUpdate = 'false';
-    }
-
-    const unityHub = new UnityHub();
-    const unityHubPath = await unityHub.Install(autoUpdate === 'true', hubVersion);
-
-    if (!unityHubPath || unityHubPath.length === 0) {
-        throw new Error('Failed to install or locate Unity Hub!');
-    }
-
-    core.info(`UNITY_HUB_PATH:\n  > ${unityHubPath}`);
-    core.exportVariable('UNITY_HUB_PATH', unityHubPath);
-    core.setOutput('unity-hub-path', unityHubPath);
+    const unityCli = await UnityCli.Get(core.getInput('unity-cli-version') || undefined);
+    core.info(`UNITY_CLI_PATH:\n  > ${unityCli.executable}`);
+    core.exportVariable('UNITY_CLI_PATH', unityCli.executable);
+    core.setOutput('unity-cli-path', unityCli.executable);
+    core.setOutput('unity-cli-version', unityCli.version);
+    core.saveState('unity-cli-path', unityCli.executable);
+    core.saveState('unity-cli-version', unityCli.version);
+    const installer = new UnityInstaller(unityCli);
 
     if (installPath && installPath.length > 0) {
-        await unityHub.SetInstallPath(installPath);
+        await installer.SetInstallPath(installPath);
     }
 
     const cacheInstallationInput = core.getInput('cache-installation')?.toLowerCase() === 'true';
+    let cacheRestored = false;
 
     if (cacheInstallationInput) {
-        const unityInstallPath = await unityHub.GetInstallPath();
+        const unityInstallPath = await installer.GetInstallPath();
         const cacheKey = getInstallationCacheKey(versions, modules);
         core.saveState('cache-key', cacheKey.primaryKey);
         core.info(`unity installation cache key: ${cacheKey.primaryKey}`);
@@ -101,12 +123,32 @@ async function setup() {
         }
 
         core.saveState('cache-hit', cacheHit);
+        cacheRestored = !!restoreKey;
     }
 
+    const channels = getChannels();
+
+    if (cacheRestored && process.platform === 'linux') {
+        // unity-cli installs the editor's system packages only when it installs the editor itself,
+        // and the cache restores just the editor folder, so a fresh runner still needs them
+        const linuxInstaller = installer as unknown as { installLinuxDependencies?: (version: UnityVersion) => Promise<void> };
+
+        if (typeof linuxInstaller.installLinuxDependencies === 'function') {
+            for (const unityVersion of versions) {
+                await linuxInstaller.installLinuxDependencies.call(installer, await installer.resolveVersion(unityVersion, channels));
+            }
+        } else {
+            core.warning('Unable to install the Linux editor dependencies for the restored Unity installation.');
+        }
+    }
+
+    const allowSecurityAlert = core.getBooleanInput('allow-security-alert');
     const installedEditors: { version: string; path: string; }[] = [];
 
     for (const unityVersion of versions) {
-        const unityEditor = await unityHub.GetEditor(unityVersion, modules);
+        const unityEditor = await installer.GetEditor(unityVersion, modules, channels, {
+            securityAlert: allowSecurityAlert ? 'allow' : 'enforce',
+        });
         core.info(`UNITY_EDITOR_PATH:\n  > ${unityEditor.editorPath}`);
         // always sets to the latest installed editor path
         core.exportVariable('UNITY_EDITOR_PATH', unityEditor.editorPath);
@@ -149,8 +191,8 @@ async function post() {
 
     if (saveCache) {
         core.info('Saving Unity installation cache...');
-        const unityHub = new UnityHub();
-        const unityInstallPath = await unityHub.GetInstallPath();
+        const unityCli = new UnityCli(core.getState('unity-cli-path'), core.getState('unity-cli-version'));
+        const unityInstallPath = await unityCli.GetInstallPath();
 
         if (!await isInstallationPathValid(unityInstallPath)) {
             core.warning(`Unity installation path "${unityInstallPath}" is invalid, skipping cache save.`);

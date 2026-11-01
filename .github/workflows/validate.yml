@@ -1,35 +1,33 @@
 name: validate
 on:
   schedule:
-    - cron: '0 0 * * 0' # Run every Sunday at midnight
+    - cron: '0 8 2 * *' # monthly: the older editors, which no longer change
   push:
     branches: [main]
   pull_request:
     branches: ['*']
     types: [opened, synchronize, reopened, ready_for_review]
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+    inputs:
+      editors:
+        description: Which editors to test
+        type: choice
+        options: [unity-6-and-newer, legacy]
+        default: unity-6-and-newer
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # the monthly legacy run gets its own group, so a push to main does not cancel it
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'legacy' || inputs.editors || 'unity-6-and-newer' }}
   cancel-in-progress: true
 jobs:
   setup:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-slim
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          sparse-checkout: .github/
-      - uses: RageAgainstThePixel/job-builder@v1
-        id: setup-jobs
-        with:
-          build-options: ./.github/workflows/build-options.json
-          group-by: unity-version
-          job-name-prefix: Install
-    outputs:
-      jobs: ${{ steps.setup-jobs.outputs.jobs }}
+    # pull requests and pushes test the streams Unity lists; the older editors run monthly or on demand
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-stream-matrix.yml@main
+    with:
+      legacy: ${{ inputs.editors == 'legacy' }}
+      job-name-prefix: Install
   validate:
     if: ${{ needs.setup.outputs.jobs }}
     needs: setup
@@ -39,17 +37,18 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
       fail-fast: false
-      max-parallel: 1
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
       matrix: ${{ toJSON(matrix.jobs.matrix) }}
+      allow-security-alert: ${{ needs.setup.outputs.allow-security-alert == 'true' }}
   timeline:
     needs: [setup, validate]
     if: always()
     runs-on: ubuntu-slim
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
-      - uses: Kesin11/actions-timeline@44c9c178ffb2fb1d9859614a3ffa79ccfb77565e # v3.1.0
+      - uses: Kesin11/actions-timeline@460b1f8a750077029ad3589824d371b200e91dcf # v3.2.1
         continue-on-error: true

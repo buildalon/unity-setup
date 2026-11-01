@@ -1,0 +1,18 @@
+name: rerun-validate
+# workflow_run only fires for workflow files on the default branch, so this starts working once it is merged to main
+on:
+  workflow_run:
+    workflows: [validate]
+    types: [completed]
+jobs:
+  rerun:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: write # to rerun the failed jobs
+      checks: read # to read the failed jobs' annotations
+    steps:
+      - uses: buildalon/retry-failed-jobs@v1
+        with:
+          markers: unity-license-exhausted,unity-transient-failure

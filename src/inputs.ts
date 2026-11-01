@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as core from '@actions/core';
 import {
-    UnityHub,
+    UnityInstaller,
     UnityVersion,
     ResolveGlobToPath
 } from '@rage-against-the-pixel/unity-cli';
@@ -55,7 +55,7 @@ export async function ValidateInputs(): Promise<{
         }
     }
 
-    const moduleMap = UnityHub.GetPlatformTargetModuleMap();
+    const moduleMap = UnityInstaller.GetPlatformTargetModuleMap();
 
     for (const target of buildTargets) {
         const module = moduleMap[target];
@@ -244,7 +244,7 @@ function getUnityVersionsFromInput(architecture: 'X86_64' | 'ARM64' | null): Uni
         }
 
         const changeset = match.groups.changeset;
-        const unityVersion = new UnityVersion(version, changeset, architecture);
+        const unityVersion = new UnityVersion(version, changeset, architecture ?? undefined);
         core.debug(`  > ${unityVersion.toString()}`);
 
         try {

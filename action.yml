@@ -1,7 +1,7 @@
-name: Buildalon Unity Setup
+name: 'Buildalon Unity Setup'
 description: A GitHub action for setting up the Unity Game Engine for CI/CD workflows.
 branding:
-  color: red
+  color: 'red'
   icon: download
 inputs:
   version-file:
@@ -27,21 +27,27 @@ inputs:
   install-path:
     description: 'Specify the path where Unity will be installed to.'
     required: false
-  auto-update-hub:
-    description: 'Automatically update Unity Hub to the latest version before installing Unity Editors. Can be `true` or `false`.'
-    required: false
-    default: 'true'
-  hub-version:
-    description: 'Specify a specific version of Unity Hub to install. Example: `3.12.0`. When set, auto-update-hub is automatically disabled.'
+  unity-cli-version:
+    description: 'The version of the official Unity CLI to install, such as `1.0.0-beta.14`, or `latest`. Defaults to `UNITY_CLI_VERSION` when an earlier step set it, otherwise `latest`.'
     required: false
     default: ''
+  channels:
+    description: 'The release channels to accept when resolving a partial `unity-version`, as comma-separated letters: `f` (stable), `p` (patch), `b` (beta), `a` (alpha), `x` (experimental). A stable release still wins once a stream has one.'
+    required: false
+    default: 'f'
+  allow-security-alert:
+    description: 'Install editors that carry a Unity Security Alert, with a warning instead of an error. Can be `true` or `false`.'
+    required: false
+    default: 'false'
   cache-installation:
     description: 'Cache the Unity installation between workflow runs to speed up subsequent runs. Can be `true` or `false`.'
     required: false
     default: 'false'
 outputs:
-  unity-hub-path:
-    description: 'The file path to the Unity Hub installation.'
+  unity-cli-path:
+    description: 'The file path to the official Unity CLI executable.'
+  unity-cli-version:
+    description: 'The installed official Unity CLI version.'
   unity-editors:
     description: 'A JSON array of all installed Unity Editors on the runner.'
   unity-editor-path:
