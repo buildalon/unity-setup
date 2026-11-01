@@ -7,6 +7,10 @@ on:
       matrix:
         required: true
         type: string
+      allow-security-alert:
+        required: false
+        type: boolean
+        default: false
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -14,21 +18,56 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
-    timeout-minutes: 30
+    # a hung download must not hold the matrix; rows that install the Android module and its SDK get more
+    timeout-minutes: ${{ contains(matrix.build-targets, 'Android') && 60 || 45 }}
+    defaults:
+      run:
+        shell: bash
     env:
       UNITY_EDITORS: '' # set by the unity-setup action
-      UNITY_HUB_PATH: '' # set by the unity-setup action
+      UNITY_CLI_PATH: '' # set by the unity-setup action
       UNITY_EDITOR_PATH: '' # set by the unity-setup action
       UNITY_PROJECT_PATH: '' # set by the unity-setup action
     steps:
+      # runs alongside checkout; the wait before the editor packages joins it
       - name: Free Disk Space
+        id: free-disk-space
+        background: true
         if: ${{ matrix.os == 'ubuntu-latest' && (matrix.unity-version != '2018' && matrix.unity-version != '2017.4.40f1') }}
-        uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1 # v3.2.2
+        uses: endersonmenezes/free-disk-space@8b8cd4e2277836962939a8f3b4ea0ee4bc006156 # v4.0.1
         with:
           remove_android: true
           remove_dotnet: false
           remove_tool_cache: false
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+      - name: Wait for Free Disk Space
+        wait: free-disk-space
+      # the editor's apt packages come from a mirror that has served them at about 40 kB/s, so the .deb files are kept
+      # in the Actions cache: an apt hook copies every package dpkg installs, and a later run puts them back into apt's
+      # archive before unity-setup, so apt finds them already downloaded
+      - name: Restore Linux editor packages
+        id: linux-packages
+        if: ${{ runner.os == 'Linux' && matrix.unity-version != 'None' }}
+        run: |
+          echo "key=unity-linux-packages-${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
+          echo "restore-key=unity-linux-packages-${ImageOS}-" >> "$GITHUB_OUTPUT"
+          mkdir -p "${RUNNER_TEMP}/apt-packages"
+          echo "DPkg::Pre-Install-Pkgs {\"xargs -r cp -n -t ${RUNNER_TEMP}/apt-packages/ || true\";};" | sudo tee /etc/apt/apt.conf.d/99unity-setup-keep-packages > /dev/null
+      - uses: actions/cache/restore@v6
+        id: linux-packages-cache
+        if: ${{ steps.linux-packages.outcome == 'success' }}
+        with:
+          path: ${{ runner.temp }}/apt-packages
+          key: ${{ steps.linux-packages.outputs.key }}
+          restore-keys: ${{ steps.linux-packages.outputs.restore-key }}
+      - name: Seed apt with cached packages
+        if: ${{ steps.linux-packages-cache.outputs.cache-matched-key != '' }}
+        run: |
+          count=$(find "${RUNNER_TEMP}/apt-packages" -maxdepth 1 -name '*.deb' | wc -l | tr -d ' ')
+          echo "Restored ${count} cached packages"
+          if [ "${count}" -gt 0 ]; then
+            sudo cp -n "${RUNNER_TEMP}"/apt-packages/*.deb /var/cache/apt/archives/
+          fi
       - uses: ./ # buildalon/unity-setup
         id: unity-setup
         with:
@@ -36,13 +75,30 @@ jobs:
           unity-version: ${{ matrix.unity-version }}
           build-targets: ${{ matrix.build-targets }}
           modules: ${{ matrix.modules }}
-          auto-update-hub: ${{ !contains(matrix.modules, 'None') }}
-          hub-version: ${{ contains(matrix.modules, 'None') && '3.12.0' || '' }}
+          # streams that only have betas or alphas so far resolve to those; a stable release wins once there is one
+          channels: f,b,a
+          allow-security-alert: ${{ inputs.allow-security-alert }}
+      - name: Collect Linux editor packages
+        id: linux-packages-collect
+        if: ${{ steps.linux-packages.outcome == 'success' && steps.linux-packages-cache.outputs.cache-hit != 'true' }}
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" "${RUNNER_TEMP}/apt-packages"
+          count=$(find "${RUNNER_TEMP}/apt-packages" -maxdepth 1 -name '*.deb' | wc -l | tr -d ' ')
+          echo "Collected ${count} packages"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/save@v6
+        # rows run in parallel, so several may try the same key; the first save wins and the rest only warn
+        if: ${{ steps.linux-packages-collect.outputs.count > 0 }}
+        continue-on-error: true
+        with:
+          path: ${{ runner.temp }}/apt-packages
+          key: ${{ steps.linux-packages.outputs.key }}
       - run: |
-          ENV_UNITY_HUB_PATH="${{ env.UNITY_HUB_PATH }}"
-          echo "env.UNITY_HUB_PATH: \"${ENV_UNITY_HUB_PATH}\""
-          STEPS_UNITY_HUB_PATH="${{ steps.unity-setup.outputs.unity-hub-path }}"
-          echo "steps.unity-setup.outputs.unity-hub-path: \"${STEPS_UNITY_HUB_PATH}\""
+          ENV_UNITY_CLI_PATH="${{ env.UNITY_CLI_PATH }}"
+          echo "env.UNITY_CLI_PATH: \"${ENV_UNITY_CLI_PATH}\""
+          STEPS_UNITY_CLI_PATH="${{ steps.unity-setup.outputs.unity-cli-path }}"
+          echo "steps.unity-setup.outputs.unity-cli-path: \"${STEPS_UNITY_CLI_PATH}\""
+          "${ENV_UNITY_CLI_PATH}" --version
           ENV_UNITY_EDITORS='${{ env.UNITY_EDITORS }}' # single quotes to preserve JSON format and quotes from breaking the script
           # The json string is raw and not escaped, which breaks echoing it directly. Escape quotes for safe echoing.
           ENV_UNITY_EDITORS="${ENV_UNITY_EDITORS//\"/\\\"}"
@@ -61,8 +117,8 @@ jobs:
           echo "steps.unity-setup.outputs.unity-project-path: \"${STEPS_UNITY_PROJECT_PATH}\""
 
           # validate both the env and output variables are the same
-          if [[ "${ENV_UNITY_HUB_PATH}" != "${STEPS_UNITY_HUB_PATH}" ]]; then
-            echo "Error: UNITY_HUB_PATH env and output do not match!"
+          if [[ "${ENV_UNITY_CLI_PATH}" != "${STEPS_UNITY_CLI_PATH}" ]]; then
+            echo "Error: UNITY_CLI_PATH env and output do not match!"
             exit 1
           fi
 
