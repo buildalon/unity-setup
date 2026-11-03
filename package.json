@@ -1,6 +1,6 @@
 {
   "name": "unity-setup",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "A GitHub action for setting up the Unity Game Engine for CI/CD workflows.",
   "author": "buildalon",
   "license": "MIT",
@@ -27,15 +27,16 @@
     "@actions/cache": "^5.0.5",
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/glob": "^0.5.1",
-    "@rage-against-the-pixel/unity-cli": "^4.1.0",
+    "@actions/glob": "file:shims/actions-glob",
+    "@rage-against-the-pixel/unity-cli": "^4.1.2",
     "semver": "^7.8.0",
     "yaml": "^2.9.0"
   },
   "overrides": {
     "@actions/core": {
       "@actions/http-client": "^3.0.2"
-    }
+    },
+    "@actions/glob": "$@actions/glob"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
