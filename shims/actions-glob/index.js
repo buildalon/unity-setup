@@ -18,6 +18,9 @@ async function match(patterns, options) {
   const globOptions = {
     absolute: true,
     dot: true,
+    // @actions/glob has no brace expansion or extglobs, so treat {} and ext patterns literally
+    nobrace: true,
+    noext: true,
     ignore: ignore.flatMap(pattern => [pattern, `${pattern}/**`]),
     // backslashes are path separators on Windows, as in @actions/glob
     windowsPathsNoEscape: true
