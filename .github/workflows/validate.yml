@@ -24,7 +24,7 @@ jobs:
     permissions:
       contents: read
     # pull requests and pushes test the streams Unity lists; the older editors run monthly or on demand
-    uses: RageAgainstThePixel/workflows/.github/workflows/unity-stream-matrix.yml@main
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-stream-matrix.yml@ci/unity-row-checks
     with:
       legacy: ${{ inputs.editors == 'legacy' }}
       job-name-prefix: Install
@@ -42,6 +42,16 @@ jobs:
     with:
       matrix: ${{ toJSON(matrix.jobs.matrix) }}
       allow-security-alert: ${{ needs.setup.outputs.allow-security-alert == 'true' }}
+      alpha-streams: ${{ needs.setup.outputs.alpha-streams || '[]' }}
+  row-checks:
+    needs: [setup, validate]
+    if: ${{ always() && needs.setup.result == 'success' && needs.setup.outputs.jobs }}
+    permissions:
+      actions: read
+      checks: write
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-row-checks.yml@ci/unity-row-checks
+    with:
+      alpha-streams: ${{ needs.setup.outputs.alpha-streams || '[]' }}
   timeline:
     needs: [setup, validate]
     if: always()
