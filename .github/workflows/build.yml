@@ -11,10 +11,6 @@ on:
         required: false
         type: boolean
         default: false
-      alpha-streams:
-        required: false
-        type: string
-        default: '[]'
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -22,7 +18,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
-    continue-on-error: ${{ contains(fromJSON(inputs.alpha-streams), matrix.unity-version) }}
+    continue-on-error: ${{ matrix.prerelease == true }}
     # a hung download must not hold the matrix; rows that install the Android module and its SDK get more
     timeout-minutes: ${{ contains(matrix.build-targets, 'Android') && 60 || 45 }}
     defaults:
