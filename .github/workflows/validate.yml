@@ -42,6 +42,13 @@ jobs:
     with:
       matrix: ${{ toJSON(matrix.jobs.matrix) }}
       allow-security-alert: ${{ needs.setup.outputs.allow-security-alert == 'true' }}
+  row-checks:
+    needs: [setup, validate]
+    if: ${{ always() && needs.setup.result == 'success' && needs.setup.outputs.jobs }}
+    permissions:
+      actions: read
+      checks: write
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-row-checks.yml@main
   timeline:
     needs: [setup, validate]
     if: always()

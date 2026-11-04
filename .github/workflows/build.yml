@@ -18,6 +18,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
+    continue-on-error: ${{ matrix.prerelease == true }}
     # a hung download must not hold the matrix; rows that install the Android module and its SDK get more
     timeout-minutes: ${{ contains(matrix.build-targets, 'Android') && 60 || 45 }}
     defaults:
