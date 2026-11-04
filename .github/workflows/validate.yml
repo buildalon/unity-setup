@@ -24,7 +24,7 @@ jobs:
     permissions:
       contents: read
     # pull requests and pushes test the streams Unity lists; the older editors run monthly or on demand
-    uses: RageAgainstThePixel/workflows/.github/workflows/unity-stream-matrix.yml@ci/unity-row-checks
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-stream-matrix.yml@main
     with:
       legacy: ${{ inputs.editors == 'legacy' }}
       job-name-prefix: Install
@@ -48,7 +48,7 @@ jobs:
     permissions:
       actions: read
       checks: write
-    uses: RageAgainstThePixel/workflows/.github/workflows/unity-row-checks.yml@ci/unity-row-checks
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-row-checks.yml@main
   timeline:
     needs: [setup, validate]
     if: always()
