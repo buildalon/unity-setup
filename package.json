@@ -28,7 +28,7 @@
     "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
     "@actions/glob": "file:shims/actions-glob",
-    "@rage-against-the-pixel/unity-cli": "^4.1.2",
+    "@rage-against-the-pixel/unity-cli": "^4.2.0",
     "semver": "^7.8.6",
     "yaml": "^2.9.1"
   },
