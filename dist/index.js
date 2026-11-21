@@ -5310,7 +5310,7 @@ exports.TRANSIENT_FAILURE_MARKER = 'unity-transient-failure';
 // only phrases that name a seat or activation limit: the licensing client's generic "seat activation failed" and
 // "acquiring license failed" also cover a wrong password or a revoked license, which a rerun would only repeat.
 // Literal alternations only, so matching stays linear on any message.
-const LICENSE_EXHAUSTED_PATTERN = /activations? limit|maximum number of activations|max activations|no free seats?|no available seats?|seat limit|0 free entitlements|sign-in rate limit/i;
+const LICENSE_EXHAUSTED_PATTERN = /activations? limit|maximum number of activations|max activations|no free seats?|no available seats?|seat limit|0 free entitlements|sign-in rate limit|no remaining license|429 too many requests/i;
 // a refused connection usually means a wrong host or port, which a rerun repeats, so it is not listed; "retryable exit code"
 // is the installer's network, install-locked or timeout exit after its own retry
 const TRANSIENT_PATTERN = /HTTP 5\d\d|Bad Gateway|Service Unavailable|Gateway Time-?out|ECONNRESET|ECONNABORTED|ETIMEDOUT|EAI_AGAIN|socket hang up|retryable exit code/i;
@@ -5632,7 +5632,7 @@ var LicenseType;
 /** How long one Unity Licensing Client command may run. */
 const LICENSING_CLIENT_TIMEOUT_MS = 10 * 60 * 1000;
 // literal alternations only, so matching stays linear on any line
-const LICENSING_DIAGNOSTIC_PATTERN = /error|fail|seat|entitlement|activation|limit|denied|invalid|expired/i;
+const LICENSING_DIAGNOSTIC_PATTERN = /error|fail|seat|entitlement|activation|limit|denied|invalid|expired|no remaining license|too many requests/i;
 /**
  * The lines of sanitized licensing client output that say why a command failed, such as a seat limit.
  * @param lines The client output, already sanitized.
@@ -6634,6 +6634,7 @@ async function ActivateLicense(options) {
     }
     logger.CI_setOutput('license-source', 'account');
     let cliError;
+    let inconsistent = false;
     try {
         const result = await activateWithUnityCli(options);
         if (result.activated) {
@@ -6641,17 +6642,31 @@ async function ActivateLicense(options) {
             return result.token;
         }
         cliError = result.reason;
+        inconsistent = result.inconsistent === true;
     }
     catch (error) {
         cliError = error;
     }
-    logger.warn(`Unity CLI license activation failed, falling back to the Unity Licensing Client.\n${cliError}`);
+    if (inconsistent) {
+        logger.annotate(logging_1.LogLevel.WARN, `Unity CLI reported a successful activation without an active license, falling back to the Unity Licensing Client.\n${cliError}`, undefined, undefined, undefined, undefined, undefined, 'unity-cli-inconsistent-activation');
+    }
+    else {
+        logger.warn(`Unity CLI license activation failed, falling back to the Unity Licensing Client.\n${cliError}`);
+    }
     if (options.licenseType !== LicenseType.floating &&
         !options.username && !process.env.UNITY_USERNAME_BASE64) {
         throw new Error(`Unity CLI license activation failed, and no Unity ID email and password were given for the fallback.\n${cliError}`);
     }
     await LicensingClient.StopBackgroundClients();
-    const token = await new LicensingClient().Activate(options);
+    let token;
+    try {
+        token = await new LicensingClient().Activate(options);
+    }
+    catch (error) {
+        // keep the official CLI's failure (or false success) visible next to the fallback's
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`${message}\nBefore the fallback: ${cliError}`, { cause: error });
+    }
     await logLicenseBinding();
     return token;
 }
@@ -6875,7 +6890,31 @@ async function activateWithUnityCli(options) {
         return { activated: false, reason: `unity license activate exited with code ${exitCode}${formatEnvelopeErrors(envelope)}` };
     }
     if (!(await isLicenseActive(cli))) {
-        return { activated: false, reason: 'unity license activate succeeded, but unity license status reports no active license' };
+        // the official CLI may still have taken a lease: return it before the fallback asks for another
+        const leftover = findToken(envelope?.data);
+        if (leftover) {
+            logging_1.Logger.instance.CI_mask(leftover);
+        }
+        let released = 'no';
+        if (options.licenseType === LicenseType.personal && IsSharedRunnerIdentity()) {
+            // same safeguard as ReturnLicense: a return here would revoke the license for every job and repo on this identity
+            released = 'skipped on a shared runner identity';
+        }
+        else {
+            try {
+                await returnLicense(options.licenseType, leftover);
+                released = 'yes';
+            }
+            catch (error) {
+                logging_1.Logger.instance.warn(`Could not release the lease left by the inconsistent activation.\n${error}`);
+            }
+        }
+        return {
+            activated: false,
+            inconsistent: true,
+            reason: `unity license activate exited ${exitCode} and reported success, but unity license status reports no active license` +
+                ` (token in response: ${leftover ? 'yes' : 'no'}, lease released: ${released})`,
+        };
     }
     const token = findToken(envelope?.data);
     if (token) {
